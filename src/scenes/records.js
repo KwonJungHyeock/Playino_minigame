@@ -1,7 +1,7 @@
 // records.js — 기록실 (내 기록 보관함, 실시간 갱신 UI)
 
 import { CHAPTERS, ROOMS, overallCleared, overallTotal, overallPercent, allRoomIds } from '../content/curriculum.js';
-import { results, PASS_GRADE } from '../app/results.js';
+import { results } from '../app/results.js';
 import { saveAsPng } from '../app/reportCard.js';
 import { student } from '../app/student.js';
 import { stageList, gradeText, gradeKey, hasMedal, esc } from '../app/achievement.js';
@@ -97,7 +97,7 @@ function summaryPanel() {
       </p>
 
       ${left
-        ? `<p class="rs-rule">🏅 메달은 무대의 <b>모든 단계</b>를 <b>${PASS_GRADE}등급 이상</b>으로 통과해야 받아요</p>`
+        ? `<p class="rs-rule">🏅 메달은 무대의 <b>모든 단계</b>를 <b>통과</b>하면 받아요 · 통과 기준은 게임마다 달라요(85% · 80% · 목표 점수)</p>`
         : ''}
 
       <ul class="rs-rooms">${roomCells()}</ul>

@@ -2,7 +2,7 @@
 // 평가 문서가 아니라 해낸 것을 남기는 문서라, 시도 횟수·세부 지표는 넣지 않는다.
 
 import { CHAPTERS, ROOMS, isRoomCleared } from '../content/curriculum.js';
-import { results, PASS_GRADE } from './results.js';
+import { results } from './results.js';
 import { stageList, gradeText, gradeKey, hasMedal, esc } from './achievement.js';
 
 const A4 = { w: 794, h: 1123 };
@@ -52,7 +52,7 @@ function buildReport({ playerName = '' } = {}) {
 
     <footer class="report-foot">
       <span>등급 기준 · S 95%↑ / A 85%↑ / B 70%↑ / C 50%↑ / D &nbsp;·&nbsp;
-        <span class="g g-medal g-mini">✓</span> 메달은 모든 단계 ${PASS_GRADE}등급↑</span>
+        <span class="g g-medal g-mini">✓</span> 메달은 모든 단계 통과(게임별 85% · 80% · 목표 점수)</span>
       <span class="report-seal">천국의 왕관까지 ${Math.max(0, total - cleared)}개</span>
     </footer>
   `;
