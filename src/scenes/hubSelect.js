@@ -3,6 +3,7 @@
 import { sfx } from '../app/sfx.js';
 import { mountCurriculumHeader } from '../app/curriculumHeader.js';
 import { CHAPTERS, chapterUnlocked, chapterDone, chapterClearedCount, chapterTotal } from '../content/curriculum.js';
+import { icon } from '../app/icons.js';
 
 const PAL = ['255,170,60', '255,110,170', '90,170,255', '150,130,255', '90,210,150'];
 
@@ -11,7 +12,7 @@ export function showHubSelect(root, { onEnter, spawnAt } = {}) {
     <div class="chsel scene-fade">
       <div class="chsel-bg" id="cs-bg"></div>
       <div class="chsel-shade"></div>
-      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? '🔇' : '🔊'}</button>
+      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button>
       <div class="chsel-body">
         <button class="chsel-arw chsel-prev" id="cs-prev" aria-label="이전">◀</button>
         <div class="chsel-viewport"><div class="chsel-track" id="cs-track">
@@ -40,7 +41,7 @@ export function showHubSelect(root, { onEnter, spawnAt } = {}) {
   const dots = [...root.querySelectorAll('#cs-dots i')];
   const metaEl = root.querySelector('#cs-meta');
   const playBtn = root.querySelector('#cs-play');
-  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { snd.textContent = sfx.toggle() ? '🔇' : '🔊'; };
+  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { snd.innerHTML = sfx.toggle() ? icon('volume-off', 18) : icon('speaker', 18); };
 
   let focus = CHAPTERS.findIndex((c) => c.id === spawnAt);
   if (focus < 0) focus = 0;   // 기본 초기 포커스 = STAGE 1(베이직)
@@ -58,7 +59,7 @@ export function showHubSelect(root, { onEnter, spawnAt } = {}) {
     metaEl.innerHTML = `<span class="cs-ico">${c.icon}</span>
       <span class="cs-concept">${c.act}</span>
       <span class="cs-status ${done ? 'done' : locked ? 'soon' : 'go'}">${done ? '🏆 완료' : locked ? '🔒 잠김' : `${cc}/${tt} 클리어`}</span>`;
-    playBtn.textContent = locked ? '이전 스테이지를 먼저 🔒' : '▶ 입장하기';
+    playBtn.textContent = locked ? '이전 스테이지를 모두 플레이하면 열려요 🔒' : '▶ 입장하기';
     playBtn.classList.toggle('soon', locked);
   }
   function go(i) { const n = Math.max(0, Math.min(CHAPTERS.length - 1, i)); if (n === focus) return; focus = n; sfx.pop(); layout(); }

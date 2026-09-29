@@ -1,13 +1,16 @@
-// cdsGame.js — 손그림자 마술 (조도센서 · 빛 조절 게임 2종)
-// 공통 조작: '가리기' 패드 꾹(또는 Space)=어둠 / 떼면=밝음. 실물 CDS(A0) 가려도 어둠 인정.
-//   1단계 'react' — 떨어지는 ☀️비춰/🌑가려 신호를 판정선에서 빛 상태로 맞추기(반응)
-//   2단계 'fly'   — 빛 받으면 떠오르고 가리면 가라앉는 반딧불이로 장애물 통과(생존/회피)
-// 각 단계 A등급(85%↑) + 둘 다 통과 → 🔆 햇살 메달.
+// cdsGame.js — 손그림자 마술 (조도센서 · 빛 조절 게임)
+// 1단계(반응) → 2단계(회피). A등급(85%) 이상 통과.
+// 센서를 가리거나 떼어서 빛 조절.
 import { sfx } from '../app/sfx.js';
+import { roomCleared } from '../content/curriculum.js';
 import { bgm } from '../app/bgm.js';
 import { progress } from '../app/progress.js';
 import { celebrateRoom } from './celebrate.js';
 import { board } from '../app/board.js';
+import { DEV_TOOLS } from '../app/flags.js';
+import { icon } from '../app/icons.js';
+import { results } from '../app/results.js';
+import { gradeOf, ready } from '../engine/utils.js';
 
 const ADC = 0, LEAD = 1700, PASS_ACC = 0.85;
 const GAMES = [
@@ -17,8 +20,6 @@ const GAMES = [
 
 const bgImg = new Image(); bgImg.src = '/brand/stage-cds-bg.webp';
 const eddieImg = new Image(); eddieImg.src = '/brand/eddie/eddie-hero.webp';
-const ready = (im) => im.complete && im.naturalWidth > 0;
-const gradeOf = (a) => a >= 0.95 ? 'S' : a >= 0.85 ? 'A' : a >= 0.7 ? 'B' : a >= 0.5 ? 'C' : 'D';
 const lerp = (a, b, t) => a + (b - a) * t;
 
 export function showCdsGame(root, { onExit } = {}) {
@@ -26,7 +27,7 @@ export function showCdsGame(root, { onExit } = {}) {
     <div class="led scene-fade cdsgame">
       <div class="cds-stage-bg" id="cd-bg"></div>
       <div class="brand-badge"><span class="brand-dot"></span>Eduino&nbsp;<b>AI</b></div>
-      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? '🔇' : '🔊'}</button>
+      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button>
       <button class="bx-exit" id="cd-exit">✕ 전시관으로</button>
       <button class="bx-exit led-skip" id="cd-skip" hidden>⏭ 건너뛰기(테스트)</button>
       <div class="world-host" id="cd-host"></div>
@@ -61,7 +62,7 @@ export function showCdsGame(root, { onExit } = {}) {
   const host = root.querySelector('#cd-host');
   const canvas = document.createElement('canvas'); canvas.className = 'world-canvas'; host.appendChild(canvas);
   const ctx = canvas.getContext('2d');
-  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { const m = sfx.toggle(); snd.textContent = m ? '🔇' : '🔊'; };
+  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { const m = sfx.toggle(); snd.innerHTML = m ? icon('volume-off', 18) : icon('speaker', 18); };
   root.querySelector('#cd-exit').onclick = () => { cleanup(); onExit?.(); };
   const elHit = root.querySelector('#cd-hit'), elTot = root.querySelector('#cd-tot'), elCombo = root.querySelector('#cd-combo'), elScore = root.querySelector('#cd-score'), elStage = root.querySelector('#cd-stage'), elHlbl = root.querySelector('#cd-hlbl'), padHint = root.querySelector('#cd-padhint');
   const hud = root.querySelector('#cd-hud'), pad = root.querySelector('#cd-pad'), skipBtn = root.querySelector('#cd-skip');
@@ -89,12 +90,11 @@ export function showCdsGame(root, { onExit } = {}) {
     senseTimer = setInterval(async () => { const v = await board.analogRead(ADC); if (v == null) return; baseline = Math.max(baseline * 0.98, v); sensorDark = v < baseline * 0.55; }, 130);
   }
   function stopSense() { if (senseTimer) { clearInterval(senseTimer); senseTimer = null; } }
-  root.querySelector('#cd-connect').onclick = async () => { const b = root.querySelector('#cd-connect'); try { await board.connect(); b.textContent = '🔌 연결됨 ✓'; startSense(); } catch (e) { b.textContent = board.classify(e).note.slice(0, 16) + '…'; } };
+  root.querySelector('#cd-connect').onclick = async () => { const b = root.querySelector('#cd-connect'); try { await board.connect(); b.innerHTML = icon('usb', 17) + ' 연결됨 ✓'; startSense(); } catch (e) { b.textContent = board.classify(e).note.slice(0, 16) + '…'; } };
   board.connectAuto().then(() => startSense()).catch(() => {});
-  root.querySelector('#cd-start').onclick = () => { root.querySelector('#cd-prep').classList.add('hide'); skipBtn.hidden = false; startFlow(); };
+  root.querySelector('#cd-start').onclick = () => { root.querySelector('#cd-prep').classList.add('hide'); skipBtn.hidden = !DEV_TOOLS; startFlow(); };
 
   // ── 플로우 ──
-  const cleared = { easy: false, hard: false };
   let gi = 0, game = GAMES[0], beats = [], fly = null, pops = [], parts = [];
   const state = { phase: 'prep', t0: 0, countT: 0, score: 0, combo: 0, maxCombo: 0, hits: 0, total: 0, ended: false, lastHit: -1e9 };
   function panel(html) { const el = document.createElement('div'); el.className = 'led-panel'; el.innerHTML = `<div class="prep-card led-pcard">${html}</div>`; scene.appendChild(el); return el; }
@@ -125,18 +125,31 @@ export function showCdsGame(root, { onExit } = {}) {
   }
   function showResult(grade, pass) {
     bgm.setDuck(1); pad.hidden = true; const acc = Math.round((state.hits / state.total) * 100); const last = gi === GAMES.length - 1;
+    results.record('cds', {
+      accuracy: acc, grade, passed: pass, summary: game.name,
+      metrics: [
+        { label: '적중', value: `${state.hits}/${state.total}` },
+        { label: '정확도', value: `${acc}%` },
+        { label: '최고 콤보', value: `${state.maxCombo}` },
+      ],
+    });
     const el = panel(`<div class="lp-grade lp-${grade}">${grade}<span>등급</span></div><h2>${pass ? '통과! 🎉' : '조금만 더!'}</h2>
       <p class="prep-sub">${game.name} · ${state.hits}/${state.total} (${acc}%) · 최고 콤보 ${state.maxCombo}</p>
-      <p class="lp-cond">${pass ? (last ? '두 미션 완성! 메달을 받자 🏅' : '다음 미션으로 ▶') : 'A등급(85%↑) 이상이어야 통과! 다시 도전!'}</p>
-      <button class="cel-go" id="lp-next">${pass ? (last ? '메달 받기 🏅' : '다음 미션 ▶') : '다시 도전 ▶'}</button>`);
-    el.querySelector('#lp-next').onclick = () => { el.remove(); if (pass) { cleared[game.key] = true; gi++; nextGame(); } else beginPlay(); };
+      <p class="lp-cond">${pass ? (last ? '두 미션 완성! 메달을 받자 🏅' : '다음 미션으로 ▶') : 'A등급(85%↑)이면 메달! 다시 도전해도 되고, 다음으로 넘어가도 돼요.'}</p>
+      <div class="lp-actions">
+        <button class="cel-go ghost" id="lp-retry">다시 도전 ↻</button>
+        <button class="cel-go" id="lp-next">${last ? (pass ? '메달 받기 🏅' : '마치기 ▶') : '다음 미션 ▶'}</button>
+      </div>`);
+    el.querySelector('#lp-retry').onclick = () => { el.remove(); beginPlay(); };
+    el.querySelector('#lp-next').onclick = () => { el.remove(); gi++; nextGame(); };
   }
   function finishAll() {
     cleanup();
-    if (cleared.easy && cleared.hard) { progress.mark('cds'); celebrateRoom({ title: '빛의 마술사! 🔆', message: '신호 맞추기와 반딧불이 비행까지 — 🔆 햇살 메달 획득! 빛도 어둠도 네 손안에 있어요.', exitLabel: '전시관으로 ▶', onExit: () => onExit?.() }); }
+    if (roomCleared('cds')) { progress.mark('cds'); celebrateRoom({ title: '빛의 마술사! 🔆', message: '신호 맞추기와 반딧불이 비행까지 — 🔆 햇살 메달 획득! 빛도 어둠도 네 손안에 있어요.', exitLabel: '전시관으로 ▶', onExit: () => onExit?.() }); }
     else onExit?.();
   }
-  skipBtn.onclick = () => { document.querySelectorAll('.led-panel').forEach((e) => e.remove()); cleared[game.key] = true; state.ended = true; state.phase = 'result'; bgm.setDuck(1); gi++; nextGame(); };
+  skipBtn.onclick = () => { document.querySelectorAll('.led-panel').forEach((e) => e.remove()); results.record('cds', { accuracy: 85, grade: 'A', passed: true, summary: game.name, metrics: [] });   // 스킵도 통과 기록을 남긴다 — 메달 조건이 results 기준이라 이게 없으면 스킵으로 메달이 안 나온다
+    state.ended = true; state.phase = 'result'; bgm.setDuck(1); gi++; nextGame(); };
 
   function sync() { elHit.textContent = state.hits; elCombo.textContent = state.combo; elScore.textContent = state.score; }
   function burst(x, y, color) { for (let i = 0; i < 14; i++) { const a = Math.random() * 6.283, s = 1.5 + Math.random() * 4; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, life: 36, color }); } }

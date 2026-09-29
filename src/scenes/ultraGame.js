@@ -1,14 +1,13 @@
-// ultraGame.js — 무궁화 꽃이 피었습니다 (초음파 거리 센서 · GO존 방식)
-// 손을 센서 앞 'GO존'(약 8~35cm)에 두면 EDDIE가 걷고, 손을 치우면(멀리/없음) 멈춘다.
-//  · 🟢 초록불: GO존에 손을 두고 다가가기
-//  · 🔴 빨간불: 손을 치워 '멈춰!' — 빨간불에 걷고 있으면(GO존) 술래에게 딱 걸린다 😱
-// 거리를 '구간 안/밖(임계값+히스테리시스)'으로만 보므로 값이 튀어도 게임이 안정적이다.
-// 보드/펌웨어가 없으면 마우스/스페이스/↑ '꾹 누르면 걷기'로 체험.
+// ultraGame.js — 무궁화 꽃이 피었습니다 (초음파 거리 센서)
+// GO존(8~35cm)에 손을 두면 이동, 치우면 정지. 빨간불에 움직이면 실패. A등급(85%) 이상 통과.
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
 import { progress } from '../app/progress.js';
 import { celebrateRoom } from './celebrate.js';
 import { board } from '../app/board.js';
+import { DEV_TOOLS } from '../app/flags.js';
+import { icon } from '../app/icons.js';
+import { gradeOf, ready, clamp, rand } from '../engine/utils.js';
 
 const PINS = { trig: 4, echo: 3 };
 const GO_LO = 8, GO_HI = 35;     // GO존(cm): 이 안이면 걷기, 밖이면(너무 가깝거나 멀거나/없음) 멈춤
@@ -21,17 +20,13 @@ const GAMES = [
 const bgImg = new Image(); bgImg.onerror = () => { if (!bgImg._p) { bgImg._p = 1; bgImg.src = '/brand/stage-ultra-bg.png'; } }; bgImg.src = '/brand/stage-ultra-bg.webp';
 const heroImg = new Image(); heroImg.src = '/brand/eddie/eddie-hero.webp';
 [bgImg, heroImg].forEach((im) => { im.decode && im.addEventListener('load', () => im.decode().catch(() => {})); });
-const ready = (im) => im.complete && im.naturalWidth > 0;
-const gradeOf = (a) => a >= 0.95 ? 'S' : a >= 0.85 ? 'A' : a >= 0.7 ? 'B' : a >= 0.5 ? 'C' : 'D';
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const rand = (a, b) => a + Math.random() * (b - a);
 
 export function showUltraGame(root, { onExit } = {}) {
   root.innerHTML = `
     <div class="led scene-fade joygame ultragame">
       <div class="joy-stage-bg" id="ug-bg"></div>
       <div class="brand-badge"><span class="brand-dot"></span>Eduino&nbsp;<b>AI</b></div>
-      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? '🔇' : '🔊'}</button>
+      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button>
       <button class="bx-exit" id="ug-exit">✕ 전시관으로</button>
       <button class="bx-exit led-skip" id="ug-skip" hidden>⏭ 건너뛰기(테스트)</button>
       <div class="world-host" id="ug-host"></div>
@@ -79,7 +74,7 @@ export function showUltraGame(root, { onExit } = {}) {
   const host = root.querySelector('#ug-host');
   const canvas = document.createElement('canvas'); canvas.className = 'world-canvas'; host.appendChild(canvas);
   const ctx = canvas.getContext('2d');
-  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { const m = sfx.toggle(); snd.textContent = m ? '🔇' : '🔊'; };
+  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { const m = sfx.toggle(); snd.innerHTML = m ? icon('volume-off', 18) : icon('speaker', 18); };
   root.querySelector('#ug-exit').onclick = () => { cleanup(); onExit?.(); };
   const elHp = root.querySelector('#ug-hp'), elStage = root.querySelector('#ug-stage'), elDist = root.querySelector('#ug-dist'), elLight = root.querySelector('#ug-light');
   const hud = root.querySelector('#ug-hud'), skipBtn = root.querySelector('#ug-skip');
@@ -134,9 +129,9 @@ export function showUltraGame(root, { onExit } = {}) {
     };
     return true;
   }
-  root.querySelector('#ug-connect').onclick = async () => { const b = root.querySelector('#ug-connect'); try { await board.connect(); b.textContent = '🔌 연결됨 ✓'; startHw(); fwCheck(); } catch (e) { b.textContent = board.classify(e).note.slice(0, 16) + '…'; } };
+  root.querySelector('#ug-connect').onclick = async () => { const b = root.querySelector('#ug-connect'); try { await board.connect(); b.innerHTML = icon('usb', 17) + ' 연결됨 ✓'; startHw(); fwCheck(); } catch (e) { b.textContent = board.classify(e).note.slice(0, 16) + '…'; } };
   board.connectAuto().then(() => { startHw(); fwCheck(); }).catch(() => {});
-  root.querySelector('#ug-start').onclick = () => { root.querySelector('#ug-prep').classList.add('hide'); skipBtn.hidden = false; startFlow(); };
+  root.querySelector('#ug-start').onclick = () => { root.querySelector('#ug-prep').classList.add('hide'); skipBtn.hidden = !DEV_TOOLS; startFlow(); };
 
   // ── 플로우 ──
   const cleared = { easy: false, hard: false };

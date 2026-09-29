@@ -4,6 +4,7 @@
 import { sfx } from '../app/sfx.js';
 import { mountCurriculumHeader } from '../app/curriculumHeader.js';
 import { getChapter, chapterRooms, isRoomCleared } from '../content/curriculum.js';
+import { icon } from '../app/icons.js';
 
 const PAL = ['255,170,60', '255,110,170', '90,170,255', '150,130,255', '90,210,150', '255,140,90'];
 
@@ -15,7 +16,8 @@ export function showChapterSelect(root, { chapter, onRoom, onExit, onChapter, sp
     <div class="chsel chsel--poster scene-fade">
       <div class="chsel-bg" id="cs-bg"></div>
       <div class="chsel-shade"></div>
-      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? '🔇' : '🔊'}</button>
+      <div class="chsel-stage-name" style="position: absolute; top: 28px; left: 116px; z-index: 10; font-weight: 700; font-size: 15px; color: rgba(255,255,255,0.5);">${ch.label}</div>
+      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button>
       <div class="chsel-body">
         <button class="chsel-arw chsel-prev" id="cs-prev" aria-label="이전">◀</button>
         <div class="chsel-viewport"><div class="chsel-track" id="cs-track">
@@ -38,10 +40,14 @@ export function showChapterSelect(root, { chapter, onRoom, onExit, onChapter, sp
   });
 
   const bg = root.querySelector('#cs-bg');
-  const bgImg = new Image();
-  bgImg.onerror = () => { if (!bgImg._p) { bgImg._p = 1; bgImg.src = `/brand/stage-${chapter}-bg.png`; } };
-  bgImg.onload = () => { bg.style.backgroundImage = `url(${bgImg.src})`; };
-  bgImg.src = `/brand/stage-${chapter}-bg.webp`;
+  bg.style.background = `
+    radial-gradient(900px 600px at 14% 12%, rgba(255,210,90,.30), transparent 60%),
+    radial-gradient(820px 620px at 88% 18%, rgba(255,122,184,.28), transparent 60%),
+    radial-gradient(900px 700px at 78% 92%, rgba(111,183,255,.30), transparent 60%),
+    radial-gradient(760px 640px at 10% 88%, rgba(155,140,255,.26), transparent 60%),
+    linear-gradient(160deg, #3a2230, #34202a 55%, #2a1a22)
+  `;
+  bg.style.backgroundColor = '#2b213e';
 
   const track = root.querySelector('#cs-track');
   const cards = [...track.querySelectorAll('.cs-card')];
@@ -55,7 +61,7 @@ export function showChapterSelect(root, { chapter, onRoom, onExit, onChapter, sp
   const dots = [...root.querySelectorAll('#cs-dots i')];
   const metaEl = root.querySelector('#cs-meta');
   const playBtn = root.querySelector('#cs-play');
-  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { snd.textContent = sfx.toggle() ? '🔇' : '🔊'; };
+  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { snd.innerHTML = sfx.toggle() ? icon('volume-off', 18) : icon('speaker', 18); };
 
   // 메달 현황(이 챕터에서 딴 메달 수) — 흰색 이탤릭 텍스트
   const medalTot = rooms.length, medalGot = rooms.filter((r) => isRoomCleared(r.id)).length;

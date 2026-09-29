@@ -1,11 +1,15 @@
-// lampGame.js — 빛 마법 램프 (STAGE 3 · 응용): 조도센서(입력) + RGB LED(출력) 상호작용 · 3막 스토리.
-//   손그림자(CDS) → 색조(Hue) → 화면 램프 + 실물 RGB LED 실시간 발광 → 목표 색 맞추기.
-//   1막 색 깨우기(정밀 매칭) · 2막 흐르는 빛(추적) · 3막 대마법 램프(색 주문 시퀀스) → 🪔 램프 스타.
+// lampGame.js — 빛 마법 램프 (조도센서 + RGB LED 응용)
+// 조도센서로 목표 색상 맞추기. 1막(맞추기) → 2막(따라가기) → 3막(시퀀스). B등급(80%) 이상 통과.
 import { sfx } from '../app/sfx.js';
+import { roomCleared } from '../content/curriculum.js';
 import { bgm } from '../app/bgm.js';
 import { progress } from '../app/progress.js';
 import { celebrateRoom } from './celebrate.js';
 import { board } from '../app/board.js';
+import { DEV_TOOLS } from '../app/flags.js';
+import { icon } from '../app/icons.js';
+import { results } from '../app/results.js';
+import { gradeOf as utilGrade, ready, clamp, lerp } from '../engine/utils.js';
 
 const ADC = 0, NEO = 6, HUE_MAX = 320, PASS = 0.8;   // 조도센서 A0(입력) · 네오픽셀 D6(출력)
 const ACTS = [
@@ -23,10 +27,7 @@ const ACTS = [
 const eddieImg = new Image(); eddieImg.onerror = () => { if (!eddieImg._p) { eddieImg._p = 1; eddieImg.src = '/brand/eddie/eddie-hero.webp'; } }; eddieImg.src = '/brand/eddie-mage.webp';
 const bgImg = new Image(); bgImg.onerror = () => { if (!bgImg._p) { bgImg._p = 1; bgImg.src = '/brand/stage-lamp-bg.png'; } }; bgImg.src = '/brand/stage-lamp-bg.webp';
 const monImg = new Image(); monImg.src = '/brand/monster-dark.webp';   // 몬스터 1장(보스는 같은 이미지를 크게)
-const ready = (im) => im.complete && im.naturalWidth > 0;
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const lerp = (a, b, t) => a + (b - a) * t;
-const gradeOf = (a) => a >= 0.95 ? 'S' : a >= 0.85 ? 'A' : a >= 0.8 ? 'B' : a >= 0.6 ? 'C' : 'D';
+const gradeOf = (a) => utilGrade(a, 'strict');
 function hueDiff(a, b) { const d = Math.abs(((a - b) % 360 + 360) % 360); return Math.min(d, 360 - d); }
 function hsv2rgb(h, s, v) {
   h = (((h % 360) + 360) % 360) / 60; const c = v * s, x = c * (1 - Math.abs(h % 2 - 1)), m = v - c; let r, g, b;
@@ -40,7 +41,7 @@ export function showLampGame(root, { onExit } = {}) {
     <div class="led scene-fade lampgame">
       <div class="pot-stage-bg" id="lp-bg" style="position:absolute;inset:0;z-index:0;background:#150d28 center/cover no-repeat;"></div>
       <div class="brand-badge"><span class="brand-dot"></span>Eduino&nbsp;<b>AI</b></div>
-      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? '🔇' : '🔊'}</button>
+      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button>
       <button class="bx-exit" id="lp-exit">✕ 전시관으로</button>
       <button class="bx-exit led-skip" id="lp-skip" hidden>⏭ 건너뛰기(테스트)</button>
       <div class="world-host" id="lp-host"></div>
@@ -82,7 +83,7 @@ export function showLampGame(root, { onExit } = {}) {
   const host = root.querySelector('#lp-host');
   const canvas = document.createElement('canvas'); canvas.className = 'world-canvas'; host.appendChild(canvas);
   const ctx = canvas.getContext('2d');
-  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { snd.textContent = sfx.toggle() ? '🔇' : '🔊'; };
+  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { snd.innerHTML = sfx.toggle() ? icon('volume-off', 18) : icon('speaker', 18); };
   root.querySelector('#lp-exit').onclick = () => { cleanup(); onExit?.(); };
   const elHit = root.querySelector('#lp-hit'), elTot = root.querySelector('#lp-tot'), elCombo = root.querySelector('#lp-combo'), elScore = root.querySelector('#lp-score'), elAct = root.querySelector('#lp-act'), elHlbl = root.querySelector('#lp-hlbl');
   const hud = root.querySelector('#lp-hud'), fader = root.querySelector('#lp-fader'), faderLbl = root.querySelector('#lp-faderlbl'), faderHint = root.querySelector('#lp-faderhint'), range = root.querySelector('#pt-range'), skipBtn = root.querySelector('#lp-skip');
@@ -123,12 +124,11 @@ export function showLampGame(root, { onExit } = {}) {
   function stopNeo() { if (rgbTimer) { clearInterval(rgbTimer); rgbTimer = null; } if (board.connected) { board.neoFill(NEO, 0, 0, 0).catch(() => {}); } lastSent = ''; }
   root.querySelector('#lp-connect').onclick = async () => { const b = root.querySelector('#lp-connect'); try { await board.connect(); b.textContent = board.fwOutdated ? `⚠ 펌웨어 v${board.version}→업데이트 필요` : '🔌 연결됨 ✓'; startSense(); startNeo(); } catch (e) { b.textContent = board.classify(e).note.slice(0, 16) + '…'; } };
   board.connectAuto().then(() => { startSense(); startNeo(); }).catch(() => {});
-  root.querySelector('#lp-start').onclick = () => { root.querySelector('#lp-prep').classList.add('hide'); skipBtn.hidden = false; startFlow(); };
+  root.querySelector('#lp-start').onclick = () => { root.querySelector('#lp-prep').classList.add('hide'); skipBtn.hidden = !DEV_TOOLS; startFlow(); };
   // 결선 회로도 이미지(있으면 표시)
   const wireProbe = new Image(); wireProbe.onload = () => { const el = root.querySelector('#lp-wire'); if (el) { el.src = wireProbe.src; el.hidden = false; } }; wireProbe.src = '/brand/wiring-lamp.webp';
 
   // ── 플로우 ──
-  const cleared = { wake: false, river: false, grand: false };
   let ai = 0, act = ACTS[0], parts = [], pops = [], curRGB = [0, 0, 0], curHue = 0, fx = 0, matching = false, motes = [], flash = 0, hintT = 0, hintTarget = null;
   let m = null, tk = null, sp = null;
   const state = { phase: 'prep', countT: 0, score: 0, combo: 0, maxCombo: 0, hits: 0, total: 0, ended: false };
@@ -159,18 +159,31 @@ export function showLampGame(root, { onExit } = {}) {
   }
   function showResult(grade, pass) {
     bgm.setDuck(1); fader.hidden = true; const acc = Math.round((state.hits / state.total) * 100); const last = ai === ACTS.length - 1;
+    results.record('lamp', {
+      accuracy: acc, grade, passed: pass, summary: act.name,
+      metrics: [
+        { label: '적중', value: `${state.hits}/${state.total}` },
+        { label: '정확도', value: `${acc}%` },
+        { label: '최고 콤보', value: `${state.maxCombo}` },
+      ],
+    });
     const el = panel(`<div class="lp-grade lp-${grade}">${grade}<span>등급</span></div><h2>${pass ? '주문 성공! 🎉' : '조금만 더!'}</h2>
       <p class="prep-sub">${act.name} · ${state.hits}/${state.total} (${acc}%) · 최고 콤보 ${state.maxCombo}</p>
-      <p class="lp-cond">${pass ? (last ? '천국에 무지개가 돌아왔어요! 메달을 받자 🏅' : '다음 막으로 ▶') : '80% 이상 성공해야 통과! 다시 도전!'}</p>
-      <button class="cel-go" id="lp-next">${pass ? (last ? '메달 받기 🏅' : '다음 막 ▶') : '다시 도전 ▶'}</button>`);
-    el.querySelector('#lp-next').onclick = () => { el.remove(); if (pass) { cleared[act.key] = true; ai++; nextAct(); } else beginPlay(); };
+      <p class="lp-cond">${pass ? (last ? '천국에 무지개가 돌아왔어요! 메달을 받자 🏅' : '다음 막으로 ▶') : '80% 이상 성공하면 메달! 다시 도전해도 되고, 다음으로 넘어가도 돼요.'}</p>
+      <div class="lp-actions">
+        <button class="cel-go ghost" id="lp-retry">다시 도전 ↻</button>
+        <button class="cel-go" id="lp-next">${last ? (pass ? '메달 받기 🏅' : '마치기 ▶') : '다음 막 ▶'}</button>
+      </div>`);
+    el.querySelector('#lp-retry').onclick = () => { el.remove(); beginPlay(); };
+    el.querySelector('#lp-next').onclick = () => { el.remove(); ai++; nextAct(); };
   }
   function finishAll() {
     cleanup();
-    if (cleared.wake && cleared.river && cleared.grand) { progress.mark('lamp'); celebrateRoom({ title: '빛의 마법사! 🪔', message: '손그림자로 빛을 다뤄 잃어버린 색을 모두 되살렸어요 — 🪔 램프 스타 획득! 조도센서(입력)와 RGB(출력)를 자유자재로 다뤘어요.', exitLabel: '전시관으로 ▶', onExit: () => onExit?.() }); }
+    if (roomCleared('lamp')) { progress.mark('lamp'); celebrateRoom({ title: '빛의 마법사! 🪔', message: '손그림자로 빛을 다뤄 잃어버린 색을 모두 되살렸어요 — 🪔 램프 스타 획득! 조도센서(입력)와 RGB(출력)를 자유자재로 다뤘어요.', exitLabel: '전시관으로 ▶', onExit: () => onExit?.() }); }
     else onExit?.();
   }
-  skipBtn.onclick = () => { document.querySelectorAll('.led-panel').forEach((e) => e.remove()); cleared[act.key] = true; state.ended = true; state.phase = 'result'; bgm.setDuck(1); ai++; nextAct(); };
+  skipBtn.onclick = () => { document.querySelectorAll('.led-panel').forEach((e) => e.remove()); results.record('lamp', { accuracy: 85, grade: 'A', passed: true, summary: act.name, metrics: [] });   // 스킵도 통과 기록을 남긴다 — 메달 조건이 results 기준이라 이게 없으면 스킵으로 메달이 안 나온다
+    state.ended = true; state.phase = 'result'; bgm.setDuck(1); ai++; nextAct(); };
 
   function sync() { elHit.textContent = state.hits; elCombo.textContent = state.combo; elScore.textContent = state.score; }
   function burst(x, y, rgb, n = 16) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = 1.5 + Math.random() * 4.5; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, life: 40, rgb }); } }

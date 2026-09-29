@@ -1,13 +1,15 @@
-// buttonGame.js — 두더지 잡기 (버튼/택트스위치 방 · 디지털 입력)
-// 구멍 2개에서 두더지가 불쑥! 해당 버튼(또는 화면 클릭·1·2 키)을 눌러 잡으면 점수.
-// 입력: 실물 택트스위치 2개(D4·D5, 디지털 / 쉴드 포트 3·4) — 연결 직후 쉬는 값을 기준으로 '눌림(변화)' 감지.
-//        보드가 없으면 화면 클릭/터치·키보드(1·2)로 플레이.
-// 1차 느긋한 들판 · 2차 빠른 들판. 두 판 통과 → 🔨 두더지 메달.
+// buttonGame.js — 두더지 잡기 (버튼 입력)
+// 1/2 키 또는 택트스위치 2개(D4·D5)로 두더지 사냥. 통과 시 🔨 두더지 메달.
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
 import { progress } from '../app/progress.js';
 import { celebrateRoom } from './celebrate.js';
 import { board } from '../app/board.js';
+import { DEV_TOOLS } from '../app/flags.js';
+import { icon } from '../app/icons.js';
+import { results } from '../app/results.js';
+import { roomCleared } from '../content/curriculum.js';
+import { gradeOf, ready, rand, clamp } from '../engine/utils.js';
 
 const PINS = [4, 5];   // 구멍 0·1 ↔ 택트스위치 핀 D4·D5 (쉴드 포트 3·4)
 const HOLES = PINS.length;
@@ -19,18 +21,14 @@ const bgImg = new Image(); bgImg.onerror = () => { if (!bgImg._p) { bgImg._p = 1
 // 두더지 이미지(있으면 사용, 없으면 캔버스 moleHead 폴백) — 콘텐츠 기준 정렬값
 const moleImg = new Image(); moleImg.src = '/brand/mole.webp';
 const moleGoldImg = new Image(); moleGoldImg.src = '/brand/mole-gold.webp';
-const MOLE = { cx: 0.5, cBottom: 0.927, cwFrac: 0.962, ar: 520 / 420 };  // 이미지 내 콘텐츠 중심/바닥/폭비/종횡비
-const ready = (im) => im.complete && im.naturalWidth > 0;
-const gradeOf = (a) => a >= 0.95 ? 'S' : a >= 0.85 ? 'A' : a >= 0.7 ? 'B' : a >= 0.5 ? 'C' : 'D';
-const rand = (a, b) => a + Math.random() * (b - a);
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const MOLE = { cx: 0.5, cBottom: 0.927, cwFrac: 0.962, ar: 520 / 420 };
 
 export function showButtonGame(root, { onExit, onComplete } = {}) {
   root.innerHTML = `
     <div class="led scene-fade joygame buttongame">
       <div class="joy-stage-bg" id="bt-bg"></div>
       <div class="brand-badge"><span class="brand-dot"></span>Eduino&nbsp;<b>AI</b></div>
-      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? '🔇' : '🔊'}</button>
+      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button>
       <button class="bx-exit" id="bt-exit">✕ 전시관으로</button>
       <button class="bx-exit led-skip" id="bt-skip" hidden>⏭ 건너뛰기(테스트)</button>
       <div class="world-host" id="bt-host"></div>
@@ -77,7 +75,7 @@ export function showButtonGame(root, { onExit, onComplete } = {}) {
   const host = root.querySelector('#bt-host');
   const canvas = document.createElement('canvas'); canvas.className = 'world-canvas'; host.appendChild(canvas);
   const ctx = canvas.getContext('2d');
-  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { const m = sfx.toggle(); snd.textContent = m ? '🔇' : '🔊'; };
+  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { const m = sfx.toggle(); snd.innerHTML = m ? icon('volume-off', 18) : icon('speaker', 18); };
   root.querySelector('#bt-exit').onclick = () => { cleanup(); onExit?.(); };
   const elScore = root.querySelector('#bt-score'), elTarget = root.querySelector('#bt-target'), elTime = root.querySelector('#bt-time'), elStage = root.querySelector('#bt-stage'), elCombo = root.querySelector('#bt-combo');
   const hud = root.querySelector('#bt-hud'), skipBtn = root.querySelector('#bt-skip');
@@ -132,9 +130,9 @@ export function showButtonGame(root, { onExit, onComplete } = {}) {
   function stopHw() { if (hwTimer) { clearInterval(hwTimer); hwTimer = null; } for (let i = 0; i < HOLES; i++) { rings[i].length = 0; rest[i] = null; pressed[i] = false; } }
 
   const pstat = root.querySelector('#bt-pstat');
-  root.querySelector('#bt-connect').onclick = async () => { const b = root.querySelector('#bt-connect'); try { await board.connect(); b.textContent = '🔌 연결됨 ✓'; startHw(); pstat.innerHTML = '버튼을 한 번씩 눌러 확인해봐! 연결 직후 <b>쉬는 값</b>을 기준으로 눌림을 알아채요 🔨'; } catch (e) { b.textContent = board.classify(e).note.slice(0, 16) + '…'; } };
+  root.querySelector('#bt-connect').onclick = async () => { const b = root.querySelector('#bt-connect'); try { await board.connect(); b.innerHTML = icon('usb', 17) + ' 연결됨 ✓'; startHw(); pstat.innerHTML = '버튼을 한 번씩 눌러 확인해봐! 연결 직후 <b>쉬는 값</b>을 기준으로 눌림을 알아채요 🔨'; } catch (e) { b.textContent = board.classify(e).note.slice(0, 16) + '…'; } };
   board.connectAuto().then(() => startHw()).catch(() => {});
-  root.querySelector('#bt-start').onclick = () => { root.querySelector('#bt-prep').classList.add('hide'); skipBtn.hidden = false; startFlow(); };
+  root.querySelector('#bt-start').onclick = () => { root.querySelector('#bt-prep').classList.add('hide'); skipBtn.hidden = !DEV_TOOLS; startFlow(); };
 
   // ── 플로우 ──
   const cleared = {};
@@ -164,21 +162,41 @@ export function showButtonGame(root, { onExit, onComplete } = {}) {
   }
   function showResult(grade, pass) {
     bgm.setDuck(1); const last = gi === GAMES.length - 1;
+    // 이 게임은 화면에 정확도를 안 띄우지만, 등급을 뽑은 식과 같은 값을 기록해야 둘이 어긋나지 않는다.
+    const acc = Math.round(clamp(state.score / (game.target * 1.5), 0, 1) * 100);
+    results.record('button', {
+      accuracy: acc, grade, passed: pass, summary: game.name,
+      metrics: [
+        { label: '잡은 두더지', value: `${state.score}마리` },
+        { label: '목표', value: `${state.target}마리` },
+        { label: '최고 콤보', value: `${state.bestCombo}` },
+      ],
+    });
+    const nextLabel = onComplete ? '청기백기 하러 가기 ▶' : (last ? (pass ? '메달 받기 🏅' : '마치기 ▶') : '다음 ▶');
     const el = panel(`<div class="lp-grade lp-${grade}">${grade}<span>등급</span></div><h2>${pass ? '두더지 소탕! 🎉' : '시간 초과! ⏱'}</h2>
       <p class="prep-sub">${game.name} · 🔨 ${state.score}마리 (목표 ${state.target}) · 최고 콤보 ${state.bestCombo}</p>
-      <p class="lp-cond">${pass ? (onComplete ? '잘했어! 이어서 청기백기 🚩' : '두더지 소탕 완료! 메달을 받자 🏅') : `목표 ${state.target}마리에 조금 모자라요 — 다시!`}</p>
-      <button class="cel-go" id="lp-next">${pass ? (onComplete ? '청기백기 하러 가기 ▶' : '메달 받기 🏅') : '다시 도전 ▶'}</button>`);
-    el.querySelector('#lp-next').onclick = () => { el.remove(); if (pass) { cleared[game.key] = true; gi++; nextGame(); } else beginPlay(); };
+      <p class="lp-cond">${pass ? (onComplete ? '잘했어! 이어서 청기백기 🚩' : '두더지 소탕 완료! 메달을 받자 🏅') : `목표 ${state.target}마리를 넘기면 메달! 다시 도전해도 되고, 다음으로 넘어가도 돼요.`}</p>
+      <div class="lp-actions">
+        <button class="cel-go ghost" id="lp-retry">다시 도전 ↻</button>
+        <button class="cel-go" id="lp-next">${nextLabel}</button>
+      </div>`);
+    el.querySelector('#lp-retry').onclick = () => { el.remove(); beginPlay(); };
+    el.querySelector('#lp-next').onclick = () => { el.remove(); if (pass) cleared[game.key] = true; gi++; nextGame(); };
   }
   function finishAll() {
     cleanup();
-    if (GAMES.every((g) => cleared[g.key])) {
-      if (onComplete) { onComplete(); return; }   // 순차 플레이: 다음(청기백기)로
+    // 순차 플레이(두더지→청기백기): 통과 못 했어도 다음 게임으로 넘긴다.
+    // 방 메달은 두 게임 결과를 다 본 호출측(sensorRoom)이 누적 기록으로 판정한다.
+    if (onComplete) { onComplete(); return; }
+    // 단독 진입 경로 — 지금 앱에서는 'button' 방이 늘 sensorRoom 을 거치므로 닿지 않는다.
+    // 닿더라도 두더지 한 판만으로 메달이 나가지 않게, 여기서도 방 전체를 누적으로 본다.
+    if (roomCleared('button')) {
       progress.mark('button'); celebrateRoom({ title: '두더지 마스터! 🔨', message: '버튼(디지털 입력)으로 두더지를 재빨리 잡았어요 — 🔨 두더지 메달 획득!', exitLabel: '전시관으로 ▶', onExit: () => onExit?.() });
     }
     else onExit?.();
   }
-  skipBtn.onclick = () => { document.querySelectorAll('.led-panel').forEach((e) => e.remove()); cleared[game.key] = true; state.ended = true; state.phase = 'result'; bgm.setDuck(1); gi++; nextGame(); };
+  skipBtn.onclick = () => { document.querySelectorAll('.led-panel').forEach((e) => e.remove()); results.record('button', { accuracy: 85, grade: 'A', passed: true, summary: game.name, metrics: [] });   // 스킵도 통과 기록을 남긴다 — 메달 조건이 results 기준이라 이게 없으면 스킵으로 메달이 안 나온다
+    cleared[game.key] = true; state.ended = true; state.phase = 'result'; bgm.setDuck(1); gi++; nextGame(); };
   function sync() { elScore.textContent = state.score; elCombo.textContent = `콤보 ${state.combo}`; }
   function burst(x, y, c, n = 12) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = 1 + Math.random() * 4; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1.5, life: 32, color: c }); } }
   function endPlay(win) { if (state.ended) return; state.ended = true; state.phase = 'result'; showResult(win ? gradeOf(clamp(state.score / (game.target * 1.5), 0, 1)) : 'D', win); }
