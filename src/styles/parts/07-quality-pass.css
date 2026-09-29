@@ -1,0 +1,68 @@
+/* 07-quality-pass.css — 품질 패스 (2026-09)
+ *
+ * main.css 맨 끝에서만 불러온다. 이 줄만 빼면 전부 원복된다(06-legibility 와 같은 방식).
+ * 레이아웃·색 체계·아트는 그대로 두고 크기 · 대비 · 간격 · 버튼 위계만 다듬는다.
+ * 기준: 교실 프로젝터(3~4m)에서 보조 문구도 읽히도록 하한 12.5~13px, 흰 카드 위 회색 글자 대비 4.5:1 이상.
+ *
+ * 1. 게임 준비 카드 — 7개 게임이 쓰던 좁은 회색 결선표를 카드 폭 결선판으로 통일
+ * 2. 단계 소개·결과 패널 — 제목·본문 한 단계 키움
+ * 3. 게임 속 보조 문구 — 페이더 힌트 · 가리기 패드 힌트 · 복도 조작 안내
+ * 4. 보드 연결 화면 — '지금 눌러야 할 버튼'을 크게, 아직 못 누르는 버튼은 중립색으로
+ * 5. 온보딩 · 스테이지 카드의 작은 글자
+ */
+
+/* ── 1. 게임 준비 카드 ─────────────────────────────────────────────────────── */
+.led-prep .prep-card h2 { font-size: 26px; letter-spacing: -.02em; margin-bottom: 10px; }
+.led-prep .prep-sub { line-height: 1.65; margin-bottom: 12px; }
+.prep-card .prep-sub b { color: #1c2333; }
+
+/* 결선판: 헤더(🔌 결선 · 부품 수) + 표 + 메모를 한 판에. 인라인 max-width:360px 를 풀어 카드 폭을 쓴다. */
+.prep-wire {
+  max-width: none; margin: 16px 0 4px; padding: 12px 14px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px;
+  border: 1px solid #e6e9f2; border-radius: 14px; background: #fafbfd; text-align: left;
+}
+.prep-wire > b { display: inline; margin: 0; font-size: 14px; color: #c2410c; }            /* 노랑(#ffd24a)은 흰 카드 위 대비 1.6:1 */
+.prep-wire > span:not(.prep-wire-note) { font-size: 13px; font-weight: 600; color: #5b6275; opacity: 1 !important; }   /* 인라인 opacity:.7 */
+.prep-wire .prep-wire-t {
+  flex: 1 0 100%; margin-top: 8px; font-size: 14px; border-radius: 10px; overflow: hidden;
+  background: #fff; box-shadow: inset 0 0 0 1px #e6e9f2;
+}
+.prep-wire .prep-wire-t td { padding: 10px 14px; text-align: left; border: 0; border-bottom: 1px solid #eef0f5; font-weight: 600; color: #2a3040; }
+.prep-wire .prep-wire-t tr:last-child td { border-bottom: 0; }
+.prep-wire .prep-wire-t td:first-child { width: 46%; background: transparent; font-weight: 700; }
+.prep-wire .prep-wire-t td b { color: #e11d48; font-weight: 800; }                          /* 포트 이름(A0 · D5 …)이 한눈에 */
+.prep-wire-note { flex: 1 0 100%; margin-top: 8px; font-size: 13px; line-height: 1.5; color: #5b6275; }
+
+.prep-status { font-size: 14px; }
+.prep-skip { font-size: 14px; color: #5b6275; }
+.prep-btn { font-size: 15px; }
+
+/* ── 2. 단계 소개 · 결과 패널 ──────────────────────────────────────────────── */
+.led-pcard h2 { font-size: 28px; letter-spacing: -.02em; }
+.led-pcard .prep-sub { font-size: 16px; line-height: 1.6; }
+.lp-no { font-size: 13px; letter-spacing: 1.5px; }
+.lp-cond { font-size: 15px; }
+
+/* ── 3. 게임 속 보조 문구 ─────────────────────────────────────────────────── */
+.pot-fader .pot-fader-hint { font-size: 12.5px; color: #e4ddff; }
+.cds-pad .cds-pad-hint { font-size: 12.5px; color: #d7deeb; }
+.hud-controls { font-size: 13.5px; color: #d7deeb; background: rgba(5,8,15,.72); padding: 7px 16px; }
+
+/* ── 4. 보드 연결 화면 — 버튼 위계 ─────────────────────────────────────────── */
+.su-action .btn { padding: 12px 22px; font-size: 15px; border-radius: 12px; }
+.su-action .btn.primary { font-weight: 800; box-shadow: 0 10px 26px rgba(111,183,255,.28); }
+.btn.su-go:disabled {                                                                          /* 탁한 반투명 주황 → 중립 회색 */
+  opacity: 1; background: rgba(255,255,255,.07); color: rgba(234,240,255,.42);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.su-step-label small { font-size: 12px; color: #aab6cc; }
+.su-skip { font-size: 13.5px; }
+
+/* ── 5. 온보딩 · 스테이지 카드 ────────────────────────────────────────────── */
+.ms-foot { font-size: 13px; color: #b3abcc; }
+.cs-tag { font-size: 12.5px; }
+.cs-status { font-size: 12.5px; }
+
+/* ── 6. 태블릿 센서 방 복도 — 오른쪽 아래 행동(✔) 버튼이 사운드 버튼을 덮던 문제 ─────── */
+html[data-mode="tablet"] body:has(.td-act) .snd-toggle { bottom: 136px; }   /* ✔ 버튼(88px, 바닥 34px) 위 */

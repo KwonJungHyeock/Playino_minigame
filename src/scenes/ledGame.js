@@ -1,14 +1,15 @@
-// ledGame.js — 반짝반짝 라이트쇼 (LED · 디지털 출력)
-// [준비] 결선 안내 → 보드 연결/진단 → 통과 시 [2단계 게임]
-//   1단계 타이밍 쇼: 빛 마커가 판정선에 닿을 때 Space.
-//   2단계 라이트 연주: 노트 색에 맞는 LED(초록1·노랑2·빨강3)를 눌러 연주.
-// 각 단계 A등급(정확도 85%↑) 이상이어야 통과. 두 단계 모두 통과해야 💡 조명 메달.
-// LED 3개 ↔ D2(초록)/D3(노랑)/D4(빨강), 보드 연결 시 실제 점등.
+// ledGame.js — 반짝반짝 라이트쇼 (LED 출력)
+// 결선(D2초록/D3노랑/D4빨강) → 1단계(타이밍) → 2단계(연주). A등급(85%) 이상 통과.
 import { sfx } from '../app/sfx.js';
+import { roomCleared } from '../content/curriculum.js';
 import { bgm } from '../app/bgm.js';
 import { progress } from '../app/progress.js';
 import { celebrateRoom } from './celebrate.js';
 import { board } from '../app/board.js';
+import { DEV_TOOLS } from '../app/flags.js';
+import { icon } from '../app/icons.js';
+import { results } from '../app/results.js';
+import { gradeOf, ready } from '../engine/utils.js';
 
 const LEAD = 1450, W_PERFECT = 90, W_GOOD = 170;
 const LEDS = [
@@ -24,7 +25,6 @@ const PASS_ACC = 0.85;   // A등급 이상
 
 const bgImg = new Image(); bgImg.src = '/brand/stage-led-bg.webp';
 const eddieImg = new Image(); eddieImg.src = '/brand/eddie-conductor.webp';
-const ready = (im) => im.complete && im.naturalWidth > 0;
 
 function buildBeats(game) {
   if (game.key === 'timing') {
@@ -55,13 +55,12 @@ const MELODY = [
   G4, G4, F4, F4, E4, E4, D4, G4, G4, F4, F4, E4, E4, D4,
   C4, C4, G4, G4, A4, A4, G4, F4, F4, E4, E4, D4, D4, C4,
 ];
-function gradeOf(acc) { return acc >= 0.95 ? 'S' : acc >= 0.85 ? 'A' : acc >= 0.7 ? 'B' : acc >= 0.5 ? 'C' : 'D'; }
 
 export function showLedGame(root, { onExit } = {}) {
   root.innerHTML = `
     <div class="led scene-fade">
       <div class="brand-badge"><span class="brand-dot"></span>Eduino&nbsp;<b>AI</b></div>
-      <button class="snd-toggle" id="snd-toggle" title="소리 켜기/끄기">${sfx.muted ? '🔇' : '🔊'}</button>
+      <button class="snd-toggle" id="snd-toggle" title="소리 켜기/끄기">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button>
       <button class="bx-exit" id="led-exit">✕ 나가기</button>
       <button class="bx-exit led-skip" id="led-skip" hidden>⏭ 건너뛰기(테스트)</button>
       <div class="world-host" id="led-host"></div>
@@ -104,7 +103,7 @@ export function showLedGame(root, { onExit } = {}) {
   const canvas = document.createElement('canvas'); canvas.className = 'world-canvas'; host.appendChild(canvas);
   const ctx = canvas.getContext('2d');
   const snd = root.querySelector('#snd-toggle');
-  snd.onclick = () => { const m = sfx.toggle(); snd.textContent = m ? '🔇' : '🔊'; };
+  snd.onclick = () => { const m = sfx.toggle(); snd.innerHTML = m ? icon('volume-off', 18) : icon('speaker', 18); };
   root.querySelector('#led-exit').onclick = () => { cleanup(); onExit?.(); };
   const elScore = root.querySelector('#lh-score'), elCombo = root.querySelector('#lh-combo'), elHit = root.querySelector('#lh-hit'), elTot = root.querySelector('#lh-tot'), elStage = root.querySelector('#lh-stage');
 
@@ -127,23 +126,23 @@ export function showLedGame(root, { onExit } = {}) {
     setStatus('연결 중… 포트를 골라주세요 🔌'); sfx.click();
     try { await board.connect(); onConnected(); } catch (e) { setStatus(board.classify(e).note, 'warn'); }
   };
-  function onConnected() { setStatus('보드 연결 완료! ✅ LED 테스트로 결선을 확인하거나 바로 시작하세요', 'ok'); bTest.disabled = false; bStart.disabled = false; bConnect.textContent = '🔌 연결됨 ✓'; }
+  function onConnected() { setStatus('보드 연결 완료! ✅ LED 테스트로 결선을 확인하거나 바로 시작하세요', 'ok'); bTest.disabled = false; bStart.disabled = false; bConnect.innerHTML = icon('usb', 17) + ' 연결됨 ✓'; }
   bTest.onclick = async () => { setStatus('초록·노랑·빨강 순서로 깜빡여 볼게요! 💡'); sfx.ok(); try { for (const l of LEDS) await board.blink(l.pin, 2, 200); } catch (e) { setStatus('테스트 실패 — 결선을 다시 확인해주세요', 'warn'); } };
   bStart.onclick = () => { root.querySelector('#led-prep').classList.add('hide'); startFlow(); };
   root.querySelector('#p-skip').onclick = () => { root.querySelector('#led-prep').classList.add('hide'); startFlow(); };
 
   // ===== 게임 플로우(2단계) =====
-  const cleared = { timing: false, play: false };
   let gi = 0, game = GAMES[0], beats = [], pops = [];
   const state = { phase: 'prep', t0: 0, countT: 0, score: 0, combo: 0, maxCombo: 0, hits: 0, seen: 0, ended: false };
 
   const skipBtn = root.querySelector('#led-skip');
   skipBtn.onclick = () => {                       // 테스트용: 현재 단계 통과 처리하고 다음으로
     document.querySelectorAll('.led-panel').forEach((e) => e.remove());
-    cleared[game.key] = true; state.ended = true; state.phase = 'result';
+    results.record('led', { accuracy: 85, grade: 'A', passed: true, summary: game.name, metrics: [] });   // 스킵도 통과 기록을 남긴다 — 메달 조건이 results 기준이라 이게 없으면 스킵으로 메달이 안 나온다
+    state.ended = true; state.phase = 'result';
     bgm.setDuck(1); gi++; nextGame();
   };
-  function startFlow() { gi = 0; skipBtn.hidden = false; nextGame(); }
+  function startFlow() { gi = 0; skipBtn.hidden = !DEV_TOOLS; nextGame(); }
   function nextGame() {
     if (gi >= GAMES.length) { finishAll(); return; }
     game = GAMES[gi]; showIntro();
@@ -170,20 +169,31 @@ export function showLedGame(root, { onExit } = {}) {
     bgm.setDuck(1);
     const acc = Math.round((state.hits / beats.length) * 100);
     const last = gi === GAMES.length - 1;
+    results.record('led', {
+      accuracy: acc, grade, passed: pass, summary: game.name,
+      metrics: [
+        { label: '적중', value: `${state.hits}/${beats.length}` },
+        { label: '정확도', value: `${acc}%` },
+        { label: '최고 콤보', value: `${state.maxCombo}` },
+      ],
+    });
     const el = panel(`<div class="lp-grade lp-${grade}">${grade}<span>등급</span></div>
       <h2>${pass ? '통과! 🎉' : '조금만 더!'}</h2>
       <p class="prep-sub">${game.name} · 적중 ${state.hits}/${beats.length} (정확도 ${acc}%) · 최고 콤보 ${state.maxCombo}</p>
-      <p class="lp-cond">${pass ? (last ? '두 단계 완료! 메달을 받자 🏅' : '다음 단계로 가자 ▶') : 'A등급(85%↑) 이상이어야 통과예요. 다시 도전!'}</p>
-      <button class="cel-go" id="lp-next">${pass ? (last ? '메달 받기 🏅' : '다음 단계 ▶') : '다시 도전 ▶'}</button>`);
+      <p class="lp-cond">${pass ? (last ? '두 단계 완료! 메달을 받자 🏅' : '다음 단계로 가자 ▶') : 'A등급(85%↑)이면 메달! 다시 도전해도 되고, 다음으로 넘어가도 돼요.'}</p>
+      <div class="lp-actions">
+        <button class="cel-go ghost" id="lp-retry">다시 도전 ↻</button>
+        <button class="cel-go" id="lp-next">${last ? (pass ? '메달 받기 🏅' : '마치기 ▶') : '다음 단계 ▶'}</button>
+      </div>`);
+    el.querySelector('#lp-retry').onclick = () => { el.remove(); beginPlay(); };
     el.querySelector('#lp-next').onclick = () => {
       el.remove();
-      if (pass) { cleared[game.key] = true; gi++; nextGame(); }
-      else beginPlay();
+      gi++; nextGame();                      // 진행은 통과 여부와 무관 — 막으면 포기한다
     };
   }
   function finishAll() {
     cleanup();
-    if (cleared.timing && cleared.play) {
+    if (roomCleared('led')) {
       progress.mark('led');
       celebrateRoom({ title: '두 단계 클리어! 🎉', message: '타이밍 쇼 + 라이트 연주 모두 A등급↑ — 💡 조명 메달 획득! 무대가 환하게 빛났어요.', exitLabel: '무대로 ▶', onExit: () => onExit?.() });
     } else onExit?.();

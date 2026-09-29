@@ -1,13 +1,16 @@
-// potGame.js — 볼륨 다이얼쇼 (가변저항 · 아날로그 입력 게임 2종)
-// 공통 조작: 화면 슬라이더 드래그 / ← → (또는 ↑ ↓) 로 볼륨 다이얼 돌리기. 실물 가변저항(A0) 돌리면 그대로 반영.
-//   1단계 'match' — 목표 볼륨 존에 바늘을 맞추고 잠깐 유지(정밀 조준)
-//   2단계 'track' — 위아래로 움직이는 목표를 다이얼로 계속 따라가기(추적)
-// 각 단계 80%↑ 통과 + 둘 다 통과 → 🎚️ 다이얼 메달.
+// potGame.js — 볼륨 다이얼쇼 (가변저항 게임)
+// 1단계(맞추기) → 2단계(따라가기). B등급(80%) 이상 통과.
+// 드래그/방향키 또는 실물 가변저항(A0) 조작.
 import { sfx } from '../app/sfx.js';
+import { roomCleared } from '../content/curriculum.js';
 import { bgm } from '../app/bgm.js';
 import { progress } from '../app/progress.js';
 import { celebrateRoom } from './celebrate.js';
 import { board } from '../app/board.js';
+import { DEV_TOOLS } from '../app/flags.js';
+import { icon } from '../app/icons.js';
+import { results } from '../app/results.js';
+import { gradeOf as utilGrade, ready, clamp, lerp } from '../engine/utils.js';
 
 const ADC = 0, PASS_ACC = 0.8;
 const GAMES = [
@@ -17,17 +20,14 @@ const GAMES = [
 
 const bgImg = new Image(); bgImg.onerror = () => { if (!bgImg._p) { bgImg._p = 1; bgImg.src = '/brand/stage-pot-bg.png'; } }; bgImg.src = '/brand/stage-pot-bg.webp';
 const djImg = new Image(); djImg.src = '/brand/eddie/eddie-hero.webp';   // 메인 캐릭터(에디)로 통일
-const ready = (im) => im.complete && im.naturalWidth > 0;
-const gradeOf = (a) => a >= 0.95 ? 'S' : a >= 0.85 ? 'A' : a >= 0.8 ? 'B' : a >= 0.6 ? 'C' : 'D';
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const lerp = (a, b, t) => a + (b - a) * t;
+const gradeOf = (a) => utilGrade(a, 'strict');
 
 export function showPotGame(root, { onExit, onComplete } = {}) {
   root.innerHTML = `
     <div class="led scene-fade potgame">
       <div class="pot-stage-bg" id="pt-bg" style="position:absolute;inset:0;z-index:0;background:#211a3a center/cover no-repeat;"></div>
       <div class="brand-badge"><span class="brand-dot"></span>Eduino&nbsp;<b>AI</b></div>
-      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? '🔇' : '🔊'}</button>
+      <button class="snd-toggle" id="snd-toggle">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button>
       <button class="bx-exit" id="pt-exit">✕ 전시관으로</button>
       <button class="bx-exit led-skip" id="pt-skip" hidden>⏭ 건너뛰기(테스트)</button>
       <div class="world-host" id="pt-host"></div>
@@ -66,7 +66,7 @@ export function showPotGame(root, { onExit, onComplete } = {}) {
   const host = root.querySelector('#pt-host');
   const canvas = document.createElement('canvas'); canvas.className = 'world-canvas'; host.appendChild(canvas);
   const ctx = canvas.getContext('2d');
-  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { const m = sfx.toggle(); snd.textContent = m ? '🔇' : '🔊'; };
+  const snd = root.querySelector('#snd-toggle'); snd.onclick = () => { const m = sfx.toggle(); snd.innerHTML = m ? icon('volume-off', 18) : icon('speaker', 18); };
   root.querySelector('#pt-exit').onclick = () => { cleanup(); onExit?.(); };
   const elHit = root.querySelector('#pt-hit'), elTot = root.querySelector('#pt-tot'), elCombo = root.querySelector('#pt-combo'), elScore = root.querySelector('#pt-score'), elStage = root.querySelector('#pt-stage'), elHlbl = root.querySelector('#pt-hlbl');
   const hud = root.querySelector('#pt-hud'), fader = root.querySelector('#pt-fader'), faderLbl = root.querySelector('#pt-faderlbl'), faderHint = root.querySelector('#pt-faderhint'), range = root.querySelector('#pt-range'), skipBtn = root.querySelector('#pt-skip');
@@ -99,12 +99,11 @@ export function showPotGame(root, { onExit, onComplete } = {}) {
     }, 90);
   }
   function stopSense() { if (senseTimer) { clearInterval(senseTimer); senseTimer = null; } }
-  root.querySelector('#pt-connect').onclick = async () => { const b = root.querySelector('#pt-connect'); try { await board.connect(); b.textContent = '🔌 연결됨 ✓'; startSense(); } catch (e) { b.textContent = board.classify(e).note.slice(0, 16) + '…'; } };
+  root.querySelector('#pt-connect').onclick = async () => { const b = root.querySelector('#pt-connect'); try { await board.connect(); b.innerHTML = icon('usb', 17) + ' 연결됨 ✓'; startSense(); } catch (e) { b.textContent = board.classify(e).note.slice(0, 16) + '…'; } };
   board.connectAuto().then(() => startSense()).catch(() => {});
-  root.querySelector('#pt-start').onclick = () => { root.querySelector('#pt-prep').classList.add('hide'); skipBtn.hidden = false; startFlow(); };
+  root.querySelector('#pt-start').onclick = () => { root.querySelector('#pt-prep').classList.add('hide'); skipBtn.hidden = !DEV_TOOLS; startFlow(); };
 
   // ── 플로우 ──
-  const cleared = { easy: false, hard: false };
   let gi = 0, game = GAMES[0], parts = [], pops = [], heroFx = 0;
   let m = null, tk = null;   // match / track 상태
   const state = { phase: 'prep', countT: 0, score: 0, combo: 0, maxCombo: 0, hits: 0, total: 0, ended: false };
@@ -142,20 +141,33 @@ export function showPotGame(root, { onExit, onComplete } = {}) {
   }
   function showResult(grade, pass) {
     bgm.setDuck(1); fader.hidden = true; const acc = Math.round((state.hits / state.total) * 100); const last = gi === GAMES.length - 1;
+    results.record('pot', {
+      accuracy: acc, grade, passed: pass, summary: game.name,
+      metrics: [
+        { label: '적중', value: `${state.hits}/${state.total}` },
+        { label: '정확도', value: `${acc}%` },
+        { label: '최고 콤보', value: `${state.maxCombo}` },
+      ],
+    });
     const el = panel(`<div class="lp-grade lp-${grade}">${grade}<span>등급</span></div><h2>${pass ? '통과! 🎉' : '조금만 더!'}</h2>
       <p class="prep-sub">${game.name} · ${state.hits}/${state.total} (${acc}%) · 최고 콤보 ${state.maxCombo}</p>
-      <p class="lp-cond">${pass ? (last ? '두 미션 완성! 메달을 받자 🏅' : '다음 미션으로 ▶') : '80% 이상 적중해야 통과! 다시 도전!'}</p>
-      <button class="cel-go" id="lp-next">${pass ? (last ? '메달 받기 🏅' : '다음 미션 ▶') : '다시 도전 ▶'}</button>`);
-    el.querySelector('#lp-next').onclick = () => { el.remove(); if (pass) { cleared[game.key] = true; gi++; nextGame(); } else beginPlay(); };
+      <p class="lp-cond">${pass ? (last ? '두 미션 완성! 메달을 받자 🏅' : '다음 미션으로 ▶') : '80% 이상 적중하면 메달! 다시 도전해도 되고, 다음으로 넘어가도 돼요.'}</p>
+      <div class="lp-actions">
+        <button class="cel-go ghost" id="lp-retry">다시 도전 ↻</button>
+        <button class="cel-go" id="lp-next">${last ? (pass ? '메달 받기 🏅' : '마치기 ▶') : '다음 미션 ▶'}</button>
+      </div>`);
+    el.querySelector('#lp-retry').onclick = () => { el.remove(); beginPlay(); };
+    el.querySelector('#lp-next').onclick = () => { el.remove(); gi++; nextGame(); };
   }
   function finishAll() {
     cleanup();
-    if (cleared.easy && cleared.hard) {
+    if (roomCleared('pot')) {
       if (onComplete) { onComplete(); return; }
       progress.mark('pot'); celebrateRoom({ title: '볼륨 마스터! 🎚️', message: '목표 볼륨 맞추기와 페이더 쇼까지 — 🎚️ 다이얼 메달 획득! 아날로그 값을 자유자재로 다뤘어요.', exitLabel: '전시관으로 ▶', onExit: () => onExit?.() });
     } else onExit?.();
   }
-  skipBtn.onclick = () => { document.querySelectorAll('.led-panel').forEach((e) => e.remove()); cleared[game.key] = true; state.ended = true; state.phase = 'result'; bgm.setDuck(1); gi++; nextGame(); };
+  skipBtn.onclick = () => { document.querySelectorAll('.led-panel').forEach((e) => e.remove()); results.record('pot', { accuracy: 85, grade: 'A', passed: true, summary: game.name, metrics: [] });   // 스킵도 통과 기록을 남긴다 — 메달 조건이 results 기준이라 이게 없으면 스킵으로 메달이 안 나온다
+    state.ended = true; state.phase = 'result'; bgm.setDuck(1); gi++; nextGame(); };
 
   function sync() { elHit.textContent = state.hits; elCombo.textContent = state.combo; elScore.textContent = state.score; }
   function burst(x, y, color) { for (let i = 0; i < 14; i++) { const a = Math.random() * 6.283, s = 1.5 + Math.random() * 4; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, life: 36, color }); } }
