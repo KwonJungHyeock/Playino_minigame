@@ -1,4 +1,6 @@
 // sfx.js — 가벼운 효과음(WebAudio, 에셋 불필요). 음소거는 localStorage에 저장.
+// 수업 모드(classMode.js)에선 여러 대가 동시에 울리므로 음량을 줄인다.
+import { SFX_SCALE } from './classMode.js';
 let muted = (typeof localStorage !== 'undefined' && localStorage.getItem('eduino.muted') === '1');
 let ac = null;
 function ctx() {
@@ -7,6 +9,7 @@ function ctx() {
 }
 function blip(freq = 520, ms = 70, type = 'sine', vol = 0.12) {
   if (muted) return; const a = ctx(); if (!a) return;
+  vol *= SFX_SCALE;
   try {
     const o = a.createOscillator(), g = a.createGain();
     o.type = type; o.frequency.value = freq; o.connect(g); g.connect(a.destination);

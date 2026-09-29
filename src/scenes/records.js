@@ -3,6 +3,7 @@
 import { CHAPTERS, ROOMS, overallCleared, overallTotal, overallPercent, allRoomIds } from '../content/curriculum.js';
 import { results, PASS_GRADE } from '../app/results.js';
 import { saveAsPng } from '../app/reportCard.js';
+import { student } from '../app/student.js';
 import { stageList, gradeText, gradeKey, hasMedal, esc } from '../app/achievement.js';
 
 const DASH = '-';
@@ -41,7 +42,7 @@ export function showRecords(host, { onPlay } = {}) {
 function template() {
   return `
     <header class="records-head">
-      <h1 class="records-title">🏆 내 성취도 기록실</h1>
+      <h1 class="records-title">🏆 ${student.label() ? `${esc(student.label())}의` : '내'} 성취도 기록실</h1>
       <div class="records-save">
         <button type="button" class="records-save-btn" id="btn-save-png">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8; margin-top:-2px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
@@ -202,7 +203,7 @@ function wire(root, onPlay) {
   saveBtn?.addEventListener('click', async () => {
     saveBtn.disabled = true;
     try {
-      await saveAsPng();
+      await saveAsPng({ playerName: student.label() });
     } catch (err) {
       toast(err.message || '저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
     } finally {

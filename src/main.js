@@ -1,5 +1,6 @@
 // main.js — Eduino AI : 미니게임천국
 // 플로우: 인트로 → 모드선택 → 메인 → 로그인 → 보드연결 → 허브 → 스테이지 → 미니게임.
+// 보드 연결을 마친 기기는 다음 세션부터 허브(학생 정보 없으면 로그인)에서 바로 시작한다 — boot() 참고.
 import { showPlatformIntro } from './scenes/platformIntro.js';
 import { showModeSelect } from './scenes/modeSelect.js';
 import { showProductMain } from './scenes/productMain.js';
@@ -12,6 +13,8 @@ import { progress } from './app/progress.js';
 import { bgm } from './app/bgm.js';
 import { nav } from './app/nav.js';
 import { DEV_TOOLS } from './app/flags.js';
+import { student, studentChip, askSameStudent } from './app/student.js';
+import { mountFullscreen } from './app/fullscreen.js';
 
 // 게임 씬 동적 import (허브 진입 시 프리패치)
 const GAME_SCENES = {
@@ -64,18 +67,25 @@ function prefetchGames() {
 function scenePlatformIntro() { showPlatformIntro(app(), { onDone: () => nav.push(sceneModeSelect) }); }     // ① 플랫폼 스튜디오 인트로(로고)
 function sceneModeSelect() { showModeSelect(app(), { onDone: () => nav.push(sceneProductMain) }); }   // ①-b 기기 모드 선택
 function sceneProductMain() { showProductMain(app(), { onDone: () => nav.push(sceneLogin) }); }                // ② 상품 메인페이지 → 바로 입장
-function sceneLogin() { showLogin(app(), { onDone: () => nav.push(sceneSetup) }); }                            // (호환 키트 안내 페이지는 전용 신제품 출시로 제외)
-function sceneSetup() { recordsEntry.hide(); showSetup(app(), { onDone: () => { progress.mark('setup'); nav.push(sceneHub, { name: 'hub' }); } }); }   // CH1 클리어
+// 로그인 뒤: 보드 연결을 이미 마친 기기(새 학생으로 바꾼 경우 등)는 연결 화면을 건너뛴다.
+function sceneLogin() {
+  recordsEntry.hide(); studentChip.hide();
+  showLogin(app(), { onDone: () => (progress.isCleared('setup') ? nav.push(sceneHub, { name: 'hub' }) : nav.push(sceneSetup)) });
+}
+// 학생 바꾸기 → 기록을 비웠으니 이름부터 다시 받는다(인트로·모드·상품 소개는 기기 단위라 생략).
+const restartAsNewStudent = () => nav.start(sceneLogin);
+function sceneSetup() { recordsEntry.hide(); studentChip.hide(); showSetup(app(), { onDone: () => { progress.mark('setup'); nav.push(sceneHub, { name: 'hub' }); } }); }   // CH1 클리어
 
 // 기록실 — 지금까지의 등급·세부기록 보관함. 카드의 '다시 도전'은 그 방으로 바로 들어간다.
 function sceneRecords() {
-  recordsEntry.hide();
+  recordsEntry.hide(); studentChip.hide();
   showRecords(app(), { onPlay: (roomId) => pushRoom(roomId) });
 }
 
 function sceneHub() {
   prefetchGames();
   recordsEntry.show({ onOpen: () => nav.push(sceneRecords, { name: 'records' }) });   // 기록실 입구는 허브에서만
+  studentChip.show({ onChange: restartAsNewStudent });                                  // 누구 기록인지 · 학생 바꾸기
   showHubSelect(app(), { onEnter: (chId) => pushChapter(chId), spawnAt: lastChapter });
 }
 
@@ -83,6 +93,7 @@ const pushChapter = (id) => nav.push(() => enterChapter(id), { name: 'chapter', 
 const pushRoom = (id) => nav.push(() => enterRoom(id), { name: 'room', params: { id } });
 
 function enterChapter(chId) {
+  studentChip.hide();
   recordsEntry.show({ onOpen: () => nav.push(sceneRecords, { name: 'records' }) });
   lastChapter = chId;
   showChapterSelect(app(), {
@@ -95,7 +106,7 @@ function enterChapter(chId) {
 }
 
 function enterRoom(roomId) {
-  recordsEntry.hide();
+  recordsEntry.hide(); studentChip.hide();
   lastRoom = roomId;
   const back = () => nav.back();
   switch (roomId) {
@@ -145,8 +156,17 @@ function readTrail() {
 
 function boot() {
   // 온보딩(인트로~보드 연결)을 아직 안 끝냈으면 복원하지 않는다 — 순서를 건너뛰면 안 되는 구간이다.
-  const trail = progress.isCleared('setup') ? readTrail() : [];
-  if (!trail.length) { nav.start(scenePlatformIntro); return; }
+  const ready = progress.isCleared('setup');
+  const trail = ready ? readTrail() : [];
+  if (!trail.length) {
+    if (!ready) { nav.start(scenePlatformIntro); return; }
+    // 새 세션(브라우저를 닫았다 연 경우)인데 이 기기는 이미 준비됐다 — 매 차시 온보딩 5화면을 다시 겪지 않게 한다.
+    // 학생 정보가 없으면 이름부터, 있으면 허브에서 시작하고 '이 학생 맞나요?' 를 한 번 묻는다(공용 PC 대비).
+    if (!student.get()) { nav.start(sceneLogin); return; }
+    nav.restore([{ fn: sceneSetup }, { fn: sceneHub, route: { name: 'hub' } }]);
+    askSameStudent({ onNew: restartAsNewStudent });
+    return;
+  }
 
   // 카루셀이 마지막에 보던 칸을 잡도록, 복원 렌더보다 먼저 채운다.
   lastChapter = trail.find((r) => r.name === 'chapter')?.params?.id ?? null;
@@ -162,4 +182,4 @@ function boot() {
   nav.restore(entries);
 }
 
-window.addEventListener('DOMContentLoaded', () => { bgm.armAutostart(); preloadAssets(); boot(); });
+window.addEventListener('DOMContentLoaded', () => { bgm.armAutostart(); mountFullscreen(); preloadAssets(); boot(); });

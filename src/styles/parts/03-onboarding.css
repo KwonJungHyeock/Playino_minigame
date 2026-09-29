@@ -635,3 +635,18 @@ button:focus-visible, a:focus-visible, .code-box:focus-visible, .lf-input:focus-
 .hub-banner .hb-key { font-weight: 800; font-size: 13px; color: #ffd27a; padding-left: 4px; }
 .hub-banner.locked .hb-key { color: #9aa0ac; }
 
+
+/* 로그인 — 학생 이름·번호 (교실 운영: 기록증 이름 자동 기입) */
+.lg-who { display: flex; gap: 9px; margin: 0 0 6px; }
+.lg-in { min-width: 0; height: 48px; padding: 0 14px; border-radius: 13px; font: inherit; font-size: 17px; font-weight: 700;
+  border: 1.5px solid rgba(255,255,255,.14); background: rgba(255,255,255,.045); color: #fff; caret-color: #8ab6ff;
+  transition: border-color .18s, box-shadow .18s, background .18s; }
+.lg-in::placeholder { color: rgba(255,255,255,.38); font-weight: 600; }
+.lg-in:focus { outline: none; border-color: rgba(150,185,255,.95); background: rgba(255,255,255,.09);
+  box-shadow: 0 0 0 3px rgba(120,170,255,.22); }
+.lg-name { flex: 1 1 auto; }
+.lg-no { flex: 0 0 84px; text-align: center; }
+.lg-in.bad { border-color: #ff6b8a; animation: lg-shake .32s; }
+@keyframes lg-shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.lg-err { margin: 2px 0 0; font-size: 13px; font-weight: 700; color: #ff9bb0; }
+.lg-help.lg-new { font-family: inherit; }

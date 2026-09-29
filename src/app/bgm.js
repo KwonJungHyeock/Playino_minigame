@@ -2,6 +2,7 @@
 // 없으면 WebAudio로 가벼운 칩튠을 생성해 루프. 음소거는 기존 sfx.muted 와 공유(사운드 토글 1개로 제어).
 // 브라우저 자동재생 정책상 첫 사용자 제스처에서 시작(armAutostart).
 import { sfx } from './sfx.js';
+import { CLASS_MODE } from './classMode.js';
 
 const FILE = '/brand/bgm.mp3';
 const STEP_MS = 270, PROC_VOL = 0.05, FILE_VOL = 0.4;
@@ -52,6 +53,7 @@ export const bgm = {
     volTimer = setInterval(applyVol, 250);
   },
   armAutostart() {
+    if (CLASS_MODE) return;   // 수업 모드: 여러 대가 동시에 틀면 부저 소리를 구분할 수 없다
     const go = () => { this.start(); window.removeEventListener('pointerdown', go); window.removeEventListener('keydown', go); };
     window.addEventListener('pointerdown', go);
     window.addEventListener('keydown', go);
