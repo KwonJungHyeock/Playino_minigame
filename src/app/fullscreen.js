@@ -1,5 +1,6 @@
-// fullscreen.js — 전체화면 버튼(왼쪽 아래, 사운드 버튼의 반대편)과 수업 모드 자동 전체화면.
+// fullscreen.js — 전체화면 버튼(오른쪽 아래, 사운드 버튼 바로 왼쪽)과 수업 모드 자동 전체화면.
 // 전체화면 API 가 없는 브라우저(iOS Safari 등)에서는 버튼을 만들지 않는다.
+// 센서 방 복도(탑다운)에선 숨긴다 — 왼쪽 아래 모드 버튼·태블릿 조이스틱, 오른쪽 아래 행동 버튼과 자리가 겹친다.
 
 import { CLASS_MODE } from './classMode.js';
 
@@ -23,13 +24,14 @@ export function mountFullscreen() {
   const style = document.createElement('style');
   style.textContent = `
 .fs-toggle {
-  position: fixed; left: 22px; bottom: 20px; z-index: 9; width: 44px; height: 44px; border-radius: 12px;
+  position: fixed; right: 76px; bottom: 20px; z-index: 9; width: 44px; height: 44px; border-radius: 12px;
   display: grid; place-items: center; cursor: pointer; font-size: 20px; line-height: 1;
   background: rgba(18,14,30,.5); color: #eef0ff; border: 1px solid rgba(255,255,255,.16);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 8px 26px rgba(0,0,0,.4);
   transition: transform .15s, background .15s;
 }
-.fs-toggle:hover { background: rgba(30,24,50,.72); transform: scale(1.06); }`;
+.fs-toggle:hover { background: rgba(30,24,50,.72); transform: scale(1.06); }
+body:has(.td-modetoggle) .fs-toggle { display: none; }`;
   document.head.appendChild(style);
 
   btn = document.createElement('button');
