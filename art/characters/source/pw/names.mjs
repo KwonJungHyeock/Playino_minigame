@@ -1,0 +1,11 @@
+import { chromium } from 'playwright-core';
+import fs from 'node:fs';
+const SP = '/tmp/claude-0/-home-user-Playino/21106cdd-724f-594b-ad21-d623ecc271d7/scratchpad/';
+const D = SP + 'c3d/', TP = SP + 'three147/package/';
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const ctx = await b.newContext({ viewport: { width: 400, height: 400 } });
+await ctx.route('https://cdn.jsdelivr.net/npm/three@0.147.0/**', (r) => { const u = new URL(r.request().url()); r.fulfill({ body: fs.readFileSync(TP + u.pathname.replace('/npm/three@0.147.0/', ''), 'utf8'), contentType: 'text/javascript' }); });
+const p = await ctx.newPage(); p.on('pageerror', (e) => console.log('ERR', e.message));
+await p.goto('file://' + D + 'render5.html'); await p.evaluate((o) => { window.__O = o; }, JSON.parse(process.argv[3] || '{}'));
+const r = await p.evaluate((id) => { const m = Concepts[id](window.__O||{}).root; const out = []; m.updateMatrixWorld(true); m.traverse((o) => { if (o.isMesh || o.isSprite) { const path = []; let q = o; while (q && q !== m) { path.unshift(q.name || q.type); q = q.parent; } const mt = Array.isArray(o.material) ? o.material[0] : o.material; const g = o.geometry; out.push(path.join('/') + ' | ' + (o.isSkinnedMesh ? 'skin ' : '') + mt.type + ' #' + (mt.color ? mt.color.getHexString() : '') + (mt.transparent ? ' T' + mt.opacity : '') + ' v' + g.attributes.position.count + ' t' + ((g.index ? g.index.count : g.attributes.position.count) / 3)); } }); return out; }, process.argv[2] || 'visor');
+console.log(r.join('\n')); await b.close();

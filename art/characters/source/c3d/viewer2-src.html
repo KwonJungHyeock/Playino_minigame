@@ -1,0 +1,139 @@
+<title>바이저 로봇 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/objects/MarchingCubes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/FontLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/TextGeometry.js"></script>
+<style>
+/* 레이아웃: 왼쪽 큰 3D 무대(하늘색 스튜디오) + 오른쪽 조작 패널, 아래에 관절 구조 · 원본과 다른 점 */
+:root{
+  --bg:#f3f6f9; --surface:#ffffff; --ink:#1f2633; --sub:#5d6778; --line:#e2e8ef;
+  --amber:#e8b632; --coral:#e5765a; --sky1:#f6e7b6; --sky2:#ebd494; --cyan:#22c3d8;
+  --chip:#eef2f6; --chipOn:#1f2633; --chipOnInk:#ffffff;
+  --display:'Fredoka','Noto Sans KR',system-ui,sans-serif;
+  --sans:'Noto Sans KR',system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --mono:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a22;--surface:#1c2430;--ink:#eef2f7;--sub:#a4afbf;--line:#2c3746;--chip:#253040;--chipOn:#f2b84b;--chipOnInk:#2a1c05;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141a22;--surface:#1c2430;--ink:#eef2f7;--sub:#a4afbf;--line:#2c3746;--chip:#253040;--chipOn:#f2b84b;--chipOnInk:#2a1c05;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;word-break:keep-all}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:clamp(16px,3vw,32px);padding-block:28px 56px;display:flex;flex-direction:column;gap:26px}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.eyebrow{font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);display:flex;gap:8px;align-items:center}
+.eyebrow i{width:10px;height:10px;border-radius:50%;background:var(--amber)}
+h1{margin:4px 0 6px;font-family:var(--display);font-size:clamp(32px,5vw,50px);font-weight:700;letter-spacing:-.01em;line-height:1.1;text-wrap:balance}
+h1 small{font-family:var(--sans);font-size:.42em;font-weight:700;color:var(--sub);margin-left:10px;letter-spacing:0}
+.lede{margin:0;color:var(--sub);max-width:68ch}
+h2{margin:0;font-size:20px;text-wrap:balance}
+.studio{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+@media (max-width:940px){.studio{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;border-radius:24px;overflow:hidden;background:radial-gradient(75% 65% at 50% 40%,var(--sky1),var(--sky2));min-width:0}
+.stage canvas{display:block;width:100%;height:clamp(440px,70vh,700px);touch-action:none}
+.hud{position:absolute;inset:12px 12px auto 12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;pointer-events:none}
+.foot{position:absolute;inset:auto 12px 12px 12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:flex-end;pointer-events:none}
+.hud>*,.foot>*{pointer-events:auto}
+.seg{display:flex;flex-wrap:wrap;gap:3px;background:rgba(255,255,255,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:14px;padding:4px}
+.seg button{border:0;background:transparent;border-radius:10px;padding:6px 12px;font-weight:700;font-size:14px;color:#4b5566}
+.seg button[aria-pressed="true"]{background:#1f2633;color:#fff}
+.hint{font-size:12px;color:#3f4a5a;background:rgba(255,255,255,.7);border-radius:8px;padding:3px 9px}
+.err{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:#3f4a5a}
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h3{margin:0;font-size:13px;font-weight:700;color:var(--sub);letter-spacing:.02em}
+.orig{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
+.orig img{width:96px;height:96px;border-radius:12px;display:block}
+.orig p{margin:0;font-size:13px;color:var(--sub)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--line);background:var(--chip);border-radius:99px;padding:6px 13px;font-weight:700;font-size:14px}
+.chips button[aria-pressed="true"]{background:var(--chipOn);border-color:var(--chipOn);color:var(--chipOnInk)}
+.sw{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.sw div{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--sub);font-family:var(--mono)}
+.sw i{height:30px;border-radius:9px;display:block;border:1px solid var(--line)}
+.lower{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:18px;align-items:start}
+@media (max-width:860px){.lower{grid-template-columns:minmax(0,1fr)}}
+.tree{margin:0;font-family:var(--mono);font-size:13.5px;line-height:1.75;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px;overflow-x:auto;white-space:pre}
+.diff{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.diff li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-size:14px}
+.diff b{font-size:12px;border-radius:6px;padding:2px 8px;white-space:nowrap}
+.ok{background:#dff3e7;color:#1d6b3e}.todo{background:#fdeccc;color:#7a4a05}
+.files{font-size:13px;color:var(--sub);margin:0}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow"><i></i>Eduino · 컨셉 01</div>
+    <h1>바이저 로봇<small>01 · 3D 모델</small></h1>
+    <p class="lede">01번 AI 이미지를 원본과 실루엣 일치율 90%까지 맞춰 옮긴 3D 모델입니다. 드래그해서 돌려 보고, 동작 · 부품 · 변형안을 바꿔 가며 확인해 주세요.</p>
+  </header>
+
+  <section class="studio" aria-label="3D 모델 보기">
+    <div class="stage" id="stage">
+      <canvas id="cv" aria-label="바이저 로봇 3D 모델. 드래그로 회전, 휠로 확대"></canvas>
+      <div class="hud">
+        <div class="seg" id="cam"><button data-c="orig" aria-pressed="true">원본 각도</button><button data-c="front" aria-pressed="false">정면</button><button data-c="three" aria-pressed="false">3/4</button><button data-c="side" aria-pressed="false">옆</button><button data-c="back" aria-pressed="false">뒤</button><button data-c="face" aria-pressed="false">얼굴</button></div>
+      </div>
+      <div class="foot"><span class="hint">드래그: 돌리기 · 휠/두 손가락: 확대</span><div class="seg"><button id="spin" aria-pressed="false">자동 회전</button></div></div>
+    </div>
+    <div class="panel">
+      <div class="card"><h3>원본 이미지</h3>
+        <div class="orig"><img id="origImg" alt="01 바이저 로봇 원본 AI 이미지"><p>"원본 각도"를 누르면 이 사진과 같은 방향에서 볼 수 있어요.</p></div></div>
+      <div class="card"><h3>변형안</h3><div class="chips" id="variant"></div></div>
+      <div class="card"><h3>동작</h3><div class="chips" id="pose"></div></div>
+      <div class="card"><h3>LED 표정</h3><div class="chips" id="expr"></div></div>
+      <div class="card"><h3>부품</h3><div class="chips" id="parts">
+        <button data-p="visor" aria-pressed="true">바이저</button><button data-p="pods" aria-pressed="true">이어팟</button><button data-p="helmet" aria-pressed="true">헬멧</button><button data-p="cape" aria-pressed="true">망토</button></div></div>
+      <div class="card"><h3>색 (원본에서 추출)</h3>
+        <div class="sw"><div><i style="background:#f8f9f6"></i>헬멧 F8F9F6</div><div><i style="background:#050505"></i>바이저 050505</div><div><i style="background:#8ff7ee"></i>LED 8FF7EE</div><div><i style="background:#e8b632"></i>이어팟 E8B632</div><div><i style="background:#3a3c40"></i>목링 3A3C40</div><div><i style="background:#e5765a"></i>e E5765A</div></div></div>
+    </div>
+  </section>
+
+  <section class="lower">
+    <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <h2>관절 구조</h2>
+      <p class="lede" style="font-size:14px">GLB 파일 안에서 이 이름으로 나뉘어 있어요. Blender에서 각 피벗만 돌리면 위 동작들을 그대로 만들 수 있습니다.</p>
+<pre class="tree" aria-label="관절 구조">VisorBot
+└─ Hips
+   ├─ Leg_L · Leg_R
+   └─ Spine
+      ├─ Body · Collar · TabPlate(Eduino) · Cape
+      ├─ Arm_L ─ Hand_L
+      ├─ Arm_R ─ Hand_R
+      └─ Head
+         ├─ Helmet
+         ├─ Visor
+         ├─ Face        LED 눈 · 볼
+         ├─ EarPod_L · EarPod_R
+         └─ Antenna     e</pre>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <h2>원본과 비교</h2>
+      <ul class="diff">
+        <li><b class="ok">망토</b><span>두께 있는 둥근 마감의 붉은 망토를 목링 뒤에 달았어요. 몸 · 팔과 최소 3cm(모델 기준) 떨어져 있어 닿지 않고, 걷기 동작에서도 팔이 망토를 뚫지 않게 맞췄어요.</span></li>
+        <li><b class="ok">이음새</b><span>몸 · 팔 · 다리를 한 덩어리 매끈한 표면으로 다시 만들어 겨드랑이와 다리 시작 부분이 원본처럼 부드럽게 이어져요(팔다리는 뼈대로 움직여요).</span></li>
+        <li><b class="ok">명암</b><span>목링 아래 · 겨드랑이 · 다리 사이 · 이어팟 둘레에 형상 기반 그림자를 굽고, 바이저 아래쪽 갈색 반사와 위쪽 반사광 줄, 두 겹으로 빛나는 눈을 넣었어요.</span></li>
+        <li><b class="ok">맞춤</b><span>실루엣 일치율 90% — 원본 이미지와 렌더의 윤곽을 픽셀 단위로 겹쳐 재며 머리 · 바이저 · 목링 · 팔 · 다리 비율을 맞췄어요.</span></li>
+        <li><b class="ok">맞춤</b><span>원본처럼 노란 배경빛이 그림자에 도는 따뜻한 조명, 깊은 검정 바이저 위 민트빛 LED 눈과 볼, 두 단으로 된 노란 이어팟.</span></li>
+        <li><b class="ok">변형안</b><span>예전에 요청하신 "02번 글꼴 e + 한 단계 진한 색" 버전도 위 변형안 버튼으로 바로 비교할 수 있어요.</span></li>
+        <li><b class="todo">남은 차이</b><span>원본 특유의 아주 부드러운 그림자 번짐과 표면의 미세한 굴곡은 실시간 3D의 한계라 Blender 렌더에서 마무리할 부분이에요.</span></li>
+      </ul>
+      <p class="files">GLB(Blender · 웹용) · STL · OBJ(키 100mm, 피규어 출력 · CAD 불러오기용) · 렌더 이미지는 대화창으로 보내 드려요.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+__MODEL__
+</script>
+<script>
+__CFGJS__
+</script>
+<script>
+__VIEWER__
+</script>

@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../package/900.css">
+<style>body{margin:0}#st{width:1536px;height:1536px}#cv{width:1536px;height:1536px;display:block}</style>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/math/SimplexNoise.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/SSAOShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/GammaCorrectionShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/Pass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/SSAOPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/objects/MarchingCubes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/FontLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/TextGeometry.js"></script>
+<script src="font-sub.js"></script>
+<script src="sdf.js"></script>
+<script src="cloth.js"></script>
+<script src="cloth-cache.js"></script>
+<script src="models3.js"></script>
+<script src="anim.js"></script>
+<script src="studio.js"></script><script>window.STUDIO = { astro: { exposure: 1.06 }, visor: { env: ['#ffffff', '#f8f3e6', '#ecdcae', '#f6ecd0'], hemi: [0xffffff, 0xe6d3a4], shadow: 0x5a4320, blob: '70,50,20', exposure: 1.1 } };</script></head><body><div id="st"><canvas id="cv" width="1536" height="1536"></canvas></div>
+<script>
+window.go = async (id, bg, yaw = 0, elev = 0.05, ty = 0.525, dist = 2.47, tx = 0) => {
+  await document.fonts.load('900 100px "Noto Sans KR"');
+  const cv = document.getElementById('cv');
+  document.getElementById('st').style.background = `radial-gradient(70% 62% at 50% 40%, ${bg[0]}, ${bg[1]})`;
+  const S = Studio.create(cv, 1536, 1536, Object.assign({ ao: false }, (window.STUDIO || {})[id] || {}));
+  const ch = Concepts[id](); S.add(ch.root); window.S = S; window.CH = ch; if (window.PROBE) window.PROBE(ch.root);
+  S.view(yaw, elev, dist, ty, tx);
+  S.render(); S.render();
+  window.done = true;
+};
+</script></body></html>
