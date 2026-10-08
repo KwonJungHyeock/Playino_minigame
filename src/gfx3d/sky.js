@@ -18,8 +18,9 @@ export function addSpaceSky(scene, o = {}) {
   }));
   dome.renderOrder = -10; g.add(dome);
 
+  // 별은 지평선 아래까지 뿌린다 — 작은 행성 허브에선 행성 둘레로 우주가 보인다
   const n = o.stars ?? 900, pos = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) { const u = Math.random() * Math.PI * 2, v = 0.12 + Math.random() * 0.88, r = 48; const s = Math.sqrt(1 - v * v); pos.set([Math.cos(u) * s * r, v * r, Math.sin(u) * s * r], i * 3); }
+  for (let i = 0; i < n; i++) { const u = Math.random() * Math.PI * 2, v = -0.55 + Math.random() * 1.55, r = 48; const s = Math.sqrt(1 - v * v); pos.set([Math.cos(u) * s * r, v * r, Math.sin(u) * s * r], i * 3); }
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0.85, fog: false, depthWrite: false })));
 

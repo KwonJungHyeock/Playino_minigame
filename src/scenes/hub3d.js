@@ -12,6 +12,7 @@ import { results } from '../app/results.js';
 import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curriculum.js';
 import { STORY, ACTS, PART_ROOMS } from '../content/v4story.js';
 
+const PLANET_R = 11;   // 작은 행성 반지름(m) — 걸으면 지평선 너머에서 스팟이 솟는다(gfx3d/curve.js)
 const SPEED = 3.1, BOT_R = 0.32;
 const HOLD_T = 0.8;              // 꾹 누르는 시간(초) — 실수로 들어가지 않을 만큼, 기다림이 느껴지지 않을 만큼
 const ON_R = 0.95, OFF_R = 1.3;  // 이 안에 멈추면 브리핑이 열리고, 이 밖으로 나가면 닫힌다
@@ -135,7 +136,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   const brackets = [...visorEl.querySelectorAll('.vb')], scanEl = visorEl.querySelector('.vs-scan');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  let stage = null, base = null, hud = null, brief = null, dust = null, sparks = null, offTick = null, done = false;
+  let curveMod = null, stage = null, base = null, hud = null, brief = null, dust = null, sparks = null, offTick = null, done = false;
   const timers = new Set(), typers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
   const wait = (ms) => new Promise((r) => later(ms, r));
@@ -144,18 +145,19 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); typers.forEach(clearInterval); listeners.forEach((f) => f());
-    offTick?.(); brief?.dispose(); hud?.dispose(); base?.dispose(); stage?.dispose();
+    offTick?.(); brief?.dispose(); hud?.dispose(); base?.dispose(); stage?.dispose(); curveMod?.setCurve(false);
     if (window.__hub3d?.el === el) delete window.__hub3d;
   }
 
   // ── 3D ──
   stage = g.createStage(host, { fov: 38, far: 140, hold: true, coverText: '기지에 불을 켜는 중…' });   // 다 짓고 warm() 할 때까지 가림막
-  const [{ createBaseScene, GATE_R, CENTER }, { addPost }, { createHud }, { createBriefing }, { createParticles }] = await Promise.all([import('../gfx3d/scenes/base.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/briefing.js'), import('../gfx3d/fx.js')]);
+  const [{ createBaseScene, GATE_R, CENTER }, { addPost }, { createHud }, { createBriefing }, { createParticles }, curve] = await Promise.all([import('../gfx3d/scenes/base.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/briefing.js'), import('../gfx3d/fx.js'), import('../gfx3d/curve.js')]);
   if (done) return;
   base = await createBaseScene(stage);
   if (done) { base.dispose(); return; }
-  addPost(stage, { bloom: 0.4, bloomRadius: 0.7, threshold: 1.05 });
+  const post = addPost(stage, { bloom: 0.4, bloomRadius: 0.7, threshold: 1.05 });
   hud = createHud(el, { mission: { icon: '🚀', eyebrow: '바이저봇 탈출기', title: '에듀이노 기지' }, onPause: () => pause() });
+  curveMod = curve;
   const THREE = stage.THREE, cam = stage.camera, bot = base.bot, botObj = bot.object;
   botObj.rotation.order = 'YXZ';   // 방향(Y) 먼저, 그다음 몸 기울기(앞뒤 X · 좌우 Z)
   brief = createBriefing({ rocket: base.rocket }); base.root.add(brief.root);
@@ -340,7 +342,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     S.faceTo = Math.atan2(f.x, f.z);
     S.hold.k = 0; S.hold.on = false; S.hold.denied = false;
     hud.hideGoal(); hint.classList.add('off');
-    visorOpen(id, st); sfx.holo();
+    visorOpen(id, st); sfx.holo(); curve.curveTree(base.root);   // 브리핑이 새로 만든 재질에도 휘기
   }
   function closeBrief() {
     if (!S.brief) return;
@@ -417,7 +419,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     const W = el.clientWidth, H = el.clientHeight;
     brief.bounds(pts);
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-    for (const p of pts) { p.project(cam); const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H; x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy); }
+    for (const p of pts) { curve.curvePoint(p, p); p.project(cam); const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H; x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy); }
     const pad = 14, tg = [clamp(x0 - pad, 10, W - 60), clamp(y0 - pad, 10, H - 60), clamp(x1 + pad, 60, W - 10), clamp(y1 + pad, 60, H - 10)];
     const k = reduce ? 1 : 1 - Math.exp(-dt * (vz.lock ? 16 : 7));
     let err = 0; for (let i = 0; i < 4; i++) { vz.r[i] += (tg[i] - vz.r[i]) * k; err = Math.max(err, Math.abs(tg[i] - vz.r[i])); }
@@ -480,7 +482,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     if (L.iris) {
       const u = clamp((L.t - (reduce ? 0.1 : 0.24)) / (reduce ? 0.2 : 0.36), 0, 1), e = Math.pow(u, 1.4);
       const W = el.clientWidth, H = el.clientHeight;
-      tmpA.copy(botObj.position).setY(botObj.position.y + 0.6).project(cam);
+      curve.curvePoint(tmpA.copy(botObj.position).setY(botObj.position.y + 0.6), tmpA).project(cam);
       const cx = (tmpA.x * 0.5 + 0.5) * W, cy = (-tmpA.y * 0.5 + 0.5) * H, R = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy)) * (1 - e);   // 가장 먼 모서리에서 바로 조여 들기 시작
       irisEl.style.background = reduce ? `rgba(18,24,56,${u})` : `radial-gradient(circle at ${cx}px ${cy}px, transparent ${R}px, #ffd25a ${R + 1}px, #ffd25a ${R + 7}px, #121838 ${R + 8}px)`;
       if (u >= 1 && !L.left) { L.left = true; later(60, () => leave(L.id, L.mode, L.stage)); }
@@ -537,13 +539,21 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3();
   const hits = base.gates.map((gt) => gt.hit);
   let holding = false, holoPress = false;
+  const behindPlanet = (p) => { const c = curve.curveCenter(tmpC); return tmpD.subVectors(p, c).normalize().dot(tmpE.subVectors(cam.position, p).normalize()) < -0.05; };
+  const tmpC = new THREE.Vector3(), tmpD = new THREE.Vector3(), tmpE = new THREE.Vector3();
   function pick(e) {
     const r = host.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, cam);
     const b = brief.pick(ray); if (b) return b;
-    const h = ray.intersectObjects(hits, false)[0];
-    if (h) return { gate: h.object.userData.gate };
-    return ray.ray.intersectPlane(plane, hitP) ? { x: hitP.x, z: hitP.z } : null;
+    // 미션 문: 행성 위에 휘어 그려진 자리(판정 구)와 광선의 거리로 고른다 — 지평선 너머(행성 뒤)는 빼고
+    let gBest = null, gT = 1e9;
+    for (const gt of base.gates) {
+      gt.hit.getWorldPosition(hitP); curve.curvePoint(hitP, hitP);
+      const t = tmpB.subVectors(hitP, ray.ray.origin).dot(ray.ray.direction); if (t <= 0 || t >= gT) continue;
+      if (ray.ray.distanceSqToPoint(hitP) < 1.0 && !behindPlanet(hitP)) { gT = t; gBest = gt.id; }
+    }
+    if (gBest) return { gate: gBest };
+    return curve.pickGround(ray.ray, hitP) ? { x: hitP.x, z: hitP.z } : null;
   }
   on(host, 'pointerdown', (e) => {
     if (S.busy) return;
@@ -584,6 +594,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     const rocketShot = { pos: CENTER.clone().add(new THREE.Vector3(5.5, 4.2, 9.5)), look: CENTER.clone().add(new THREE.Vector3(0, 2.8, 0)) };
     S.shot = { pos: CENTER.clone().add(new THREE.Vector3(-4, 15, 22)), look: CENTER.clone().add(new THREE.Vector3(0, 2, 0)) };
     cam.position.copy(S.shot.pos); camLook.copy(S.shot.look); camV.set(0, 0, 0); lookV.set(0, 0, 0);
+    curveC.copy(S.shot.look).setY(0);   // 행성 초점도 바로 그 자리로
     bot.setExpression('졸림');
     await hud.banner('에듀이노 기지', '바이저봇 탈출기', { ms: 2100 }); if (skip) return;
     S.shot = null; await wait(900); if (skip) return;
@@ -635,7 +646,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   const pops = [];
 
   // ── 매 프레임 ──
-  const bufSize = new THREE.Vector2();
+  const bufSize = new THREE.Vector2(), curveC = new THREE.Vector3();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
     S.t += dt;
@@ -649,6 +660,10 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     S.shake = Math.max(0, S.shake - dt * 4);
     cam.lookAt(camLook);
     if (S.shake > 0) { cam.position.y += Math.sin(S.t * 61) * 0.05 * S.shake; cam.rotation.z += Math.sin(S.t * 47) * 0.01 * S.shake; }
+    // 행성 초점: 평소엔 바이저봇 앞, 연출 중엔 보는 곳 — 초점이 옮겨 가면 행성이 굴러가듯 돈다
+    // 초점 = 카메라가 실제로 보는 점 — 카메라가 아직 따라오는 중이어도 행성 꼭대기는 늘 화면 가운데에 맞는다
+    curveC.copy(camLook).setY(0);
+    curve.CURVE.uCurveC.value.copy(curveC); base.applyCurve(curve.curvePoint, curve.curveCenter(tmpC), PLANET_R);
     base.update(wdt, botObj.position, cam.position, (id) => fxOf.get(id));
     brief.update(dt, cam.position);
     stage.renderer.getDrawingBufferSize(bufSize); dust.setScale(bufSize.y); sparks.setScale(bufSize.y);
@@ -666,6 +681,9 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   window.__hub3d = { el, S, base, stage, hud, brief, openCard, enter: (id, mode = '2d', stageNo = 1) => launch(id, mode, stageNo), holdStart, holdEnd, selectStage, walkTo, refresh, intro };
 
   // 가림막 뒤에서 셰이더 · 텍스처를 다 올린 뒤 걷는다 — 덜 지은 장면이 보이거나 첫 몇 초가 끊기지 않게
+  // 작은 행성: 지금까지 만든 모든 것에 휘기를 붙이고 초점을 바이저봇 발밑에 둔다
+  curve.setCurve(true, PLANET_R); curve.curveTree(base.root); if (post.aoPass) curve.curveMaterial(post.aoPass.normalMaterial);
+  curveC.copy(camLook).setY(0); curve.CURVE.uCurveC.value.copy(curveC); base.applyCurve(curve.curvePoint, curve.curveCenter(tmpC), PLANET_R);
   await stage.warm(); if (done) return;
   stage.reveal();
 

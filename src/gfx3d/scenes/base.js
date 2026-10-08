@@ -50,7 +50,7 @@ function ground() {
   const craters = [[-3.2, 6.2, 1.1], [6.4, 6.6, 0.9], [-11.6, 9.4, 1.6], [12.2, -12, 1.8], [-1.6, -9.6, 0.8]];   // 캡슐 밑 구덩이는 뺐다 — 성긴 격자에서 면이 꺾여 밤 조명에 쐐기 모양 명암이 생겼다
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), z = p.getZ(i), k = boundK(x, z);
-    let h = THREE.MathUtils.smoothstep(k, 0.98, 1.45) * (2.6 + Math.sin(x * 0.31) * Math.cos(z * 0.27) * 1.1 + Math.sin(x * 0.09 + z * 0.13) * 1.4);
+    let h = THREE.MathUtils.smoothstep(k, 1.0, 1.7) * (0.9 + Math.sin(x * 0.31) * Math.cos(z * 0.27) * 0.45 + Math.sin(x * 0.09 + z * 0.13) * 0.5);   // 작은 행성이라 벽 같은 언덕 대신 낮은 둔덕
     h += (Math.sin(x * 0.45) * Math.cos(z * 0.38)) * 0.06 * (1 - THREE.MathUtils.smoothstep(k, 0.0, 0.9));   // 기지 안은 아주 잔잔하게
     for (const [cx, cz, r] of craters) { const q = Math.hypot(x - cx, z - cz) / r; if (q < 1.6) h += q < 1 ? -0.1 * (1 - q * q) ** 2 : 0.05 * Math.sin((q - 1) / 0.6 * Math.PI); }
     p.setY(i, h);
@@ -352,7 +352,7 @@ async function caveZone(stat, live, at) {
   ]);
   const mouth = mesh(new THREE.CircleGeometry(1.0, 48, 0, Math.PI), new THREE.MeshBasicMaterial({ color: 0x07060c }), { cast: false, receive: false }); mouth.position.set(at.x, 0, at.z + 0.35); mouth.scale.set(1, 1.25, 1); stat.add(mouth);
   await placeKit(live, 'rock_crystalsLargeB', { x: at.x - 1.2, z: at.z + 0.9, s: 1.1, ry: 0.8, smooth: true });
-  const glow = new THREE.PointLight(P.mint, 2.2, 4, 1.6); glow.position.set(at.x, 0.8, at.z + 0.9); live.add(glow);
+  const glow = new THREE.PointLight(P.mint, 2.2, 4, 1.6); glow.position.set(at.x, 0.8, at.z + 0.9); live.add(glow); glow.userData.flat = glow.position.clone();
   return (t) => { glow.intensity = 1.8 + Math.sin(t * 2.6) * 0.6; };
 }
 function reactorZone(stat, live, at) {
@@ -364,7 +364,7 @@ function reactorZone(stat, live, at) {
   for (const y of [0.42, 0.62]) { const band = mesh(new THREE.TorusGeometry(0.955, 0.05, 10, 72), vinyl(y < 0.5 ? P.mustard : P.charcoal)); band.rotation.x = Math.PI / 2; band.position.y = y; g.add(band); }
   const t2 = tanks(); t2.position.set(1.9, 0, 0.3); t2.rotation.y = -0.7; t2.scale.setScalar(0.85); g.add(t2);
   const core = mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.12, 40), lamp(P.orange, 2.4), { cast: false }); core.position.set(at.x, 1.48, at.z); live.add(core);
-  const glow = new THREE.PointLight(P.orange, 2.5, 5, 1.5); glow.position.set(at.x, 1.5, at.z + 1.2); live.add(glow);
+  const glow = new THREE.PointLight(P.orange, 2.5, 5, 1.5); glow.position.set(at.x, 1.5, at.z + 1.2); live.add(glow); glow.userData.flat = glow.position.clone();
   return (t) => { const k = 0.5 + 0.5 * Math.sin(t * 3.1) * Math.sin(t * 1.7 + 1); core.material.emissiveIntensity = 1.8 + k * 1.6; glow.intensity = 1.6 + k * 1.8; core.scale.x = core.scale.z = 1 + k * 0.03; };
 }
 
@@ -392,9 +392,10 @@ export async function createBaseScene(stage) {
   const { scene, renderer } = stage;
   const root = new THREE.Group(); root.name = 'BaseScene'; scene.add(root);
   // 밤의 기지 — 탈출 이야기라 어둡게 깔고, 불빛(문 · 가로등 · 로켓 · 바이저봇)이 길잡이가 되게 한다
-  addSpaceSky(scene, { top: 0x050817, horizon: 0x1e1f4a, glow: 0x5a3358, stars: 1500, fog: [20, 64] });
+  // 작은 행성 둘레로 우주가 보인다 — 지평선 띠 없이 깊은 남색 우주 + 별을 많이
+  const sky = addSpaceSky(scene, { top: 0x04061a, horizon: 0x0d1030, glow: 0x24163e, stars: 2600, fog: [24, 80] }); sky.userData.noAO = true;
   renderer.toneMappingExposure = 1.0;
-  renderer.shadowMap.type = THREE.VSMShadowMap;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;   // VSM 은 휜 행성에서 땅 전체를 그림자로 덮는다(모멘트 비교가 어긋남) — 부드러운 PCF 로
   scene.environmentIntensity = 0.38;
   root.add(new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.8));
   // 그림자는 바이저봇 둘레만 — 달빛(키 라이트)이 봇을 따라다닌다(지도 전체를 덮으면 해상도가 모자란다)
@@ -404,6 +405,7 @@ export async function createBaseScene(stage) {
   const rim = new THREE.DirectionalLight(0x7fd8ff, 1.5); rim.position.set(8, 6, -10); root.add(rim);   // 윤곽을 살리는 청록 역광
   // 로켓 조명: 발사탑에서 비추는 스폿(그림자 없음) — 기지 어디서나 목표가 보이게
   const rocketLight = new THREE.SpotLight(0xffe2b0, 160, 24, 0.36, 0.7, 2); rocketLight.position.set(CENTER.x + 4.5, 10, CENTER.z + 6); rocketLight.target.position.set(CENTER.x, 2.6, CENTER.z); root.add(rocketLight, rocketLight.target);
+  rocketLight.userData.flat = rocketLight.position.clone(); rocketLight.target.userData.flat = rocketLight.target.position.clone();
   root.add(ground());
 
   const stat = new THREE.Group(), live = new THREE.Group(); live.name = 'Live';
@@ -498,5 +500,19 @@ export async function createBaseScene(stage) {
     return { pos: p, ry: Math.atan2(d.x, d.z) };
   }
 
-  return { root, bot, gates, rocket, colliders, update, keyLight: key, walkable, spawnFor, zoneOf: (id) => new THREE.Vector3(ZONES[id].x, 0, ZONES[id].z), dispose: () => bot.dispose() };
+  // 대기 띠: 행성 가장자리에 도는 옅은 빛(휘지 않는 진짜 구 — 행성 중심을 따라 옮긴다)
+  const atmo = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 32), new THREE.ShaderMaterial({
+    uniforms: { uCol: { value: new THREE.Color(0x7d9bff) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide, fog: false,
+    vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vV = -mv.xyz; vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform vec3 uCol; varying vec3 vN; varying vec3 vV; void main(){ float f = dot(normalize(vN), normalize(vV)); float a = pow(clamp(1.0 - abs(f), 0.0, 1.0), 7.0); gl_FragColor = vec4(uCol * 1.2, a * 0.55); }',
+  }));
+  atmo.userData.noCurve = true; atmo.userData.noAO = true; atmo.visible = false; atmo.renderOrder = -1; scene.add(atmo);
+  const flatLights = []; root.traverse((o) => { if (o.userData.flat) flatLights.push(o); });
+  /** 행성 휘기를 켠 뒤 매 프레임: 점광원 · 스폿 위치를 휜 자리로, 대기 띠를 행성 중심으로 */
+  function applyCurve(curvePoint, center, R) {
+    flatLights.forEach((o) => curvePoint(o.userData.flat, o.position));
+    atmo.visible = true; atmo.position.copy(center); atmo.scale.setScalar(R * 1.045);
+  }
+
+  return { root, bot, gates, rocket, colliders, update, applyCurve, atmo, keyLight: key, walkable, spawnFor, zoneOf: (id) => new THREE.Vector3(ZONES[id].x, 0, ZONES[id].z), dispose: () => bot.dispose() };
 }
