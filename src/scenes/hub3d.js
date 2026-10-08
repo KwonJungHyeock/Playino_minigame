@@ -28,7 +28,7 @@ const ICON_LOCK = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M13 18v-
 
 /**
  * @param {HTMLElement} root
- * @param {{onRoom:(id:string, o:{mode:'3d'|'2d'})=>void, onExit?:Function, fallback?:Function, spawnAt?:string, openAll?:boolean, partsPreview?:number}} o
+ * @param {{onRoom:(id:string, o:{mode:'3d'|'2d', stage:number})=>void, onExit?:Function, fallback?:Function, spawnAt?:string, openAll?:boolean, partsPreview?:number}} o
  *   openAll: 잠금 무시(미리보기) · partsPreview: 로켓 부품을 n 개 붙인 모습만 보여 줌(기록은 바꾸지 않음)
  */
 export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openAll = false, partsPreview = null } = {}) {
@@ -360,7 +360,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     else lines.push(['진행', st.cleared ? '모두 통과' : st.passed ? `${st.passed} / ${st.total} 단계 통과` : st.played ? '도전 중' : `처음 · ${st.total}단계`]);
     return lines;
   }
-  const stageLabel = (id, i) => `${i + 1}단계 · ${STORY[id].stages[i]}${i === 0 ? ' <small>· 새 3D</small>' : ''}`;
+  const stageLabel = (id, i) => `${i + 1}단계 · ${STORY[id].stages[i]}`;
   function typeInto(elm, html, delay) {
     // 글자가 한 자씩 찍힌다(태그는 통째로)
     const parts = html.split(/(<[^>]+>[^<]*<\/[^>]+>)/).filter(Boolean);
@@ -448,7 +448,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     if (h.on && !locked) {
       h.k = Math.min(1, h.k + dt / HOLD_T);
       const step = Math.floor(h.k * 6); if (step > h.tick) { h.tick = step; sfx.tick(h.k); }
-      if (h.k >= 1) { h.on = false; launch(S.brief.id, S.brief.id === 'led' && S.brief.sel === 0 ? '3d' : '2d'); }
+      if (h.k >= 1) { h.on = false; launch(S.brief.id, S.brief.id === 'led' ? '3d' : '2d', S.brief.id === 'led' ? S.brief.sel + 1 : 1); }   // 착륙 유도등은 두 단계 모두 3D
     } else if (h.on && locked) {
       h.k = Math.min(0.14, h.k + dt / HOLD_T);
       if (h.k >= 0.14 && !h.denied) { h.denied = true; brief.deny(); sfx.deny(); holdBtn.classList.remove('no'); void holdBtn.offsetWidth; holdBtn.classList.add('no'); S.sqV += 2; }
@@ -458,8 +458,8 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   }
 
   // 출발: 짧게 멈칫(히트스톱) → 늘어나며 뛰어오름 + 불꽃 → 바이저봇을 중심으로 화면이 조여 든다
-  function launch(id, mode) {
-    lastGate = id; S.busy = true; S.launch = { t: 0, id, mode, fired: false, iris: false };
+  function launch(id, mode, stageNo = 1) {
+    lastGate = id; S.busy = true; S.launch = { t: 0, id, mode, stage: stageNo, fired: false, iris: false };
     brief.launch(); goEl.classList.add('leave'); sayEl.classList.remove('on'); visorEl.classList.remove('on'); scrimEl.classList.remove('on');
     sfx.start();
   }
@@ -483,11 +483,11 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
       tmpA.copy(botObj.position).setY(botObj.position.y + 0.6).project(cam);
       const cx = (tmpA.x * 0.5 + 0.5) * W, cy = (-tmpA.y * 0.5 + 0.5) * H, R = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy)) * (1 - e);   // 가장 먼 모서리에서 바로 조여 들기 시작
       irisEl.style.background = reduce ? `rgba(18,24,56,${u})` : `radial-gradient(circle at ${cx}px ${cy}px, transparent ${R}px, #ffd25a ${R + 1}px, #ffd25a ${R + 7}px, #121838 ${R + 8}px)`;
-      if (u >= 1 && !L.left) { L.left = true; later(60, () => leave(L.id, L.mode)); }
+      if (u >= 1 && !L.left) { L.left = true; later(60, () => leave(L.id, L.mode, L.stage)); }
     }
     return 1;
   }
-  function leave(id, mode) { cleanup(); onRoom?.(id, { mode }); }
+  function leave(id, mode, stageNo) { cleanup(); onRoom?.(id, { mode, stage: stageNo }); }
 
   // 몸 늘이기 · 누르기(스프링). 꾹 누르는 동안은 웅크린다.
   function bodyFrame(dt) {
@@ -663,7 +663,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   { const f = follow(); cam.position.copy(f.pos); camLook.copy(f.look); }
   /** 자동 점검용: openCard(id) = 그 문 원판 위에 바로 세우고 브리핑을 연다 · enter(id, mode) = 바로 출발 연출 */
   const openCard = (id) => { const gp = gateOf(id).pos; botObj.position.set(gp.x, 0, gp.z); S.vel.set(0, 0, 0); S.busy = false; if (S.brief) closeBrief(); openBrief(id); };
-  window.__hub3d = { el, S, base, stage, hud, brief, openCard, enter: (id, mode = '2d') => launch(id, mode), holdStart, holdEnd, selectStage, walkTo, refresh, intro };
+  window.__hub3d = { el, S, base, stage, hud, brief, openCard, enter: (id, mode = '2d', stageNo = 1) => launch(id, mode, stageNo), holdStart, holdEnd, selectStage, walkTo, refresh, intro };
 
   // 가림막 뒤에서 셰이더 · 텍스처를 다 올린 뒤 걷는다 — 덜 지은 장면이 보이거나 첫 몇 초가 끊기지 않게
   await stage.warm(); if (done) return;

@@ -128,14 +128,14 @@ function sceneHub3d(opts) {
   recordsEntry.hide(); studentChip.hide(); darkHold();
   import('./scenes/hub3d.js').then((m) => m.showHub3d(app(), {
     ...opts,
-    onRoom: (id, { mode }) => (mode === '3d' ? nav.push(sceneLanding3d) : pushRoom(id)),
+    onRoom: (id, { mode, stage }) => (mode === '3d' ? nav.push(() => sceneLanding3d(stage)) : pushRoom(id)),
     onExit: () => { location.search = ''; },
     fallback: () => sceneHub(),   // WebGL2 가 없는 기기는 기존 허브
   }));
 }
-function sceneLanding3d() {
+function sceneLanding3d(stage = 1) {
   recordsEntry.hide(); studentChip.hide(); darkHold();
-  import('./scenes/landingGame.js').then((m) => m.showLandingGame(app(), { onExit: () => nav.back() }));
+  import('./scenes/landingGame.js').then((m) => m.showLandingGame(app(), { stage, onExit: () => nav.back() }));
 }
 
 // 배경 이미지 사전 로드 (404 방지)
@@ -185,9 +185,9 @@ function boot() {
     nav.start(() => sceneHub3d({ openAll: q.get('all') === '1', partsPreview: n != null && n !== '' ? Number(n) : null }));
     return;
   }
-  // v4 3D 게임 미리보기(?v4=led) — 착륙 유도등 1단계만 단독으로.
+  // v4 3D 게임 미리보기(?v4=led) — 착륙 유도등 단독으로(&stage=2 면 2단계 라이트 연주부터).
   if (q.get('v4') === 'led') {
-    import('./scenes/landingGame.js').then((m) => m.showLandingGame(app(), { onExit: () => { location.search = ''; } }));
+    import('./scenes/landingGame.js').then((m) => m.showLandingGame(app(), { stage: q.get('stage') === '2' ? 2 : 1, onExit: () => { location.search = ''; } }));
     return;
   }
   // 온보딩(인트로~보드 연결)을 아직 안 끝냈으면 복원하지 않는다 — 순서를 건너뛰면 안 되는 구간이다.
