@@ -13,7 +13,7 @@ export function addPost(stage, { bloom = 0.55, bloomRadius = 0.5, threshold = 0.
   const composer = new EffectComposer(R);
   composer.addPass(new RenderPass(scene, camera));
   let aoPass = null;
-  if (ao) { aoPass = new GTAOPass(scene, camera, size.x, size.y); aoPass.blendIntensity = 0.85; aoPass.updateGtaoMaterial({ radius: 0.35, distanceFallOff: 1, thickness: 1 }); composer.addPass(aoPass); }
+  if (ao) { aoPass = new GTAOPass(scene, camera, size.x, size.y); aoPass.blendIntensity = 0.6; aoPass.updateGtaoMaterial({ radius: 0.5, distanceFallOff: 1, thickness: 1.5 }); composer.addPass(aoPass); }
   const bloomPass = new UnrealBloomPass(size.clone(), bloom, bloomRadius, threshold);
   composer.addPass(bloomPass);
   composer.addPass(new OutputPass());

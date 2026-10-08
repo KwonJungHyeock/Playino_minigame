@@ -5,7 +5,7 @@ v4 실시간 3D 에 쓰는 외부 모델의 원본 보관소. 앱 번들에는 �
 
 | 팩 | 제작 | 받은 곳(URL) | 라이선스 | 받은 날 | 쓰는 곳 |
 |---|---|---|---|---|---|
-| Space Kit 2.0 (모델 12종 사용) | Kenney | https://kenney.nl/assets/space-kit | CC0 1.0 | 2026-10-08 | `src/assets/3d/kits/space/` — 착륙 유도등 견본 배경 |
+| Space Kit 2.0 (바위 · 수정 6종 사용) | Kenney | https://kenney.nl/assets/space-kit | CC0 1.0 | 2026-10-08 | `src/assets/3d/kits/space/` — 착륙 유도등 배경 바위 · 수정(매끈한 음영으로 바꿔 씀). 건물은 직접 모델링(src/gfx3d/props.js) |
 | Space Station Kit 1.0 · Modular Space Kit 1.0 · City Kit Commercial 2.1 · Car Kit 3.1 | Kenney | https://kenney.nl/assets | CC0 1.0 | 2026-10-08 | 주제 비교용으로만 받음(앱에 미포함) |
 
 ## 절차

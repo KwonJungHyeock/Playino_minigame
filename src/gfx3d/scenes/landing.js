@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { vinyl, gloss, lamp, PALETTE } from '../materials.js';
 import { roundedBox, roundedCylinder, dome, lathe, extrude, mesh } from '../shapes.js';
 import { placeKit } from '../kits.js';
+import { habDome, hangar, dish, tanks, escapeRocket } from '../props.js';
 import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 
@@ -24,7 +25,7 @@ function ground() {
     for (const [cx, cz, r] of craters) { const q = Math.hypot(x - cx, z - cz) / r; if (q < 1.6) h += q < 1 ? -0.22 * (1 - q * q) : 0.12 * Math.sin((q - 1) / 0.6 * Math.PI); }
     p.setY(i, h);
     const n = 0.5 + 0.5 * Math.sin(x * 1.3 + Math.sin(z * 0.9) * 2.0) * Math.cos(z * 1.1);
-    c.copy(a).lerp(b, n * 0.55 + Math.max(0, -h) * 1.4); col.set([c.r, c.g, c.b], i * 3);
+    c.copy(a).lerp(b, n * 0.3 + Math.max(0, -h) * 1.0); col.set([c.r, c.g, c.b], i * 3);
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
   const m = mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), { cast: false, name: 'Ground' });
@@ -110,14 +111,15 @@ export async function createLandingScene(stage, { demo = true } = {}) {
   const { scene, camera, renderer } = stage;
   const root = new THREE.Group(); root.name = 'LandingScene'; scene.add(root);
   addSpaceSky(scene, {});
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.type = THREE.VSMShadowMap;   // 부드럽게 번지는 그림자(가장자리 흐림)
   // 조명: 차가운 하늘빛 + 따뜻한 키 라이트 + 푸른 림
-  scene.environmentIntensity = 0.55;
-  root.add(new THREE.HemisphereLight(0xdfe4ff, 0x6a4a52, 0.75));
-  const key = new THREE.DirectionalLight(0xffe9d4, 2.6); key.position.set(-5, 9, 6); key.castShadow = true;
-  key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0003; key.shadow.normalBias = 0.025; key.shadow.radius = 3;
-  Object.assign(key.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 1, far: 30 }); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0x9fd6ff, 1.6); rim.position.set(6, 4, -7); root.add(rim);
+  scene.environmentIntensity = 0.7;
+  root.add(new THREE.HemisphereLight(0xe6e8ff, 0x8a6066, 1.05));
+  const key = new THREE.DirectionalLight(0xffecd8, 2.1); key.position.set(-5, 9, 6); key.castShadow = true;
+  key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 9; key.shadow.blurSamples = 16;
+  Object.assign(key.shadow.camera, { left: -11, right: 11, top: 11, bottom: -11, near: 1, far: 40 }); root.add(key, key.target);
+  const rim = new THREE.DirectionalLight(0xb4e0ff, 1.25); rim.position.set(6, 4, -7); root.add(rim);
 
   root.add(ground());
   const pad = landingPad(); root.add(pad);
@@ -127,20 +129,18 @@ export async function createLandingScene(stage, { demo = true } = {}) {
 
   // 배경 — 무료 모델(CC0)을 팔레트 재질로
   await Promise.all([
-    placeKit(root, 'hangar_roundGlass', { x: -7.4, z: -10.5, s: 2.0, ry: 0.5 }),
-    placeKit(root, 'hangar_largeA', { x: 6.6, z: -10.8, s: 2.1, ry: -0.45 }),
-    placeKit(root, 'satelliteDish_large', { x: 7.4, z: -3.2, s: 2.8, ry: -1.0 }),
-    placeKit(root, 'machine_generator', { x: -5.0, z: -4.6, s: 1.7, ry: 0.4 }),
-    placeKit(root, 'structure_detailed', { x: 4.4, z: -6.2, s: 1.8, ry: -0.2 }),
-    placeKit(root, 'machine_wireless', { x: 3.4, z: -2.3, s: 1.6, ry: -0.7 }),
-    placeKit(root, 'rock_largeA', { x: -3.6, z: 2.2, s: 1.3, ry: 0.6 }),
-    placeKit(root, 'rock_largeB', { x: 4.2, z: 1.9, s: 1.5, ry: 2.1 }),
-    placeKit(root, 'rock_crystalsLargeA', { x: 3.1, z: 0.6, s: 1.2, ry: 1.2 }),
-    placeKit(root, 'rock_crystals', { x: -3.9, z: -0.9, s: 1.2, ry: 0.2 }),
-    placeKit(root, 'rocks_smallA', { x: 1.9, z: 2.4, s: 1.4, ry: 0.9 }),
-    placeKit(root, 'meteor_detailed', { x: -8.5, z: -1.5, s: 1.6, ry: 0.3 }),
+    placeKit(root, 'rock_largeA', { x: -3.6, z: 2.2, s: 1.3, ry: 0.6, smooth: true }),
+    placeKit(root, 'rock_largeB', { x: 4.2, z: 1.9, s: 1.5, ry: 2.1, smooth: true }),
+    placeKit(root, 'rock_crystalsLargeA', { x: 3.1, z: 0.6, s: 1.2, ry: 1.2, smooth: true }),
+    placeKit(root, 'rock_crystals', { x: -3.9, z: -0.9, s: 1.2, ry: 0.2, smooth: true }),
+    placeKit(root, 'rocks_smallA', { x: 1.9, z: 2.4, s: 1.4, ry: 0.9, smooth: true }),
+    placeKit(root, 'meteor_detailed', { x: -8.5, z: -1.5, s: 1.6, ry: 0.3, smooth: true }),
   ]);
 
+  // 기지 배경(직접 모델링): 돔 거주 모듈 · 격납고 · 안테나 · 연료 탱크 · 저 멀리 미완성 탈출 로켓(이야기의 목표)
+  const put = (o, x, z, ry = 0) => { o.position.set(x, 0, z); o.rotation.y = ry; o.traverse((m) => { if (m.isMesh && m.castShadow !== false) m.castShadow = true; }); root.add(o); return o; };
+  put(habDome(1.7), -6.8, -8.6, 0.55); put(hangar(3.4, 2.6, 1.8), 6.4, -9.4, -0.5); put(dish(1.3), 5.6, -3.4, -0.9); put(tanks(), -5.2, -4.4, 0.4);
+  put(escapeRocket(0.25), -3.6, -13, 0.3);
   const bot = await loadRobot(); bot.object.position.set(-1.45, 0, 0.95); bot.object.rotation.y = 0.45; root.add(bot.object);
 
   const setLamp = (i, on) => { const { bulb, light } = lamps[i].userData; bulb.material.emissiveIntensity = on ? 4 : 0.15; light.intensity = on ? 3.2 : 0; desk.userData.buttons[i].material.emissiveIntensity = on ? 3 : 0.25; };
