@@ -42,9 +42,9 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .hub3{--ink:#fff;--sub:#c9d0ea;--led:#8ff7ee;--gold:#ffd25a;--good:#5ff0a0;--night:#121838;position:fixed;inset:0;overflow:hidden;background:var(--night)}
     .hub3 ::selection{background:var(--gold);color:#2b2418}
     .hub3-stage{position:absolute;inset:0;cursor:pointer}
-    .hub3-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px "Noto Sans KR",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
-    .hub3-hint{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;display:flex;gap:8px;align-items:center;color:#fff;font:700 14px "Noto Sans KR",sans-serif;text-shadow:0 2px 0 rgba(10,14,40,.5),0 0 12px rgba(10,14,40,.7);pointer-events:none;transition:opacity .4s}
-    .hub3-hint.off{opacity:0}.hub3-hint .hud-key{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 6px;border-radius:6px;background:#fff;color:#1c2140;font:800 11px "Noto Sans KR",sans-serif;text-shadow:none}
+    .hub3-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px "Pretendard Variable","Noto Sans KR",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
+    .hub3-hint{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;display:flex;gap:8px;align-items:center;color:#fff;font:700 14px "Pretendard Variable","Noto Sans KR",sans-serif;text-shadow:0 2px 0 rgba(10,14,40,.5),0 0 12px rgba(10,14,40,.7);pointer-events:none;transition:opacity .4s}
+    .hub3-hint.off{opacity:0}.hub3-hint .hud-key{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 6px;border-radius:6px;background:#fff;color:#1c2140;font:800 11px "Pretendard Variable","Noto Sans KR",sans-serif;text-shadow:none}
     .hub3-hint .t{display:none}
 
     /* 목표 칸 — 유리 상자 대신 바이저 꺾쇠 + 글자 */
@@ -74,18 +74,18 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .hub3-visor .vs-info div::after{content:"";position:absolute;left:-3px;top:0;width:3px;height:100%;box-shadow:0 0 10px var(--led);pointer-events:none}
     .hub3-visor.locked .vs-info div{border-left-color:#a9b3d6}.hub3-visor.locked .vs-info div::after{box-shadow:none}
     .hub3-visor.done .vs-info div{border-left-color:var(--good)}
-    .hub3-visor .vs-info dt{font:800 13px/1.3 "Noto Sans KR",sans-serif;letter-spacing:.04em;color:var(--led)}
+    .hub3-visor .vs-info dt{font:800 13px/1.3 "Pretendard Variable","Noto Sans KR",sans-serif;letter-spacing:.04em;color:var(--led)}
     .hub3-visor.locked .vs-info dt{color:#c9d0ea}.hub3-visor.done .vs-info dt{color:var(--good)}
-    .hub3-visor .vs-info dd{margin:3px 0 0;font:400 22px/1.3 "Jua","Noto Sans KR",sans-serif;color:#fff;word-break:keep-all}
-    .hub3-visor .vs-info dd small{font:700 13px "Noto Sans KR",sans-serif;color:#c9d0ea}
+    .hub3-visor .vs-info dd{margin:3px 0 0;font:400 22px/1.3 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;color:#fff;word-break:keep-all}
+    .hub3-visor .vs-info dd small{font:700 13px "Pretendard Variable","Noto Sans KR",sans-serif;color:#c9d0ea}
 
     /* 아래쪽: 옅은 어둠 번짐 위에 바이저봇 한마디 + 출발 버튼 */
     .hub3-scrim{position:absolute;left:0;right:0;bottom:0;height:280px;background:linear-gradient(180deg,rgba(12,16,44,0),rgba(12,16,44,.62));pointer-events:none;z-index:3;opacity:0;transition:opacity .3s}
     .hub3-scrim.on{opacity:1}
     .hub3-say{position:absolute;left:50%;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 120px);transform:translate(-50%,10px);width:min(640px,calc(100% - 32px));text-align:center;pointer-events:none;z-index:5;opacity:0;transition:opacity .25s,transform .45s cubic-bezier(.16,1,.3,1)}
     .hub3-say.on{opacity:1;transform:translate(-50%,0)}
-    .hub3-say b{display:block;font:400 15px/1.2 "Jua","Noto Sans KR",sans-serif;color:var(--gold);margin-bottom:4px;text-shadow:0 1px 0 rgba(10,14,40,.6)}
-    .hub3-say span{display:inline;padding:5px 14px;border-radius:12px;-webkit-box-decoration-break:clone;box-decoration-break:clone;background:rgba(8,12,34,.7);font:700 19px/1.75 "Noto Sans KR",sans-serif;color:#fff;word-break:keep-all}
+    .hub3-say b{display:block;font:400 15px/1.2 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;color:var(--gold);margin-bottom:4px;text-shadow:0 1px 0 rgba(10,14,40,.6)}
+    .hub3-say span{display:inline;padding:5px 14px;border-radius:12px;-webkit-box-decoration-break:clone;box-decoration-break:clone;background:rgba(8,12,34,.7);font:700 19px/1.75 "Pretendard Variable","Noto Sans KR",sans-serif;color:#fff;word-break:keep-all}
     .hub3-say span:empty{display:none}
     .hub3-go{position:absolute;left:50%;width:max-content;bottom:max(16px,env(safe-area-inset-bottom));transform:translate(-50%,24px);display:flex;align-items:center;gap:14px;z-index:6;opacity:0;pointer-events:none;transition:opacity .2s,transform .45s cubic-bezier(.16,1,.3,1)}
     .hub3-go.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
@@ -106,8 +106,8 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .hub3-hold.no{animation:hub3no .42s cubic-bezier(.36,.07,.19,.97)}
     @keyframes hub3no{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
     .hub3-go-t{display:grid;gap:5px;text-align:left}
-    .hub3-go-t b{font:400 22px/1.15 "Jua","Noto Sans KR",sans-serif;color:#fff;white-space:nowrap;text-shadow:0 2px 0 rgba(10,14,40,.55),0 0 16px rgba(10,14,40,.75)}
-    .hub3-go-t>span{display:flex;white-space:nowrap;gap:6px;align-items:center;font:700 13px "Noto Sans KR",sans-serif;color:var(--sub);text-shadow:0 1px 0 rgba(10,14,40,.6)}
+    .hub3-go-t b{font:400 24px/1.15 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;color:#fff;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:.14em #1b1f4a;text-shadow:0 .08em 0 #1b1f4a,0 0 16px rgba(10,14,40,.6)}
+    .hub3-go-t>span{display:flex;white-space:nowrap;gap:6px;align-items:center;font:700 13px "Pretendard Variable","Noto Sans KR",sans-serif;color:var(--sub);text-shadow:0 1px 0 rgba(10,14,40,.6)}
     .hub3-go-t .hud-key{text-shadow:none}
     .hub3-go-t>span:empty{display:none}.hub3-go-t .h3-pick{gap:4px;color:var(--led)}.hub3-go-t .h3-pick .hud-key{min-width:22px}
     /* 출발 — 바이저봇을 중심으로 조여 드는 원 */

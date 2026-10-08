@@ -2,10 +2,11 @@
 // 원칙(docs/V4-UI.md): 늘 떠 있는 건 최소(미션 목표 1줄 + 일시정지), 판정 · 콤보는 장면 안 그 자리에서 짧게,
 // 대화는 화자 · 얼굴 · 한 글자씩 · 넘김 표시, 버튼에는 조작 표시(스페이스 / 탭), 결과는 한 가지 결론 + 다음 행동 하나.
 import { PORTRAIT } from './portrait.js';
+import { injectType } from './type.js';
 
 const CSS = `
 .hud{--hud-ink:#fff;--hud-sub:#c9d0ea;--hud-glass:rgba(18,24,56,.66);--hud-line:rgba(255,255,255,.16);--hud-gold:#ffd25a;--hud-led:#8ff7ee;--hud-good:#5ff0a0;--hud-bad:#ff6f6f;
-  position:absolute;inset:0;pointer-events:none;z-index:5;color:var(--hud-ink);font-family:"Noto Sans KR",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  position:absolute;inset:0;pointer-events:none;z-index:5;color:var(--hud-ink);font-family:"Pretendard Variable","Noto Sans KR",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 .hud *{box-sizing:border-box}
 .hud button{pointer-events:auto;font-family:inherit}
 .hud-safe{position:absolute;inset:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
@@ -14,8 +15,8 @@ const CSS = `
 .hud-obj{position:absolute;left:0;top:0;display:flex;gap:12px;align-items:center;padding:10px 16px 10px 10px;border-radius:22px;max-width:min(420px,calc(100% - 84px));transition:opacity .3s,transform .3s}
 .hud-obj.off{opacity:0;transform:translateY(-8px)}
 .hud-obj-ic{flex:none;width:44px;height:44px;border-radius:15px;display:grid;place-items:center;font-size:22px;background:linear-gradient(160deg,#ffe28a,#e8b632)}
-.hud-obj-t{min-width:0}.hud-obj-t small{display:block;font:800 11px/1.2 "Noto Sans KR",sans-serif;letter-spacing:.12em;color:var(--hud-gold)}
-.hud-obj-t b{display:block;font:400 19px/1.25 "Jua","Noto Sans KR",sans-serif}
+.hud-obj-t{min-width:0}.hud-obj-t small{display:block;font:700 12px/1.2 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.1em;color:var(--hud-gold)}
+.hud-obj-t b{display:block;font:400 20px/1.25 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;text-shadow:0 2px 0 #1b1f4a}
 .hud-obj-t span{display:block;font-size:13px;color:var(--hud-sub);margin-top:2px}
 .hud-bar{height:6px;border-radius:9px;background:rgba(255,255,255,.14);margin-top:7px;overflow:hidden}.hud-bar i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#8ff7ee,#5ff0a0);transition:width .35s cubic-bezier(.2,.8,.2,1)}
 /* 일시정지(우상단) */
@@ -27,34 +28,34 @@ const CSS = `
 .hud-face{flex:none;width:88px;height:88px;border-radius:28px;background:linear-gradient(170deg,#fff,#e6e9f2);box-shadow:0 8px 24px rgba(8,10,30,.3);display:grid;place-items:center}
 .hud-face svg{width:76px;height:76px}
 .hud-box{position:relative;flex:1;min-width:0;border-radius:26px;padding:16px 20px 18px;cursor:pointer}
-.hud-name{position:absolute;left:18px;top:-15px;padding:4px 14px;border-radius:999px;background:var(--hud-gold);color:#2b2418;font:400 15px/1.3 "Jua","Noto Sans KR",sans-serif}
+.hud-name{position:absolute;left:18px;top:-15px;padding:4px 14px;border-radius:999px;background:var(--hud-gold);color:#2b2418;font:400 15px/1.3 "Jua","Pretendard Variable","Noto Sans KR",sans-serif}
 .hud-text{font-size:19px;line-height:1.6;font-weight:700;min-height:3.2em;word-break:keep-all}
 .hud-next{position:absolute;right:16px;bottom:10px;font-size:12px;color:var(--hud-sub);display:flex;gap:6px;align-items:center;opacity:0}
 .hud-next.on{opacity:1;animation:hudnod 1s ease-in-out infinite}
 @keyframes hudnod{50%{transform:translateY(3px)}}
 /* 조작 표시 */
-.hud-key{display:inline-grid;place-items:center;min-width:26px;height:24px;padding:0 7px;border-radius:7px;background:#fff;color:#1c2140;font:800 11px/1 "Noto Sans KR",sans-serif;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.hud-key{display:inline-grid;place-items:center;min-width:26px;height:24px;padding:0 7px;border-radius:7px;background:#fff;color:#1c2140;font:800 11px/1 "Pretendard Variable","Noto Sans KR",sans-serif;box-shadow:0 2px 0 rgba(0,0,0,.35)}
 .hud-key.wide{min-width:58px}
 /* 큰 행동 버튼(하단 가운데) */
-.hud-act{position:absolute;left:50%;bottom:0;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:14px 26px 14px 16px;border-radius:999px;border:0;cursor:pointer;color:#14203a;font:400 21px/1 "Jua","Noto Sans KR",sans-serif;
+.hud-act{position:absolute;left:50%;bottom:0;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:14px 26px 14px 16px;border-radius:999px;border:0;cursor:pointer;color:#14203a;font:400 21px/1 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;
   background:linear-gradient(180deg,#b5fff7,#7ae9e0);box-shadow:0 0 0 5px rgba(143,247,238,.18),0 12px 30px rgba(8,10,30,.35);touch-action:manipulation;transition:transform .12s}
 .hud-act:active,.hud-act.hit{transform:translateX(-50%) scale(.95)}
 .hud-act[hidden]{display:none}
 /* 장면 위 판정 · 콤보 */
-.hud-pop{position:absolute;transform:translate(-50%,-50%);font:400 30px/1 "Jua","Noto Sans KR",sans-serif;white-space:nowrap;text-shadow:0 2px 0 rgba(10,14,40,.5),0 6px 18px rgba(10,14,40,.45);animation:hudpop .62s cubic-bezier(.2,.9,.3,1) forwards}
+.hud-pop{position:absolute;transform:translate(-50%,-50%);font:700 32px/1 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.02em;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:5px #1b1f4a;text-shadow:0 3px 0 #1b1f4a,0 6px 18px rgba(10,14,40,.45);animation:hudpop .62s cubic-bezier(.2,.9,.3,1) forwards}
 @keyframes hudpop{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}25%{opacity:1;transform:translate(-50%,-60%) scale(1.08)}100%{opacity:0;transform:translate(-50%,-130%) scale(1)}}
-.hud-combo{position:absolute;transform:translate(-50%,-50%);text-align:center;font:400 15px/1 "Jua","Noto Sans KR",sans-serif;color:var(--hud-sub);transition:opacity .25s}
-.hud-combo b{display:block;font-size:34px;color:#fff;text-shadow:0 4px 16px rgba(10,14,40,.45)}
+.hud-combo{position:absolute;transform:translate(-50%,-50%);text-align:center;font:700 14px/1 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.08em;color:var(--hud-sub);transition:opacity .25s}
+.hud-combo b{display:block;font:700 38px/1 "Fredoka","Pretendard Variable",sans-serif;paint-order:stroke fill;-webkit-text-stroke:5px #1b1f4a;color:#fff;text-shadow:0 4px 16px rgba(10,14,40,.45)}
 .hud-combo.bump b{animation:hudbump .25s ease-out}
 @keyframes hudbump{40%{transform:scale(1.25)}}
 /* 배너 · 카운트다운 */
 .hud-banner{position:absolute;left:0;right:0;top:34%;text-align:center;pointer-events:none}
 .hud-banner .rib{display:inline-block;padding:14px 46px 16px;border-radius:999px;background:linear-gradient(90deg,rgba(255,210,90,0),rgba(255,210,90,.95) 18%,rgba(255,210,90,.95) 82%,rgba(255,210,90,0));color:#2b2418;animation:hudrib 1.7s cubic-bezier(.2,.9,.25,1) forwards}
-.hud-banner small{display:block;font:800 12px/1.2 "Noto Sans KR",sans-serif;letter-spacing:.24em}
-.hud-banner b{display:block;font:400 clamp(30px,5.5vw,52px)/1.1 "Jua","Noto Sans KR",sans-serif}
+.hud-banner small{display:block;font:700 14px/1.2 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.24em}
+.hud-banner b{display:block;font:400 clamp(32px,6vw,58px)/1.1 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;color:#fff;paint-order:stroke fill;-webkit-text-stroke:.15em #1b1f4a;text-shadow:0 .09em 0 #1b1f4a}
 .hud-banner.bad .rib{background:linear-gradient(90deg,rgba(255,140,120,0),rgba(255,160,140,.95) 18%,rgba(255,160,140,.95) 82%,rgba(255,140,120,0))}
 @keyframes hudrib{0%{opacity:0;transform:scaleX(.4)}14%{opacity:1;transform:scaleX(1.04)}22%{transform:scaleX(1)}82%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
-.hud-count{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font:400 120px/1 "Jua","Noto Sans KR",sans-serif;text-shadow:0 8px 40px rgba(10,14,40,.5);animation:hudcount .9s cubic-bezier(.2,.9,.3,1) forwards}
+.hud-count{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font:700 128px/1 "Fredoka","Pretendard Variable",sans-serif;paint-order:stroke fill;-webkit-text-stroke:14px #1b1f4a;text-shadow:0 10px 0 #1b1f4a,0 16px 40px rgba(10,14,40,.5);animation:hudcount .9s cubic-bezier(.2,.9,.3,1) forwards}
 @keyframes hudcount{0%{opacity:0;transform:translate(-50%,-50%) scale(1.8)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(.85)}}
 /* 알림(상단 가운데) */
 .hud-toasts{position:absolute;left:50%;top:0;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;align-items:center;width:min(440px,calc(100% - 150px))}
@@ -66,13 +67,13 @@ const CSS = `
 @keyframes hudfade{from{opacity:0}}
 .hud-win{width:min(560px,100%);max-height:100%;overflow:auto;border-radius:30px;padding:26px 26px 22px;animation:hudwin .38s cubic-bezier(.2,.9,.25,1.15)}
 @keyframes hudwin{from{opacity:0;transform:translateY(18px) scale(.97)}}
-.hud-win h2{margin:4px 0 8px;font:400 30px/1.2 "Jua","Noto Sans KR",sans-serif;text-wrap:balance}
+.hud-win h2{margin:4px 0 8px;font:400 31px/1.2 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;text-wrap:balance;text-shadow:0 2px 0 #1b1f4a}
 .hud-win p{margin:6px 0;font-size:16px;line-height:1.6;color:var(--hud-sub);word-break:keep-all}
 .hud-win p b{color:#fff}
-.hud-eye{font:800 12px/1.2 "Noto Sans KR",sans-serif;letter-spacing:.16em;color:var(--hud-gold)}
+.hud-eye{font:700 13px/1.2 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.14em;color:var(--hud-gold)}
 .hud-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}
 .hud-sp{flex:1}
-.hud-btn{display:inline-flex;align-items:center;gap:9px;min-height:50px;padding:0 20px;border-radius:999px;border:1px solid var(--hud-line);background:rgba(255,255,255,.08);color:#fff;font:400 18px/1 "Jua","Noto Sans KR",sans-serif;cursor:pointer;transition:transform .12s,background .2s}
+.hud-btn{display:inline-flex;align-items:center;gap:9px;min-height:50px;padding:0 20px;border-radius:999px;border:1px solid var(--hud-line);background:rgba(255,255,255,.08);color:#fff;font:400 18px/1 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;cursor:pointer;transition:transform .12s,background .2s}
 .hud-btn:hover{background:rgba(255,255,255,.14)}.hud-btn:active{transform:scale(.96)}
 .hud-btn.main{background:linear-gradient(180deg,#ffe28a,#f0be3c);color:#2b2418;border-color:transparent;box-shadow:0 8px 22px rgba(240,190,60,.3)}
 .hud-btn[disabled]{opacity:.45;pointer-events:none}
@@ -82,24 +83,19 @@ const CSS = `
 .hud-stars{display:flex;justify-content:center;gap:10px;margin:4px 0 2px}
 .hud-star{width:58px;height:58px;filter:drop-shadow(0 6px 14px rgba(10,14,40,.35));opacity:.25;transform:scale(.7);transition:opacity .3s,transform .45s cubic-bezier(.2,.9,.3,1.5)}
 .hud-star.on{opacity:1;transform:scale(1)}.hud-star:nth-child(2){width:72px;height:72px;margin-top:-10px}
-.hud-rank{display:inline-grid;place-items:center;width:74px;height:74px;border-radius:50%;margin:6px auto 0;border:4px solid currentColor;font:400 40px/1 "Jua",sans-serif;transform:rotate(-8deg);animation:hudstamp .5s .55s cubic-bezier(.2,.9,.3,1.4) both}
+.hud-rank{display:inline-grid;place-items:center;width:74px;height:74px;border-radius:50%;margin:6px auto 0;border:4px solid currentColor;font:700 42px/1 "Fredoka","Pretendard Variable",sans-serif;transform:rotate(-8deg);animation:hudstamp .5s .55s cubic-bezier(.2,.9,.3,1.4) both}
 @keyframes hudstamp{from{opacity:0;transform:rotate(-8deg) scale(2)}}
 .hud-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
 .hud-stat{border-radius:18px;padding:10px 6px;background:rgba(255,255,255,.07)}
-.hud-stat small{display:block;font-size:12px;color:var(--hud-sub)}.hud-stat b{display:block;font:400 24px/1.2 "Jua",sans-serif;font-variant-numeric:tabular-nums;margin-top:2px}
+.hud-stat small{display:block;font-size:12px;color:var(--hud-sub)}.hud-stat b{display:block;font:700 24px/1.2 "Fredoka","Pretendard Variable",sans-serif;font-variant-numeric:tabular-nums;margin-top:2px}
 @media (max-width:640px){.hud-text{font-size:17px}.hud-face{width:68px;height:68px;border-radius:22px}.hud-face svg{width:58px;height:58px}.hud-win{padding:20px}.hud-win h2{font-size:26px}.hud-count{font-size:96px}.hud-obj-t b{font-size:17px}}
 @media (prefers-reduced-motion:reduce){.hud *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 `;
 
 const STAR = (on) => `<svg class="hud-star${on ? ' on' : ''}" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5c2 0 3 1.4 4 3.4l6 12.3 13.5 2c2.2.3 3.5 1.2 4 2.8.5 1.7-.1 3.2-1.7 4.7l-9.8 9.5 2.3 13.4c.4 2.2-.1 3.7-1.5 4.7-1.4 1-3.1.9-5-.1L32 51.4 20.2 57.7c-1.9 1-3.6 1.1-5 .1-1.4-1-1.9-2.5-1.5-4.7L16 39.7l-9.8-9.5c-1.6-1.5-2.2-3-1.7-4.7.5-1.6 1.8-2.5 4-2.8l13.5-2 6-12.3C29 6.4 30 5 32 5z" fill="#ffd25a" stroke="#fff4c8" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
 
-let fontsAdded = false;
-function addFonts() {
-  if (fontsAdded || document.querySelector('link[data-hud-fonts]')) return; fontsAdded = true;
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.dataset.hudFonts = '1';
-  l.href = 'https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@500;700;800&display=swap';
-  document.head.appendChild(l);
-}
+// 글꼴은 앱에 넣어 둔 것을 쓴다(gfx3d/type.js) — 외부 글꼴 서버(Google Fonts)에 기대지 않는다
+function addFonts() { injectType(); }
 
 /**
  * @param {HTMLElement} host 3D 무대를 덮는 요소(position 이 있는 부모)

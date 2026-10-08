@@ -11,6 +11,7 @@ import { habDome, hangar, dish, tanks } from '../props.js';
 import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 import { STORY } from '../../content/v4story.js';
+import { fontsReady } from '../type.js';
 
 export const CENTER = new THREE.Vector3(0, 0, -2);   // 발사대(로켓) 자리
 const PAD_R = 2.5;
@@ -174,11 +175,14 @@ function drawSign(cv, id, st) {
   x.globalAlpha = 1;
   // 이름
   x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.lineJoin = 'round';
-  let fs = 50; x.font = `${fs}px "Jua","Noto Sans KR",sans-serif`; while (x.measureText(s.name).width > bw - 40 && fs > 34) { fs -= 2; x.font = `${fs}px "Jua","Noto Sans KR",sans-serif`; }
-  x.lineWidth = 9; x.strokeStyle = 'rgba(10,14,40,.6)'; x.strokeText(s.name, W / 2, 86);
-  x.fillStyle = st.state === 'locked' ? '#d5dbef' : '#ffffff'; x.fillText(s.name, W / 2, 86);
+  let fs = 50; x.font = `${fs}px "Jua","Pretendard Variable","Noto Sans KR",sans-serif`; while (x.measureText(s.name).width > bw - 40 && fs > 34) { fs -= 2; x.font = `${fs}px "Jua","Pretendard Variable","Noto Sans KR",sans-serif`; }
+  // 게임 로고 글자: 남색 입체 그림자 → 남색 외곽선 → 흰 글자(위가 밝은 그라데이션)
+  x.fillStyle = '#1b1f4a'; x.fillText(s.name, W / 2, 91);
+  x.lineWidth = 11; x.strokeStyle = '#1b1f4a'; x.strokeText(s.name, W / 2, 86);
+  const tg = x.createLinearGradient(0, 86 - fs, 0, 86); tg.addColorStop(0, '#ffffff'); tg.addColorStop(1, st.state === 'locked' ? '#c9d0ea' : '#fff1c8');
+  x.fillStyle = tg; x.fillText(s.name, W / 2, 86);
   // 상태 한 줄(아이콘 + 글)
-  const label = st.label || ''; x.font = '800 24px "Noto Sans KR",sans-serif';
+  const label = st.label || ''; x.font = '800 24px "Pretendard Variable","Noto Sans KR",sans-serif';
   const tw = x.measureText(label).width, ix = W / 2 - (tw + 34) / 2;
   stateIcon(x, st.state, ix + 11, 129, 22, col);
   x.textAlign = 'left'; x.lineWidth = 7; x.strokeStyle = 'rgba(10,14,40,.6)'; x.strokeText(label, ix + 34, 138); x.fillStyle = col; x.fillText(label, ix + 34, 138);
@@ -475,7 +479,7 @@ export async function createBaseScene(stage) {
   const botPool = lightPool(0xfff0d8, 1.6, 0.22); root.add(botPool);
 
   // 글꼴(Jua)이 늦게 오면 안내판을 다시 그린다
-  document.fonts?.load?.('44px "Jua"').then(() => gates.forEach((g) => g.redraw())).catch(() => {});
+  fontsReady().then(() => gates.forEach((g) => g.redraw()));
 
   let t = 0;
   const tmp = new THREE.Vector3();

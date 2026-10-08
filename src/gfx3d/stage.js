@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { detectTier, tierSettings, createGovernor } from './quality.js';
 import { disposeObject } from './dispose.js';
+import { injectType } from './type.js';   // 3D 화면 공통 서체(앱에 넣어 둔 글꼴)
 
 let renderer = null, owner = null;
 
@@ -27,6 +28,7 @@ function getRenderer(tier) {
  * @param {{fov?:number, near?:number, far?:number, tier?:'high'|'mid'|'low'}} [o]
  */
 export function createStage(host, o = {}) {
+  injectType();
   if (owner) owner.dispose();   // 무대는 한 번에 하나 — 앞 화면이 정리를 빠뜨려도 여기서 막는다
   const tier = o.tier || detectTier();
   const R = getRenderer(tier);
@@ -42,7 +44,7 @@ export function createStage(host, o = {}) {
     cover = document.createElement('div'); cover.className = 'gfx-cover';
     cover.innerHTML = `<style>.gfx-cover{position:absolute;inset:0;z-index:20;display:grid;place-items:center;background:radial-gradient(120% 90% at 50% 100%,#2a1f45 0%,#121838 45%,#050817 100%);transition:opacity .5s ease;pointer-events:auto}
       .gfx-cover.out{opacity:0;pointer-events:none}.gfx-cover i{display:block;width:46px;height:46px;border-radius:50%;border:3px solid rgba(143,247,238,.18);border-top-color:#8ff7ee;animation:gfxspin .9s linear infinite;margin:0 auto 14px;filter:drop-shadow(0 0 8px rgba(143,247,238,.6))}
-      .gfx-cover b{display:block;font:400 18px/1.3 "Jua","Noto Sans KR",sans-serif;color:#c9d0ea;letter-spacing:.02em;text-align:center}
+      .gfx-cover b{display:block;font:400 18px/1.3 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;color:#c9d0ea;letter-spacing:.02em;text-align:center}
       @keyframes gfxspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.gfx-cover i{animation-duration:3s}}</style><div><i></i><b>${o.coverText || '불을 켜는 중…'}</b></div>`;
   }
 

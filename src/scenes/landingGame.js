@@ -53,15 +53,15 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   if (!g.supports3D()) { const { showLedGame } = await import('./ledGame.js'); showLedGame(root, { onExit }); return; }
 
   root.innerHTML = `<style>body:has(.lnd) .nav-back{display:none!important}body:has(.lnd-pads.on-play:not([hidden])) .fs-toggle{display:none!important}.lnd{position:fixed;inset:0;overflow:hidden;background:#121838}.lnd-stage{position:absolute;inset:0}
-    .lnd-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px "Noto Sans KR",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
+    .lnd-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px "Pretendard Variable","Noto Sans KR",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
     /* 2단계 유도등 단추 3개 — 유도등 갓처럼 둥근 비닐 단추. 누르면 꾹 들어간다 */
     .lnd-pads{position:absolute;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;display:flex;gap:clamp(14px,4vw,30px);transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1)}
     .lnd-pads[hidden]{display:flex;opacity:0;pointer-events:none;transform:translate(-50%,20px)}
     .lnd-pad{position:relative;width:clamp(76px,19vw,92px);height:clamp(76px,19vw,92px);border-radius:50%;border:0;padding:0;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;
       background:radial-gradient(circle at 50% 36%,#fffaf0,#e9e2d2 70%,#cfc5ad);box-shadow:0 6px 0 #a99f86,0 14px 24px rgba(8,10,30,.45);transition:transform .08s,box-shadow .08s}
-    .lnd-pad i{position:absolute;inset:12%;border-radius:50%;display:grid;place-items:center;font:400 clamp(26px,7vw,32px)/1 "Jua","Noto Sans KR",sans-serif;color:rgba(10,14,40,.72);font-style:normal;
+    .lnd-pad i{position:absolute;inset:12%;border-radius:50%;display:grid;place-items:center;font:700 clamp(28px,7.5vw,34px)/1 "Fredoka","Pretendard Variable",sans-serif;color:rgba(10,14,40,.75);font-style:normal;
       background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--c) 40%,#fff),var(--c) 62%,color-mix(in srgb,var(--c) 70%,#000));box-shadow:inset 0 -5px 0 rgba(0,0,0,.18),0 0 0 3px rgba(255,255,255,.35)}
-    .lnd-pad b{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);white-space:nowrap;font:700 12px "Noto Sans KR",sans-serif;color:#c9d0ea;text-shadow:0 1px 0 rgba(10,14,40,.6)}
+    .lnd-pad b{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);white-space:nowrap;font:700 12px "Pretendard Variable","Noto Sans KR",sans-serif;color:#c9d0ea;text-shadow:0 1px 0 rgba(10,14,40,.6)}
     .lnd-pad.down{transform:translateY(4px);box-shadow:0 2px 0 #a99f86,0 6px 12px rgba(8,10,30,.4)}
     .lnd-pad.down i{box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),0 0 0 3px rgba(255,255,255,.55),0 0 26px var(--c)}
     .lnd-pad:focus-visible{outline:3px solid #8ff7ee;outline-offset:5px}
@@ -86,6 +86,8 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   // ── 3D 장면 ──
   stage = g.createStage(host, { fov: 36, far: 120, hold: true, coverText: '착륙장에 불을 켜는 중…' });   // 다 짓고 warm() 할 때까지 가림막
   const [{ createLandingScene, PAD, SHIP_REST }, { addPost }, { createHud }, { lathe, roundedCylinder, mesh }, { vinyl, PALETTE }, { runLesson }] = await Promise.all([import('../gfx3d/scenes/landing.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/shapes.js'), import('../gfx3d/materials.js'), import('../gfx3d/lesson.js')]);
+  if (done) return;
+  await (await import('../gfx3d/type.js')).fontsReady();   // 캔버스 글씨(별 번호 등)를 글꼴이 온 뒤에 그린다
   if (done) return;
   land = await createLandingScene(stage, { demo: false });
   if (done) { land.dispose(); return; }

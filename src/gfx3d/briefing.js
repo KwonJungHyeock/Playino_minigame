@@ -47,18 +47,21 @@ function drawTitle(cv, { name, sub, locked }) {
   const x = cv.getContext('2d'); x.clearRect(0, 0, TW, TH);
   const ink = locked ? '#c9d0ea' : '#ffffff', glow = locked ? 'rgba(169,179,214,.8)' : 'rgba(143,247,238,.9)', accent = locked ? '#a9b3d6' : '#ffd25a';
   x.textAlign = 'center'; x.textBaseline = 'alphabetic';
-  let fs = 132; x.font = `${fs}px "Jua","Noto Sans KR",sans-serif`;
-  while (x.measureText(name).width > TW - 80 && fs > 70) { fs -= 6; x.font = `${fs}px "Jua","Noto Sans KR",sans-serif`; }
-  x.lineJoin = 'round'; x.lineWidth = 16; x.strokeStyle = 'rgba(10,14,40,.55)'; x.strokeText(name, TW / 2, 160);
-  x.save(); x.shadowColor = glow; x.shadowBlur = 28; x.fillStyle = ink; x.fillText(name, TW / 2, 160); x.restore();
-  x.fillStyle = ink; x.fillText(name, TW / 2, 160);
+  let fs = 132; x.font = `${fs}px "Jua","Pretendard Variable","Noto Sans KR",sans-serif`;
+  while (x.measureText(name).width > TW - 80 && fs > 70) { fs -= 6; x.font = `${fs}px "Jua","Pretendard Variable","Noto Sans KR",sans-serif`; }
+  // 게임 로고 글자: 빛 번짐 → 남색 입체 그림자 → 남색 외곽선 → 위가 밝은 그라데이션 글자
+  x.lineJoin = 'round';
+  x.save(); x.shadowColor = glow; x.shadowBlur = 30; x.fillStyle = '#1b1f4a'; x.fillText(name, TW / 2, 172); x.restore();
+  x.lineWidth = 20; x.strokeStyle = '#1b1f4a'; x.strokeText(name, TW / 2, 160);
+  const tg = x.createLinearGradient(0, 160 - fs * 0.8, 0, 160); tg.addColorStop(0, ink); tg.addColorStop(1, locked ? '#a9b3d6' : '#fff0c2');
+  x.fillStyle = tg; x.fillText(name, TW / 2, 160);
   // 가는 눈금 선 — 홀로그램 계기판 느낌
   const w = Math.min(TW - 120, x.measureText(name).width + 60), x0 = (TW - w) / 2;
   x.strokeStyle = accent; x.globalAlpha = 0.85; x.lineWidth = 4; x.beginPath(); x.moveTo(x0, 196); x.lineTo(x0 + w, 196); x.stroke();
   x.lineWidth = 3; for (let i = 0; i <= 10; i++) { const tx = x0 + (w * i) / 10, h = i % 5 === 0 ? 14 : 7; x.beginPath(); x.moveTo(tx, 196); x.lineTo(tx, 196 + h); x.stroke(); }
   x.globalAlpha = 1;
-  x.font = '800 40px "Noto Sans KR",sans-serif'; if ('letterSpacing' in x) x.letterSpacing = '6px';
-  x.lineWidth = 10; x.strokeStyle = 'rgba(10,14,40,.5)'; x.strokeText(sub, TW / 2, 268); x.fillStyle = accent; x.fillText(sub, TW / 2, 268);
+  x.font = '700 42px "Fredoka","Pretendard Variable",sans-serif'; if ('letterSpacing' in x) x.letterSpacing = '6px';
+  x.lineWidth = 10; x.strokeStyle = '#1b1f4a'; x.strokeText(sub, TW / 2, 268); x.fillStyle = accent; x.fillText(sub, TW / 2, 268);
   if ('letterSpacing' in x) x.letterSpacing = '0px';
   // 가로 주사선
   x.globalCompositeOperation = 'destination-out'; x.fillStyle = 'rgba(0,0,0,.22)';
@@ -74,7 +77,7 @@ function drawNode(cv, { n, lit, sel, locked }) {
   x.beginPath(); x.arc(W / 2, W / 2, r, 0, Math.PI * 2); x.fillStyle = lit ? c : 'rgba(18,24,56,.55)'; x.fill();
   x.lineWidth = 7; x.strokeStyle = c; x.stroke(); x.restore();
   if (sel) { x.lineWidth = 6; x.strokeStyle = '#ffd25a'; x.beginPath(); x.arc(W / 2, W / 2, r + 14, 0, Math.PI * 2); x.stroke(); }
-  x.font = '64px "Jua","Noto Sans KR",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = '700 66px "Fredoka","Pretendard Variable",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
   x.fillStyle = lit ? '#123a2a' : '#ffffff'; x.fillText(String(n), W / 2, W / 2 + 4);
 }
 
