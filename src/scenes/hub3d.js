@@ -65,15 +65,18 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .hub3-visor .vs-scan{position:absolute;left:0;top:0;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--led) 20%,#fff 50%,var(--led) 80%,transparent);box-shadow:0 0 14px var(--led);opacity:0}
     .hub3-visor.lockon .vs-scan{animation:hub3scan .75s cubic-bezier(.16,1,.3,1) forwards}
     @keyframes hub3scan{0%{opacity:0;transform:translateY(0)}15%{opacity:1}100%{opacity:0;transform:translateY(var(--h,200px))}}
-    .hub3-visor .vs-info{position:absolute;left:0;top:0;margin:0;display:grid;gap:10px;width:max-content;max-width:min(300px,calc(100vw - 32px))}
-    .hub3-visor .vs-info div{position:relative;padding-left:16px;opacity:0;transform:translateX(-6px);transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1)}
+    .hub3-visor .vs-info{position:absolute;left:0;top:0;margin:0;display:grid;gap:6px;width:max-content;max-width:min(320px,calc(100vw - 32px))}
+    /* 판독 띠: 왼쪽 빛줄 + 오른쪽으로 사라지는 짙은 유리 — 상자 대신 바이저 판독기처럼. 밝은 땅 위에서도 글자가 읽히게 */
+    .hub3-visor .vs-info div{position:relative;padding:7px 40px 9px 14px;border-left:3px solid var(--led);border-radius:2px 16px 16px 2px;
+      background:linear-gradient(90deg,rgba(8,12,34,.86),rgba(8,12,34,.72) 70%,rgba(8,12,34,0));opacity:0;transform:translateX(-8px);transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1)}
     .hub3-visor .vs-info div.on{opacity:1;transform:none}
-    .hub3-visor .vs-info div::before{content:"";position:absolute;left:0;top:7px;width:8px;height:8px;border-radius:2px;background:var(--led);box-shadow:0 0 8px var(--led)}
-    .hub3-visor.locked .vs-info div::before{background:#a9b3d6;box-shadow:none}
-    .hub3-visor .vs-info dt{font:800 12px/1.3 "Noto Sans KR",sans-serif;letter-spacing:.06em;color:var(--led);text-shadow:0 1px 0 rgba(10,14,40,.6),0 0 10px rgba(10,14,40,.8)}
-    .hub3-visor.locked .vs-info dt{color:#c9d0ea}
-    .hub3-visor .vs-info dd{margin:2px 0 0;font:400 21px/1.25 "Jua","Noto Sans KR",sans-serif;color:#fff;word-break:keep-all;text-shadow:0 2px 0 rgba(10,14,40,.55),0 0 16px rgba(10,14,40,.75)}
-    .hub3-visor .vs-info dd small{font:700 13px "Noto Sans KR",sans-serif;color:var(--sub)}
+    .hub3-visor .vs-info div::after{content:"";position:absolute;left:-3px;top:0;width:3px;height:100%;box-shadow:0 0 10px var(--led);pointer-events:none}
+    .hub3-visor.locked .vs-info div{border-left-color:#a9b3d6}.hub3-visor.locked .vs-info div::after{box-shadow:none}
+    .hub3-visor.done .vs-info div{border-left-color:var(--good)}
+    .hub3-visor .vs-info dt{font:800 13px/1.3 "Noto Sans KR",sans-serif;letter-spacing:.04em;color:var(--led)}
+    .hub3-visor.locked .vs-info dt{color:#c9d0ea}.hub3-visor.done .vs-info dt{color:var(--good)}
+    .hub3-visor .vs-info dd{margin:3px 0 0;font:400 22px/1.3 "Jua","Noto Sans KR",sans-serif;color:#fff;word-break:keep-all}
+    .hub3-visor .vs-info dd small{font:700 13px "Noto Sans KR",sans-serif;color:#c9d0ea}
 
     /* 아래쪽: 옅은 어둠 번짐 위에 바이저봇 한마디 + 출발 버튼 */
     .hub3-scrim{position:absolute;left:0;right:0;bottom:0;height:280px;background:linear-gradient(180deg,rgba(12,16,44,0),rgba(12,16,44,.62));pointer-events:none;z-index:3;opacity:0;transition:opacity .3s}
@@ -81,7 +84,8 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .hub3-say{position:absolute;left:50%;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 120px);transform:translate(-50%,10px);width:min(640px,calc(100% - 32px));text-align:center;pointer-events:none;z-index:5;opacity:0;transition:opacity .25s,transform .45s cubic-bezier(.16,1,.3,1)}
     .hub3-say.on{opacity:1;transform:translate(-50%,0)}
     .hub3-say b{display:block;font:400 15px/1.2 "Jua","Noto Sans KR",sans-serif;color:var(--gold);margin-bottom:4px;text-shadow:0 1px 0 rgba(10,14,40,.6)}
-    .hub3-say span{font:700 19px/1.5 "Noto Sans KR",sans-serif;color:#fff;word-break:keep-all;text-shadow:0 2px 0 rgba(10,14,40,.55),0 0 18px rgba(10,14,40,.8)}
+    .hub3-say span{display:inline;padding:5px 14px;border-radius:12px;-webkit-box-decoration-break:clone;box-decoration-break:clone;background:rgba(8,12,34,.7);font:700 19px/1.75 "Noto Sans KR",sans-serif;color:#fff;word-break:keep-all}
+    .hub3-say span:empty{display:none}
     .hub3-go{position:absolute;left:50%;width:max-content;bottom:max(16px,env(safe-area-inset-bottom));transform:translate(-50%,24px);display:flex;align-items:center;gap:14px;z-index:6;opacity:0;pointer-events:none;transition:opacity .2s,transform .45s cubic-bezier(.16,1,.3,1)}
     .hub3-go.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
     .hub3-go.leave{opacity:0;transform:translate(-50%,16px) scale(.9);transition-duration:.18s}
@@ -97,23 +101,23 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .hub3-hold.down .cap{transform:scale(.94)}
     .hub3-hold.locked .cap{color:#3a4060;background:radial-gradient(circle at 50% 30%,#e4e8f5,#b9c0d8 65%,#9aa2bf);box-shadow:inset 0 -5px 0 rgba(40,48,80,.25),0 3px 0 rgba(40,48,80,.35)}
     .hub3-hold.locked .arc{stroke:#c9d0ea;filter:none}
-    .hub3-go.locked .kb{display:none}
+    .hub3-go.locked .h3-kb{display:none}
     .hub3-hold.no{animation:hub3no .42s cubic-bezier(.36,.07,.19,.97)}
     @keyframes hub3no{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
     .hub3-go-t{display:grid;gap:5px;text-align:left}
     .hub3-go-t b{font:400 22px/1.15 "Jua","Noto Sans KR",sans-serif;color:#fff;white-space:nowrap;text-shadow:0 2px 0 rgba(10,14,40,.55),0 0 16px rgba(10,14,40,.75)}
     .hub3-go-t>span{display:flex;white-space:nowrap;gap:6px;align-items:center;font:700 13px "Noto Sans KR",sans-serif;color:var(--sub);text-shadow:0 1px 0 rgba(10,14,40,.6)}
     .hub3-go-t .hud-key{text-shadow:none}
-    .hub3-go-t>span:empty{display:none}.hub3-go-t .pick{gap:4px;color:var(--led)}.hub3-go-t .pick .hud-key{min-width:22px}
+    .hub3-go-t>span:empty{display:none}.hub3-go-t .h3-pick{gap:4px;color:var(--led)}.hub3-go-t .h3-pick .hud-key{min-width:22px}
     /* 출발 — 바이저봇을 중심으로 조여 드는 원 */
     .hub3-iris{position:absolute;inset:0;z-index:9;pointer-events:none;display:none}
     .hub3-iris.on{display:block;pointer-events:auto}
-    @media (pointer:coarse){.hub3-hint .k,.hub3-go-t .kb{display:none}.hub3-hint .t{display:inline}}
-    @media (pointer:fine){.hub3-go-t .tp{display:none}}
+    @media (pointer:coarse){.hub3-hint .k,.hub3-go-t .h3-kb{display:none}.hub3-hint .t{display:inline}}
+    @media (pointer:fine){.hub3-go-t .h3-tp{display:none}}
     @media (max-width:560px){.hub3-hint .k{display:none}.hub3-hint .t{display:inline}
       .hub3-hold{width:84px;height:84px}.hub3-hold .cap{inset:12px}.hub3-go-t b{font-size:20px}
       .hub3-say{bottom:calc(max(16px,env(safe-area-inset-bottom)) + 108px)}.hub3-say span{font-size:17px}
-      .hub3-visor .vs-info dd{font-size:19px}}
+      .hub3-visor .vs-info dd{font-size:20px}.hub3-visor .vs-info div{padding-right:28px}}
     @media (prefers-reduced-motion:reduce){.hub3-visor .vb{transition:none}.hub3-visor.lockon .vs-scan{animation:none}.hub3-go,.hub3-say{transition-duration:.01ms}}
   </style>
   <section class="hub3" aria-label="에듀이노 기지"><div class="hub3-stage" id="hub3-stage"></div>
@@ -121,7 +125,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     <div class="hub3-visor" id="hub3-visor" aria-hidden="true"><i class="vb tl"></i><i class="vb tr"></i><i class="vb bl"></i><i class="vb br"></i><div class="vs-scan"></div><dl class="vs-info" id="hub3-info"></dl></div>
     <div class="hub3-say" id="hub3-say" aria-live="polite"><b>바이저봇</b><span></span></div>
     <div class="hub3-go" id="hub3-go"><button class="hub3-hold" id="hub3-hold" type="button" aria-label="꾹 눌러 출발"><svg class="rg" viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="46"/><circle class="arc" cx="50" cy="50" r="46" pathLength="100"/></svg><span class="cap"></span></button>
-      <div class="hub3-go-t"><b id="hub3-go-b">꾹 눌러 출발</b><span class="kb"><span class="hud-key wide">스페이스</span>꾹 누르기</span><span class="kb pick" id="hub3-pick-k"></span><span class="tp" id="hub3-pick-t"></span></div></div>
+      <div class="hub3-go-t"><b id="hub3-go-b">꾹 눌러 출발</b><span class="h3-kb"><span class="hud-key wide">스페이스</span>꾹 누르기</span><span class="h3-kb h3-pick" id="hub3-pick-k"></span><span class="h3-tp" id="hub3-pick-t"></span></div></div>
     <div class="hub3-hint off" id="hub3-hint"><span class="k"><span class="hud-key">←↑↓→</span> 또는 <span class="hud-key">WASD</span> 걷기 · 문 위에서 <span class="hud-key">스페이스</span> 꾹</span><span class="t">가고 싶은 곳을 누르면 걸어가요</span></div>
     <div class="hub3-iris" id="hub3-iris"></div>
     <button class="hub3-skip" id="hub3-skip" type="button" hidden>인트로 건너뛰기 ⏭</button></section>`;

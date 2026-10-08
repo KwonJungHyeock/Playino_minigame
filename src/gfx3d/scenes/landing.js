@@ -17,7 +17,8 @@ export const SHIP_REST = PAD_H + 0.17;   // 셔틀 발이 착륙장에 닿는 �
 // 행성 표면: 가운데는 평평, 바깥은 완만한 언덕 · 구덩이. 정점 색으로 모래 결을 낸다.
 function ground() {
   const g = new THREE.PlaneGeometry(120, 120, 160, 160); g.rotateX(-Math.PI / 2);
-  const p = g.attributes.position, col = new Float32Array(p.count * 3), a = new THREE.Color(PALETTE.sand), b = new THREE.Color(PALETTE.sandDark), c = new THREE.Color();
+  // 기지 허브(base.js)와 같은 밤 흙색 — 채도를 빼서 유도등 · 착륙장 불빛이 도드라지게
+  const p = g.attributes.position, col = new Float32Array(p.count * 3), a = new THREE.Color(0xae8c80), b = new THREE.Color(0x7d6264), c = new THREE.Color();
   const craters = [[-5.5, 3.5, 1.4], [6.5, 2.6, 1.0], [-9, -6, 2.2], [10, -10, 2.8], [2.5, 6, 0.8]];
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), z = p.getZ(i), d = Math.hypot(x - PAD.x, z - PAD.z);
@@ -110,16 +111,18 @@ export async function createLandingScene(stage, { demo = true } = {}) {
   // demo=false: 시연 자동 진행을 끄고 게임이 셔틀 높이 · 유도등을 직접 움직인다
   const { scene, camera, renderer } = stage;
   const root = new THREE.Group(); root.name = 'LandingScene'; scene.add(root);
-  addSpaceSky(scene, {});
-  renderer.toneMappingExposure = 1.05;
+  addSpaceSky(scene, { top: 0x050817, horizon: 0x1e1f4a, glow: 0x5a3358, stars: 1500, fog: [16, 60] });   // 허브와 같은 밤하늘
+  renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.type = THREE.VSMShadowMap;   // 부드럽게 번지는 그림자(가장자리 흐림)
   // 조명: 차가운 하늘빛 + 따뜻한 키 라이트 + 푸른 림
-  scene.environmentIntensity = 0.7;
-  root.add(new THREE.HemisphereLight(0xe6e8ff, 0x8a6066, 1.05));
-  const key = new THREE.DirectionalLight(0xffecd8, 2.1); key.position.set(-5, 9, 6); key.castShadow = true;
+  scene.environmentIntensity = 0.42;
+  root.add(new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.85));
+  const key = new THREE.DirectionalLight(0xd4dcff, 1.7); key.position.set(-5, 9, 6); key.castShadow = true;   // 달빛
   key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 9; key.shadow.blurSamples = 16;
   Object.assign(key.shadow.camera, { left: -11, right: 11, top: 11, bottom: -11, near: 1, far: 40 }); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0xb4e0ff, 1.25); rim.position.set(6, 4, -7); root.add(rim);
+  const rim = new THREE.DirectionalLight(0x7fd8ff, 1.5); rim.position.set(6, 4, -7); root.add(rim);
+  // 착륙장 조명: 작업등처럼 위에서 비추는 따뜻한 스폿(그림자 없음) — 밤에도 무대가 또렷하게
+  const work = new THREE.SpotLight(0xffe6c0, 70, 16, 0.6, 0.8, 2); work.position.set(PAD.x + 1.5, 7, PAD.z + 4); work.target.position.copy(PAD); root.add(work, work.target);
 
   root.add(ground());
   const pad = landingPad(); root.add(pad);

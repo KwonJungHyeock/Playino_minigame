@@ -40,19 +40,22 @@ const gatePos = (id) => {
 const BOUND = { cx: 0, cz: -3, rx: 13.6, rz: 17.6 };
 const boundK = (x, z) => Math.hypot((x - BOUND.cx) / BOUND.rx, (z - BOUND.cz) / BOUND.rz);
 
+const GROUND = { lit: 0xae8c80, dark: 0x7d6264, edge: 0x3c3242 };
+
 function ground() {
   const g = new THREE.PlaneGeometry(130, 130, 120, 120); g.rotateX(-Math.PI / 2);
   const p = g.attributes.position, col = new Float32Array(p.count * 3);
-  const a = new THREE.Color(PALETTE.sand), b = new THREE.Color(PALETTE.sandDark), c = new THREE.Color();
-  const craters = [[-3.2, 6.2, 1.1], [6.4, 6.6, 0.9], [-11.6, 9.4, 1.6], [12.2, -12, 1.8], [-1.6, -9.6, 0.8], [3.4, 11.4, 1.7]];
+  // 밤 기지: 채도를 뺀 붉은 흙. 기지 안쪽(불빛이 닿는 자리)은 조금 밝게, 바깥 언덕은 어둡게 — 스팟이 도드라지게
+  const a = new THREE.Color(GROUND.lit), b = new THREE.Color(GROUND.dark), edge = new THREE.Color(GROUND.edge), c = new THREE.Color();
+  const craters = [[-3.2, 6.2, 1.1], [6.4, 6.6, 0.9], [-11.6, 9.4, 1.6], [12.2, -12, 1.8], [-1.6, -9.6, 0.8]];   // 캡슐 밑 구덩이는 뺐다 — 성긴 격자에서 면이 꺾여 밤 조명에 쐐기 모양 명암이 생겼다
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), z = p.getZ(i), k = boundK(x, z);
     let h = THREE.MathUtils.smoothstep(k, 0.98, 1.45) * (2.6 + Math.sin(x * 0.31) * Math.cos(z * 0.27) * 1.1 + Math.sin(x * 0.09 + z * 0.13) * 1.4);
     h += (Math.sin(x * 0.45) * Math.cos(z * 0.38)) * 0.06 * (1 - THREE.MathUtils.smoothstep(k, 0.0, 0.9));   // 기지 안은 아주 잔잔하게
-    for (const [cx, cz, r] of craters) { const q = Math.hypot(x - cx, z - cz) / r; if (q < 1.6) h += q < 1 ? -0.18 * (1 - q * q) : 0.1 * Math.sin((q - 1) / 0.6 * Math.PI); }
+    for (const [cx, cz, r] of craters) { const q = Math.hypot(x - cx, z - cz) / r; if (q < 1.6) h += q < 1 ? -0.1 * (1 - q * q) ** 2 : 0.05 * Math.sin((q - 1) / 0.6 * Math.PI); }
     p.setY(i, h);
     const n = 0.5 + 0.5 * Math.sin(x * 1.3 + Math.sin(z * 0.9) * 2.0) * Math.cos(z * 1.1);
-    c.copy(a).lerp(b, n * 0.28 + Math.max(0, -h) * 1.0 + THREE.MathUtils.smoothstep(k, 1.0, 1.6) * 0.35); col.set([c.r, c.g, c.b], i * 3);
+    c.copy(a).lerp(b, n * 0.3 + Math.max(0, -h) * 1.0 + THREE.MathUtils.smoothstep(k, 0.35, 0.95) * 0.45).lerp(edge, THREE.MathUtils.smoothstep(k, 0.95, 1.5) * 0.85); col.set([c.r, c.g, c.b], i * 3);
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
   return mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), { cast: false, name: 'Ground' });
@@ -128,6 +131,21 @@ function launchPad() {
   return g;
 }
 
+// ── 바닥 빛 웅덩이: 가로등 · 문 둘레 땅이 빛을 받은 것처럼(조명 계산 없는 가산 원판) ──
+let poolTex = null;
+function poolTexture() {
+  if (poolTex) return poolTex;
+  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
+  const g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.35, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  poolTex = new THREE.CanvasTexture(c); poolTex.userData.gfxShared = true; return poolTex;
+}
+export function lightPool(color, r, opacity = 0.35) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(r * 2, r * 2), new THREE.MeshBasicMaterial({ color, map: poolTexture(), transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  m.rotation.x = -Math.PI / 2; m.position.y = 0.02; m.renderOrder = 1; m.userData.noAO = true; m.castShadow = m.receiveShadow = false; m.name = 'LightPool';
+  return m;
+}
+
 // ── 미션 문: 바닥 원판 + 상태색 고리 + 떠 있는 안내판(스프라이트) + 다음 목표 빛기둥 ──
 const STATE_COL = { open: PALETTE.cyan, next: PALETTE.mustard, cleared: PALETTE.mint, locked: 0x8a8fa0, partial: PALETTE.cyan };
 const STATE_CSS = { open: '#8ff7ee', next: '#ffd25a', cleared: '#5ff0a0', locked: '#a9b3d6', partial: '#8ff7ee' };
@@ -184,6 +202,7 @@ function gate(id) {
   const bc = document.createElement('canvas'); bc.width = 4; bc.height = 128; const bx = bc.getContext('2d'); const gr = bx.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,1)'); bx.fillStyle = gr; bx.fillRect(0, 0, 4, 128);
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.78, 3.4, 48, 1, true), new THREE.MeshBasicMaterial({ color: PALETTE.mustard, map: new THREE.CanvasTexture(bc), transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, fog: false }));
   beam.position.y = 1.7; beam.visible = false; beam.userData.noAO = true; g.add(beam);
+  const pool = lightPool(STATE_COL.open, 1.9, 0.3); g.add(pool);
   // 안내판
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 240;
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
@@ -201,6 +220,7 @@ function gate(id) {
       st = next; drawSign(cv, id, st); tex.needsUpdate = true;
       const c = STATE_COL[st.state]; ringMat.emissive.setHex(c); ringMat.color.setHex(c).multiplyScalar(0.28); chevMat.color.setHex(c);
       beam.visible = st.state === 'next';
+      pool.material.color.setHex(c); pool.material.opacity = st.state === 'locked' ? 0.08 : st.state === 'next' ? 0.42 : 0.26;
     },
     redraw() { drawSign(cv, id, st); tex.needsUpdate = true; },
     /** o.near: '들어가기' 거리 · o.prox: 0~1 다가올수록 1 · o.brief: 홀로그램 브리핑 중(안내판을 접는다) · o.dim: 다른 문 브리핑 중(흐리게) */
@@ -371,16 +391,19 @@ function walkways(gates) {
 export async function createBaseScene(stage) {
   const { scene, renderer } = stage;
   const root = new THREE.Group(); root.name = 'BaseScene'; scene.add(root);
-  addSpaceSky(scene, { fog: [18, 62] });
-  renderer.toneMappingExposure = 1.05;
+  // 밤의 기지 — 탈출 이야기라 어둡게 깔고, 불빛(문 · 가로등 · 로켓 · 바이저봇)이 길잡이가 되게 한다
+  addSpaceSky(scene, { top: 0x050817, horizon: 0x1e1f4a, glow: 0x5a3358, stars: 1500, fog: [20, 64] });
+  renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.type = THREE.VSMShadowMap;
-  scene.environmentIntensity = 0.7;
-  root.add(new THREE.HemisphereLight(0xe6e8ff, 0x8a6066, 1.05));
-  // 그림자는 바이저봇 둘레만 — 키 라이트가 봇을 따라다닌다(지도 전체를 덮으면 해상도가 모자란다)
-  const key = new THREE.DirectionalLight(0xffecd8, 2.1); key.castShadow = true;
+  scene.environmentIntensity = 0.38;
+  root.add(new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.8));
+  // 그림자는 바이저봇 둘레만 — 달빛(키 라이트)이 봇을 따라다닌다(지도 전체를 덮으면 해상도가 모자란다)
+  const key = new THREE.DirectionalLight(0xd4dcff, 1.55); key.castShadow = true;
   key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 8; key.shadow.blurSamples = 16;
   Object.assign(key.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 50 }); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0xb4e0ff, 1.2); rim.position.set(8, 6, -10); root.add(rim);
+  const rim = new THREE.DirectionalLight(0x7fd8ff, 1.5); rim.position.set(8, 6, -10); root.add(rim);   // 윤곽을 살리는 청록 역광
+  // 로켓 조명: 발사탑에서 비추는 스폿(그림자 없음) — 기지 어디서나 목표가 보이게
+  const rocketLight = new THREE.SpotLight(0xffe2b0, 160, 24, 0.36, 0.7, 2); rocketLight.position.set(CENTER.x + 4.5, 10, CENTER.z + 6); rocketLight.target.position.set(CENTER.x, 2.6, CENTER.z); root.add(rocketLight, rocketLight.target);
   root.add(ground());
 
   const stat = new THREE.Group(), live = new THREE.Group(); live.name = 'Live';
@@ -433,6 +456,7 @@ export async function createBaseScene(stage) {
     const x = CENTER.x + Math.cos(a) * (PAD_R + 2.2), z = CENTER.z + Math.sin(a) * (PAD_R + 2.2);
     const p = mesh(roundedCylinder(0.05, 1.3, 0.02, 0), vinyl(P.white)); p.position.set(x, 0, z); stat.add(p);
     const b = mesh(new THREE.SphereGeometry(0.11, 20, 14), postLamp, { cast: false }); b.position.set(x, 1.38, z); stat.add(b);
+    const lp = lightPool(0xffc978, 1.5, 0.3); lp.position.set(x, 0.02, z); live.add(lp);
     col(x, z, 0.18);
   }
 
@@ -444,6 +468,9 @@ export async function createBaseScene(stage) {
 
   const bot = await loadRobot();
   bot.object.position.set(0.4, 0, 10.6); bot.object.rotation.y = 0.5; root.add(bot.object);
+  // 바이저봇 둘레를 은은히 밝히는 불빛 + 발밑 빛 웅덩이 — 어두운 기지에서도 주인공이 늘 잘 보이게(봇을 따라다닌다)
+  const lantern = new THREE.PointLight(0xfff0d8, 7, 6, 2); lantern.position.set(0, 2.3, 0.9); bot.object.add(lantern);
+  const botPool = lightPool(0xfff0d8, 1.6, 0.22); root.add(botPool);
 
   // 글꼴(Jua)이 늦게 오면 안내판을 다시 그린다
   document.fonts?.load?.('44px "Jua"').then(() => gates.forEach((g) => g.redraw())).catch(() => {});
@@ -452,7 +479,7 @@ export async function createBaseScene(stage) {
   const tmp = new THREE.Vector3();
   /** gateFx(id) → { near, prox, brief } (문마다 반응 정도) */
   function update(dt, botPos, camPos, gateFx) {
-    t += dt; bot.update(dt);
+    t += dt; bot.update(dt); botPool.position.set(botPos.x, 0.025, botPos.z);
     anim.forEach((f) => f?.(t, dt));
     gates.forEach((g) => g.update(t, dt, gateFx?.(g.id), tmp.copy(g.pos).sub(camPos).length()));
     rocket.userData.ghostMat.opacity = 0.16 + Math.sin(t * 2.2) * 0.05;
