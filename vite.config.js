@@ -12,5 +12,7 @@ export default defineConfig({
   build: {
     target: 'es2020',
     outDir: 'dist',
+    // three.js(약 690kB · gzip 177kB)는 3D 씬에서만 동적 import 되는 별도 청크라 첫 화면과 무관하다.
+    chunkSizeWarningLimit: 720,
   },
 });

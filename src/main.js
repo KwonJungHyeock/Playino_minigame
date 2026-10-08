@@ -155,6 +155,11 @@ function readTrail() {
 }
 
 function boot() {
+  // v4 3D 실험실(?lab3d) — 학생 동선과 분리된 점검 화면. three.js 는 이 경로에서만 내려받는다.
+  if (new URLSearchParams(location.search).has('lab3d')) {
+    import('./scenes/lab3d.js').then((m) => m.showLab3d(app(), { onExit: () => { location.search = ''; } }));
+    return;
+  }
   // 온보딩(인트로~보드 연결)을 아직 안 끝냈으면 복원하지 않는다 — 순서를 건너뛰면 안 되는 구간이다.
   const ready = progress.isCleared('setup');
   const trail = ready ? readTrail() : [];
