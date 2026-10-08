@@ -77,14 +77,15 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    offTick?.(); hud?.dispose(); song?.dispose(); land?.dispose(); stage?.dispose();
+    offTick?.(); lessonRef?.dispose(); hud?.dispose(); song?.dispose(); land?.dispose(); stage?.dispose();
     PINS.forEach((p) => { if (board.connected) board.digital(p, false).catch(() => {}); });
   }
   const exit = () => { cleanup(); onExit?.(); };
+  let lessonRef = null;
 
   // ── 3D 장면 ──
   stage = g.createStage(host, { fov: 36, far: 120, hold: true, coverText: '착륙장에 불을 켜는 중…' });   // 다 짓고 warm() 할 때까지 가림막
-  const [{ createLandingScene, PAD, SHIP_REST }, { addPost }, { createHud }, { lathe, roundedCylinder, mesh }, { vinyl, PALETTE }] = await Promise.all([import('../gfx3d/scenes/landing.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/shapes.js'), import('../gfx3d/materials.js')]);
+  const [{ createLandingScene, PAD, SHIP_REST }, { addPost }, { createHud }, { lathe, roundedCylinder, mesh }, { vinyl, PALETTE }, { runLesson }] = await Promise.all([import('../gfx3d/scenes/landing.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/shapes.js'), import('../gfx3d/materials.js'), import('../gfx3d/lesson.js')]);
   if (done) return;
   land = await createLandingScene(stage, { demo: false });
   if (done) { land.dispose(); return; }
@@ -93,7 +94,8 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   const THREE = stage.THREE, cam = stage.camera, bot = land.bot, ship = land.ship;
   const GAME_CAM = { p: new THREE.Vector3(2.7, 2.5, 5.9), t: new THREE.Vector3(-0.25, 1.55, -1.0) };
   const MUSIC_CAM = { p: new THREE.Vector3(0.9, 1.75, 6.6), t: new THREE.Vector3(-0.1, 2.7, -3.0) };   // 2단계: 아래엔 유도등 3기, 위로는 별자리 하늘
-  const camDef = () => (S.mode === 2 ? MUSIC_CAM : GAME_CAM);
+  const LESSON_CAM = { p: new THREE.Vector3(1.2, 1.9, 3.9), t: new THREE.Vector3(-0.85, 0.95, -3.0) };   // 강의: 유도등 3기를 화면 오른쪽 가운데에 크게(왼쪽은 코드 자리)
+  const camDef = () => (S.lesson ? LESSON_CAM : S.mode === 2 ? MUSIC_CAM : GAME_CAM);
   const camT = new THREE.Vector3();
   const fitCam = () => {   // 세로 화면에서도 착륙장 · 유도등 3기가 다 보이게
     const a = cam.aspect, k = a < 1.25 ? 1 + (1.25 - a) * (S.mode === 2 ? 0.35 : 1.05) : 1, fov = a < 1 ? 46 : 36;   // 2단계 빛길은 폭이 좁아 덜 물러나도 된다
@@ -165,16 +167,64 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     else board.connectAuto().then((a) => { if (a?.ok && w.isConnected) ok(); }).catch(() => {});
     w.querySelector('#w-conn').onclick = async () => { if (!board.isSupported()) return; set('포트를 골라 주세요 🔌'); try { await board.connect(); ok(); } catch (e) { set(board.classify(e).note, 'warn'); } };
     w.querySelector('#w-test').onclick = async () => { set('초록 · 노랑 · 빨강 순서로 깜빡여요 💡'); for (let i = 0; i < 3; i++) { land.pulseLamp(i, 0.45); try { await board.blink(PINS[i], 2, 200); } catch { set('테스트 실패 — 결선을 확인해 주세요', 'warn'); return; } } set('세 개 모두 켜졌다면 준비 완료!', 'ok'); };
-    await closed; if (!done) (S.mode === 2 ? brief2() : brief());
+    await closed; if (done) return;
+    if (!lessonSeen()) { await lesson(); if (done) return; }   // 처음 온 날은 원리부터 — 다음부턴 1단계 설명에서 '원리 다시 보기'
+    S.mode === 2 ? brief2() : brief();
   }
+  // ── 바이저 강의 + 확인 퀴즈(공통 짜임새, gfx3d/lesson.js) — 유도등 = 디지털 출력 ──
+  const LESSON_KEY = 'eduino.v4.lesson.v1';
+  function lessonSeen() { try { return !!JSON.parse(localStorage.getItem(LESSON_KEY) || '{}').led; } catch { return false; } }
+  function markLesson(r) { try { const v = JSON.parse(localStorage.getItem(LESSON_KEY) || '{}'); v.led = { at: Date.now(), right: r.right, firstTry: r.firstTry }; localStorage.setItem(LESSON_KEY, JSON.stringify(v)); } catch {} }
+  const lampOn = (i, on) => { land.setLamp(i, on); if (board.connected) board.digital(PINS[i], on).catch(() => {}); };
+  const lampAll = (on) => [0, 1, 2].forEach((i) => lampOn(i, on));
+  const blink = (i, ms) => { lampOn(i, true); later(ms, () => lampOn(i, false)); };
+  async function lesson() {
+    S.lesson = true; const prev = S.phase; S.phase = 'lesson'; hud.action(''); lampAll(false);
+    hud.goal('바이저 강의 · 유도등의 원리');
+    bot.setExpression('웃음');
+    lessonRef = runLesson(el, {
+      sfx: { click: () => sfx.click?.(), perfect: () => sfx.perfect(), no: () => sfx.no() }, skippable: true,
+      outro: '좋아! 이제 진짜 유도등으로 보급선을 내리자.',
+      cards: [
+        { title: '켜짐과 꺼짐', say: '유도등은 켜짐 아니면 꺼짐, 딱 두 가지야. 노랑 유도등을 켰다 꺼 봐!',
+          code: ['digitalWrite(3, HIGH);  // 켜짐 (5V)', 'digitalWrite(3, LOW);   // 꺼짐 (0V)'],
+          acts: [{ code: 'HIGH', label: '켜기', color: '#e0a800', line: 0, run: () => lampOn(1, true) }, { code: 'LOW', label: '끄기', color: '#3a3c40', line: 1, run: () => lampOn(1, false) }],
+          after: '이렇게 두 가지로만 말하는 걸 디지털 출력이라고 해.' },
+        { title: '핀 번호 = 유도등 주소', say: '보드의 핀 번호로 어느 유도등인지 골라. 2번 초록, 3번 노랑, 4번 빨강!',
+          code: ['digitalWrite(2, HIGH);  // 초록', 'digitalWrite(3, HIGH);  // 노랑', 'digitalWrite(4, HIGH);  // 빨강'],
+          acts: [0, 1, 2].map((i) => ({ label: `${i + 2}번 핀`, color: ['#1fb85a', '#e0a800', '#e04848'][i], line: i, run: () => { lampAll(false); blink(i, 900); } })),
+          after: '숫자 하나만 바꾸면 다른 유도등이 켜져.' },
+        { title: '기다리기로 박자 만들기', say: 'delay 는 기다리기야. 1000 이면 1초! 켜고 기다렸다 끄면 깜빡여.',
+          code: ['digitalWrite(2, HIGH);', 'delay(500);            // 0.5초 기다리기', 'digitalWrite(2, LOW);'],
+          acts: [{ code: 'delay(500)', label: '깜빡', color: '#1fb85a', line: [0, 1, 2], run: () => blink(0, 500) }, { code: 'delay(1000)', label: '깜빡', color: '#1fb85a', line: [0, 1, 2], run: () => blink(0, 1000) }],
+          after: '보급선을 내릴 때도 딱 맞는 박자로 켜야 해!' },
+      ],
+      quiz: [
+        { q: '노랑 유도등(3번 핀)을 켜는 코드는?', options: [{ code: 'digitalWrite(3, LOW);' }, { code: 'digitalWrite(3, HIGH);' }, { code: 'digitalWrite(2, HIGH);' }], answer: 1,
+          hint: 'HIGH 가 켜짐, 노랑은 3번 핀이었지!', good: '정답! 노랑 유도등이 켜졌어.', onRight: () => { lampAll(false); blink(1, 1400); } },
+        { q: 'LOW 는 무슨 뜻일까?', options: [{ label: '켜짐 (5V)' }, { label: '반만 켜짐' }, { label: '꺼짐 (0V)' }], answer: 2,
+          hint: '디지털은 켜짐 아니면 꺼짐, 딱 두 가지야.', good: '맞아! LOW 는 꺼짐이야.', onRight: () => { lampAll(true); later(500, () => lampAll(false)); } },
+        { q: '빨강을 1초 켰다 끄려면 빈칸에는?', code: ['digitalWrite(4, HIGH);', '____', 'digitalWrite(4, LOW);'], runLine: [0, 1, 2],
+          options: [{ code: 'delay(1000);' }, { code: 'delay(1);' }, { code: 'wait(1);' }], answer: 0,
+          hint: 'delay 숫자는 1000분의 1초 단위야. 1초는 1000!', good: '완벽해! 빨강이 1초 동안 켜졌어.', onRight: () => { lampAll(false); blink(2, 1000); } },
+      ],
+    });
+    const r = await lessonRef.done; lessonRef = null;
+    if (done) return;
+    markLesson(r); lampAll(false); S.lesson = false; S.phase = prev === 'lesson' ? 'prep' : prev; bot.setExpression('기본');
+    if (!r.skipped) { bot.play('환호', { once: true }); hud.toast(r.firstTry === r.total ? '퀴즈 만점! 원리 마스터 💡' : `퀴즈 ${r.total}문제 모두 풀었어요`, 'ok'); }
+  }
+
   async function brief() {
     hud.goal('보급선을 착륙장으로 안내하기');
-    await hud.window(`<div class="hud-eye">1 / 2 단계</div><h2>타이밍 착륙</h2>
+    const a = await hud.window(`<div class="hud-eye">1 / 2 단계</div><h2>타이밍 착륙</h2>
       <p>빛 고리가 가운데 <b>판정 고리</b>에 겹치는 순간 <span class="hud-key wide">스페이스</span> 또는 <b>신호 보내기</b> 버튼!</p>
       <p>맞힐 때마다 유도등이 켜지고 보급선이 내려와요. 정확하면 <b style="color:#5ff0a0">초록</b>, 조금 어긋나면 <b style="color:#ffd25a">노랑</b>, 놓치면 <b style="color:#ff6f6f">빨강</b>.</p>
       <p>정확도 <b>85%</b> 이상(A등급)이면 착륙 성공!</p>
-      <div class="hud-row"><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
-    if (!done) beginPlay();
+      <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
+    if (done) return;
+    if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
+    beginPlay();
   }
 
   // ── 1단계 플레이 ──
