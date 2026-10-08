@@ -12,6 +12,7 @@ import { results } from '../app/results.js';
 import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curriculum.js';
 import { STORY, ACTS, PART_ROOMS } from '../content/v4story.js';
 
+const THREE_D = new Set(['led', 'buzzer']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
 const PLANET_R = 11;   // 작은 행성 반지름(m) — 걸으면 지평선 너머에서 스팟이 솟는다(gfx3d/curve.js)
 const SPEED = 3.1, BOT_R = 0.32;
 const HOLD_T = 0.8;              // 꾹 누르는 시간(초) — 실수로 들어가지 않을 만큼, 기다림이 느껴지지 않을 만큼
@@ -450,7 +451,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     if (h.on && !locked) {
       h.k = Math.min(1, h.k + dt / HOLD_T);
       const step = Math.floor(h.k * 6); if (step > h.tick) { h.tick = step; sfx.tick(h.k); }
-      if (h.k >= 1) { h.on = false; launch(S.brief.id, S.brief.id === 'led' ? '3d' : '2d', S.brief.id === 'led' ? S.brief.sel + 1 : 1); }   // 착륙 유도등은 두 단계 모두 3D
+      if (h.k >= 1) { h.on = false; { const id = S.brief.id, is3d = THREE_D.has(id); launch(id, is3d ? '3d' : '2d', is3d && STORY[id].stages ? S.brief.sel + 1 : 1); } }   // 3D 판이 있는 미션은 고른 단계부터
     } else if (h.on && locked) {
       h.k = Math.min(0.14, h.k + dt / HOLD_T);
       if (h.k >= 0.14 && !h.denied) { h.denied = true; brief.deny(); sfx.deny(); holdBtn.classList.remove('no'); void holdBtn.offsetWidth; holdBtn.classList.add('no'); S.sqV += 2; }

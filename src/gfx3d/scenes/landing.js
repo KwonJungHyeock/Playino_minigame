@@ -15,13 +15,13 @@ export const PAD = new THREE.Vector3(0, 0, -1.0), PAD_R = 1.9, PAD_H = 0.14;
 export const SHIP_REST = PAD_H + 0.17;   // 셔틀 발이 착륙장에 닿는 높이
 
 // 행성 표면: 가운데는 평평, 바깥은 완만한 언덕 · 구덩이. 정점 색으로 모래 결을 낸다.
-function ground() {
+/** 밤 행성 표면(가운데 c 둘레는 평평) — 다른 미션 장면도 같이 쓴다 */
+export function ground(at = PAD, craters = [[-5.5, 3.5, 1.4], [6.5, 2.6, 1.0], [-9, -6, 2.2], [10, -10, 2.8], [2.5, 6, 0.8]]) {
   const g = new THREE.PlaneGeometry(120, 120, 160, 160); g.rotateX(-Math.PI / 2);
   // 기지 허브(base.js)와 같은 밤 흙색 — 채도를 빼서 유도등 · 착륙장 불빛이 도드라지게
   const p = g.attributes.position, col = new Float32Array(p.count * 3), a = new THREE.Color(0xae8c80), b = new THREE.Color(0x7d6264), c = new THREE.Color();
-  const craters = [[-5.5, 3.5, 1.4], [6.5, 2.6, 1.0], [-9, -6, 2.2], [10, -10, 2.8], [2.5, 6, 0.8]];
   for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), z = p.getZ(i), d = Math.hypot(x - PAD.x, z - PAD.z);
+    const x = p.getX(i), z = p.getZ(i), d = Math.hypot(x - at.x, z - at.z);
     let h = (Math.sin(x * 0.21) * Math.cos(z * 0.17) * 0.55 + Math.sin(x * 0.07 + z * 0.11) * 0.9) * THREE.MathUtils.smoothstep(d, 4.5, 14);
     for (const [cx, cz, r] of craters) { const q = Math.hypot(x - cx, z - cz) / r; if (q < 1.6) h += q < 1 ? -0.22 * (1 - q * q) : 0.12 * Math.sin((q - 1) / 0.6 * Math.PI); }
     p.setY(i, h);

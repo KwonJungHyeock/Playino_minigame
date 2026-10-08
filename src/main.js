@@ -128,14 +128,19 @@ function sceneHub3d(opts) {
   recordsEntry.hide(); studentChip.hide(); darkHold();
   import('./scenes/hub3d.js').then((m) => m.showHub3d(app(), {
     ...opts,
-    onRoom: (id, { mode, stage }) => (mode === '3d' ? nav.push(() => sceneLanding3d(stage)) : pushRoom(id)),
+    onRoom: (id, { mode, stage }) => (mode === '3d' ? nav.push(() => sceneMission3d(id, stage)) : pushRoom(id)),
     onExit: () => { location.search = ''; },
     fallback: () => sceneHub(),   // WebGL2 가 없는 기기는 기존 허브
   }));
 }
-function sceneLanding3d(stage = 1) {
+// 3D 판 미션(허브 THREE_D 와 짝) — 고른 단계부터 시작, 나가면 기지의 그 문 앞으로
+const MISSION_3D = {
+  led: () => import('./scenes/landingGame.js').then((m) => m.showLandingGame),
+  buzzer: () => import('./scenes/beaconGame.js').then((m) => m.showBeaconGame),
+};
+function sceneMission3d(id, stage = 1) {
   recordsEntry.hide(); studentChip.hide(); darkHold();
-  import('./scenes/landingGame.js').then((m) => m.showLandingGame(app(), { stage, onExit: () => nav.back() }));
+  MISSION_3D[id]().then((show) => show(app(), { stage, onExit: () => nav.back() }));
 }
 
 // 배경 이미지 사전 로드 (404 방지)
@@ -186,8 +191,8 @@ function boot() {
     return;
   }
   // v4 3D 게임 미리보기(?v4=led) — 착륙 유도등 단독으로(&stage=2 면 2단계 라이트 연주부터).
-  if (q.get('v4') === 'led') {
-    import('./scenes/landingGame.js').then((m) => m.showLandingGame(app(), { stage: q.get('stage') === '2' ? 2 : 1, onExit: () => { location.search = ''; } }));
+  if (MISSION_3D[q.get('v4')]) {   // ?v4=led · ?v4=buzzer (&stage=2)
+    MISSION_3D[q.get('v4')]().then((show) => show(app(), { stage: q.get('stage') === '2' ? 2 : 1, onExit: () => { location.search = ''; } }));
     return;
   }
   // 온보딩(인트로~보드 연결)을 아직 안 끝냈으면 복원하지 않는다 — 순서를 건너뛰면 안 되는 구간이다.
