@@ -47,7 +47,7 @@ export async function showLandingGame(root, { onExit } = {}) {
   const exit = () => { cleanup(); onExit?.(); };
 
   // ── 3D 장면 ──
-  stage = g.createStage(host, { fov: 36, far: 120 });
+  stage = g.createStage(host, { fov: 36, far: 120, hold: true, coverText: '착륙장에 불을 켜는 중…' });   // 다 짓고 warm() 할 때까지 가림막
   const [{ createLandingScene, PAD, SHIP_REST }, { addPost }, { createHud }] = await Promise.all([import('../gfx3d/scenes/landing.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js')]);
   if (done) return;
   land = await createLandingScene(stage, { demo: false });
@@ -244,5 +244,7 @@ export async function showLandingGame(root, { onExit } = {}) {
 
   window.__landingGame = { S, land, stage, press, hud };   // 자동 점검용
   cam.position.copy(introFrom.p); camT.copy(introFrom.t);
+  await stage.warm(); if (done) return;   // 셰이더 · 텍스처를 가림막 뒤에서 미리 — 첫 장면이 멈칫하지 않게
+  stage.reveal();
   intro();
 }

@@ -149,7 +149,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   }
 
   // ── 3D ──
-  stage = g.createStage(host, { fov: 38, far: 140 });
+  stage = g.createStage(host, { fov: 38, far: 140, hold: true, coverText: '기지에 불을 켜는 중…' });   // 다 짓고 warm() 할 때까지 가림막
   const [{ createBaseScene, GATE_R, CENTER }, { addPost }, { createHud }, { createBriefing }, { createParticles }] = await Promise.all([import('../gfx3d/scenes/base.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/briefing.js'), import('../gfx3d/fx.js')]);
   if (done) return;
   base = await createBaseScene(stage);
@@ -664,6 +664,10 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   /** 자동 점검용: openCard(id) = 그 문 원판 위에 바로 세우고 브리핑을 연다 · enter(id, mode) = 바로 출발 연출 */
   const openCard = (id) => { const gp = gateOf(id).pos; botObj.position.set(gp.x, 0, gp.z); S.vel.set(0, 0, 0); S.busy = false; if (S.brief) closeBrief(); openBrief(id); };
   window.__hub3d = { el, S, base, stage, hud, brief, openCard, enter: (id, mode = '2d') => launch(id, mode), holdStart, holdEnd, selectStage, walkTo, refresh, intro };
+
+  // 가림막 뒤에서 셰이더 · 텍스처를 다 올린 뒤 걷는다 — 덜 지은 장면이 보이거나 첫 몇 초가 끊기지 않게
+  await stage.warm(); if (done) return;
+  stage.reveal();
 
   // 처음이면 인트로, 아니면 새로 얻은 것부터 축하
   bgm.setDuck(1);

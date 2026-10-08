@@ -122,8 +122,10 @@ function enterRoom(roomId) {
 }
 
 // v4 3D 기지 허브 — 미션 문 → 방. 착륙 유도등 1단계만 3D 판이 있고, 나머지는 기존 방(2D)으로 들어간다.
+// 3D 청크 · 모델을 받는 동안 흰 화면이 비치지 않게 밤하늘색 바탕을 먼저 깐다(씬이 뜨면 덮어쓴다)
+const darkHold = () => { app().innerHTML = '<div style="position:fixed;inset:0;background:radial-gradient(120% 90% at 50% 100%,#2a1f45 0%,#121838 45%,#050817 100%)"></div>'; };
 function sceneHub3d(opts) {
-  recordsEntry.hide(); studentChip.hide();
+  recordsEntry.hide(); studentChip.hide(); darkHold();
   import('./scenes/hub3d.js').then((m) => m.showHub3d(app(), {
     ...opts,
     onRoom: (id, { mode }) => (mode === '3d' ? nav.push(sceneLanding3d) : pushRoom(id)),
@@ -132,7 +134,7 @@ function sceneHub3d(opts) {
   }));
 }
 function sceneLanding3d() {
-  recordsEntry.hide(); studentChip.hide();
+  recordsEntry.hide(); studentChip.hide(); darkHold();
   import('./scenes/landingGame.js').then((m) => m.showLandingGame(app(), { onExit: () => nav.back() }));
 }
 
