@@ -19,6 +19,17 @@ function blip(freq = 520, ms = 70, type = 'sine', vol = 0.12) {
     o.start(); o.stop(a.currentTime + ms / 1000 + 0.02);
   } catch (_) {}
 }
+// 주파수가 미끄러지는 소리(홀로그램 켜짐 · 출발 휙)
+function sweep(f0, f1, ms = 200, type = 'sine', vol = 0.1) {
+  if (muted) return; const a = ctx(); if (!a) return;
+  vol *= SFX_SCALE;
+  try {
+    const o = a.createOscillator(), g = a.createGain(), t = a.currentTime, d = ms / 1000;
+    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + d); o.connect(g); g.connect(a.destination);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.start(t); o.stop(t + d + 0.02);
+  } catch (_) {}
+}
 export const sfx = {
   get muted() { return muted; },
   toggle() { muted = !muted; try { localStorage.setItem('eduino.muted', muted ? '1' : '0'); } catch (_) {} return muted; },
@@ -32,4 +43,11 @@ export const sfx = {
   no() { blip(150, 200, 'sawtooth', 0.16); },
   // 멜로디 연주용 — 지정한 음정을 또렷한 음색으로
   note(freq, ms = 300, vol = 0.2) { blip(freq, ms, 'triangle', vol); },
+  // v4 허브 — 미션 문 홀로그램 · 꾹 눌러 출발
+  holo() { sweep(330, 990, 260, 'sine', 0.07); setTimeout(() => blip(1320, 70, 'sine', 0.05), 200); },
+  holoOff() { sweep(700, 260, 160, 'sine', 0.05); },
+  tick(k = 0) { blip(520 + k * 520, 30, 'square', 0.025); },
+  launch() { sweep(260, 1400, 320, 'triangle', 0.12); setTimeout(() => blip(1760, 120, 'sine', 0.07), 240); },
+  deny() { blip(392, 90, 'triangle', 0.09); setTimeout(() => blip(330, 140, 'triangle', 0.08), 100); },
+  land() { blip(140, 70, 'sine', 0.06); },
 };

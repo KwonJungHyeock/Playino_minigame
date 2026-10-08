@@ -1,10 +1,11 @@
 // v4story.js — v4 '바이저봇 탈출기' 문구. 방 ID · 무대 구성은 curriculum.js 를 그대로 따르고, 여기엔 이야기 쪽 이름만 둔다.
 // 방마다: 미션 번호 · 이야기 속 이름 · 한 줄 사연 · 얻는 로켓 부품(part: 로켓 모형의 부품 키, null 이면 부품 아님).
+// stages: 허브에서 단계를 골라 들어가는 방만 — 이름은 게임이 results 에 기록하는 단계 이름과 같아야 한다.
 // 원본 기획: docs/V4-STORY.md
 
 export const STORY = {
   basics: { no: 'PROLOGUE', name: '부팅 훈련', icon: '🔋', line: '충격으로 꺼졌던 센서를 하나씩 깨워 보자.', reward: '기지 출입 카드', part: null },
-  led:    { no: 'MISSION 01', name: '착륙 유도등', icon: '🛬', line: '보급선이 엔진 부품을 싣고 내려와. 유도등으로 길을 안내하자.', reward: '엔진 노즐', part: 'engine' },
+  led:    { no: 'MISSION 01', name: '착륙 유도등', icon: '🛬', line: '보급선이 엔진 부품을 싣고 내려와. 유도등으로 길을 안내하자.', reward: '엔진 노즐', part: 'engine', stages: ['타이밍 쇼', '라이트 연주'] },
   buzzer: { no: 'MISSION 02', name: '구조 신호 비콘', icon: '📡', line: '멜로디 신호를 보내 궤도 위 위성과 통신을 다시 잇자.', reward: '통신 안테나', part: 'antenna' },
   rgb:    { no: 'MISSION 03', name: '에너지 셀 색 맞추기', icon: '🔋', line: '셀마다 맞는 빛 색을 섞어 넣어야 충전돼.', reward: '에너지 셀', part: 'cells' },
   cds:    { no: 'MISSION 04', name: '태양광 충전소', icon: '☀️', line: '빛을 가리고 비추며 태양광 판의 반응을 맞춰 보자.', reward: '태양광 날개', part: 'wings' },

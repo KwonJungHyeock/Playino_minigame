@@ -38,10 +38,23 @@ export async function loadRobot() {
   /** 동작 전환. once=true 면 한 번만 하고 then(기본 '대기')으로 돌아간다. */
   function play(name, { fade = 0.25, once = false, then = '대기' } = {}) {
     const a = actions[name]; if (!a || a === cur) return;
-    a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once;
+    a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once; a.timeScale = 1;
     a.setEffectiveWeight(1).play();
-    if (cur) a.crossFadeFrom(cur, fade, false);
+    // 섞여 돌던 동작(대기 + 걷기 블렌드 포함)을 모두 함께 내린다
+    if (cur) { a.fadeIn(fade); Object.values(actions).forEach((x) => { if (x !== a && x.isRunning()) x.fadeOut(fade); }); }
     cur = a; after = once ? then : null;
+  }
+
+  /**
+   * 걷기 블렌드 — 실제 이동 속도에 맞춰 '대기' ↔ '걷기' 를 섞고, 걷기 재생 속도를 맞춘다(발 미끄러짐 방지).
+   * k: 0(서 있음) ~ 1(완전히 걷기) · rate: 걷기 클립 재생 배속. 한 번만 하는 동작(점프 · 인사 등) 중엔 무시한다.
+   */
+  function locomote(k, rate = 1) {
+    const idle = actions['대기'], walk = actions['걷기'];
+    if (!idle || !walk || (cur && cur !== idle && cur !== walk)) return;
+    for (const x of [idle, walk]) if (!x.isRunning()) { x.reset(); x.setLoop(THREE.LoopRepeat, Infinity); x.play(); }
+    idle.setEffectiveWeight(1 - k); walk.setEffectiveWeight(Math.max(k, 1e-3)); walk.timeScale = rate;
+    cur = k > 0.5 ? walk : idle; after = null;
   }
 
   function setExpression(name) {
@@ -66,7 +79,7 @@ export async function loadRobot() {
     expressions: [...exprs.keys()],
     get expression() { return expr; },
     get clip() { return cur?.getClip().name || null; },
-    play, setExpression, update,
+    play, locomote, setExpression, update,
     dispose() { mixer.removeEventListener('finished', onFinished); mixer.stopAllAction(); mixer.uncacheRoot(object); disposeObject(object); },
   };
 }

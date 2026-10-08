@@ -130,31 +130,51 @@ function launchPad() {
 
 // ── 미션 문: 바닥 원판 + 상태색 고리 + 떠 있는 안내판(스프라이트) + 다음 목표 빛기둥 ──
 const STATE_COL = { open: PALETTE.cyan, next: PALETTE.mustard, cleared: PALETTE.mint, locked: 0x8a8fa0, partial: PALETTE.cyan };
+const STATE_CSS = { open: '#8ff7ee', next: '#ffd25a', cleared: '#5ff0a0', locked: '#a9b3d6', partial: '#8ff7ee' };
+// 상태 표시(그림 문자 대신 선으로 그린다)
+function stateIcon(x, state, cx, cy, s, col) {
+  x.save(); x.strokeStyle = col; x.fillStyle = col; x.lineWidth = s * 0.2; x.lineCap = 'round'; x.lineJoin = 'round';
+  if (state === 'locked') { x.beginPath(); x.arc(cx, cy - s * 0.18, s * 0.32, Math.PI, 0); x.stroke(); roundRect(x, cx - s * 0.5, cy - s * 0.14, s, s * 0.78, s * 0.16); x.fill(); }
+  else if (state === 'cleared') { x.beginPath(); x.moveTo(cx - s * 0.45, cy + s * 0.02); x.lineTo(cx - s * 0.1, cy + s * 0.36); x.lineTo(cx + s * 0.5, cy - s * 0.34); x.stroke(); }
+  else if (state === 'next') { x.beginPath(); x.moveTo(cx - s * 0.3, cy - s * 0.42); x.lineTo(cx + s * 0.42, cy); x.lineTo(cx - s * 0.3, cy + s * 0.42); x.closePath(); x.fill(); }
+  else { x.beginPath(); x.arc(cx, cy, s * 0.22, 0, Math.PI * 2); x.fill(); }
+  x.restore();
+}
 function roundRect(x, X, y, w, h, r) { x.beginPath(); x.moveTo(X + r, y); x.arcTo(X + w, y, X + w, y + h, r); x.arcTo(X + w, y + h, X, y + h, r); x.arcTo(X, y + h, X, y, r); x.arcTo(X, y, X + w, y, r); x.closePath(); }
+// 안내판 = 바이저가 띄우는 홀로그램 표지. 상자 없이 모서리 꺾쇠 + 큰 이름 + 상태 한 줄, 아래로 원판을 가리키는 점선.
+// 어떤 배경에서도 읽히게 글자 뒤에만 옅은 어둠 번짐 + 어두운 외곽선을 깐다.
 function drawSign(cv, id, st) {
-  const x = cv.getContext('2d'), W = cv.width, H = cv.height, s = STORY[id];
+  const x = cv.getContext('2d'), W = cv.width, H = cv.height, s = STORY[id], col = STATE_CSS[st.state] || STATE_CSS.open;
   x.clearRect(0, 0, W, H);
-  x.save(); x.shadowColor = 'rgba(8,10,30,.45)'; x.shadowBlur = 18; x.shadowOffsetY = 6;
-  roundRect(x, 14, 14, W - 28, H - 46, 40); x.fillStyle = st.state === 'locked' ? 'rgba(40,44,66,.86)' : 'rgba(18,24,56,.84)'; x.fill(); x.restore();
-  roundRect(x, 14, 14, W - 28, H - 46, 40); x.lineWidth = 4; x.strokeStyle = '#' + new THREE.Color(STATE_COL[st.state]).getHexString(); x.globalAlpha = 0.9; x.stroke(); x.globalAlpha = 1;
-  // 꼬리(아래 원판을 가리킴)
-  x.beginPath(); x.moveTo(W / 2 - 18, H - 33); x.lineTo(W / 2, H - 8); x.lineTo(W / 2 + 18, H - 33); x.fillStyle = 'rgba(18,24,56,.84)'; x.fill();
-  // 아이콘 원
-  x.beginPath(); x.arc(84, (H - 32) / 2 + 7, 46, 0, Math.PI * 2); x.fillStyle = st.state === 'cleared' ? '#5fe0b8' : st.state === 'locked' ? '#5a5f78' : '#ffd25a'; x.fill();
-  x.font = '48px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.fillText(st.state === 'locked' ? '🔒' : s.icon, 84, (H - 32) / 2 + 9);
-  x.textAlign = 'left'; x.textBaseline = 'alphabetic';
-  x.fillStyle = '#ffd25a'; x.font = '800 22px "Noto Sans KR",sans-serif'; x.fillText(s.no, 148, 66);
-  x.fillStyle = '#fff'; x.font = '44px "Jua","Noto Sans KR",sans-serif'; x.fillText(s.name, 146, 116);
-  x.fillStyle = st.state === 'cleared' ? '#5ff0a0' : st.state === 'next' ? '#ffd25a' : '#c9d0ea'; x.font = '700 22px "Noto Sans KR",sans-serif'; x.fillText(st.label || '', 148, 152);
+  x.save(); x.translate(W / 2, 90); x.scale(1, 0.34);   // 납작한 타원 번짐 — 사각형 가장자리가 생기지 않게
+  const sc = x.createRadialGradient(0, 0, 0, 0, 0, W * 0.5); sc.addColorStop(0, 'rgba(12,16,44,.7)'); sc.addColorStop(0.55, 'rgba(12,16,44,.42)'); sc.addColorStop(1, 'rgba(12,16,44,0)');
+  x.fillStyle = sc; x.fillRect(-W / 2, -W / 2, W, W); x.restore();
+  // 모서리 꺾쇠
+  const bx = 22, by = 14, bw = W - 44, bh = 150, L = 26;
+  x.strokeStyle = col; x.lineWidth = 5; x.lineCap = 'round'; x.globalAlpha = st.state === 'locked' ? 0.6 : 0.95;
+  for (const [px, py, dx, dy] of [[bx, by, 1, 1], [bx + bw, by, -1, 1], [bx, by + bh, 1, -1], [bx + bw, by + bh, -1, -1]]) { x.beginPath(); x.moveTo(px + dx * L, py); x.lineTo(px, py); x.lineTo(px, py + dy * L); x.stroke(); }
+  x.globalAlpha = 1;
+  // 이름
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.lineJoin = 'round';
+  let fs = 50; x.font = `${fs}px "Jua","Noto Sans KR",sans-serif`; while (x.measureText(s.name).width > bw - 40 && fs > 34) { fs -= 2; x.font = `${fs}px "Jua","Noto Sans KR",sans-serif`; }
+  x.lineWidth = 9; x.strokeStyle = 'rgba(10,14,40,.6)'; x.strokeText(s.name, W / 2, 86);
+  x.fillStyle = st.state === 'locked' ? '#d5dbef' : '#ffffff'; x.fillText(s.name, W / 2, 86);
+  // 상태 한 줄(아이콘 + 글)
+  const label = st.label || ''; x.font = '800 24px "Noto Sans KR",sans-serif';
+  const tw = x.measureText(label).width, ix = W / 2 - (tw + 34) / 2;
+  stateIcon(x, st.state, ix + 11, 129, 22, col);
+  x.textAlign = 'left'; x.lineWidth = 7; x.strokeStyle = 'rgba(10,14,40,.6)'; x.strokeText(label, ix + 34, 138); x.fillStyle = col; x.fillText(label, ix + 34, 138);
+  // 원판을 가리키는 점선
+  x.fillStyle = col; x.globalAlpha = 0.75; for (let y = 172; y < H - 4; y += 11) { x.beginPath(); x.arc(W / 2, y, 3, 0, Math.PI * 2); x.fill(); } x.globalAlpha = 1;
 }
 
 function gate(id) {
   const g = new THREE.Group(); g.name = 'Gate_' + id; g.position.copy(gatePos(id));
-  const base = mesh(roundedCylinder(0.82, 0.07, 0.03, 0.01, 40), vinyl(PALETTE.white)); g.add(base);
-  const inner = mesh(roundedCylinder(0.66, 0.02, 0.01, 0, 40), vinyl(PALETTE.navy, { roughness: 0.3, clearcoat: 0.8 })); inner.position.y = 0.065; g.add(inner);
+  const disc = new THREE.Group(); g.add(disc);
+  const base = mesh(roundedCylinder(0.82, 0.07, 0.03, 0.01, 40), vinyl(PALETTE.white)); disc.add(base);
+  const inner = mesh(roundedCylinder(0.66, 0.02, 0.01, 0, 40), vinyl(PALETTE.navy, { roughness: 0.3, clearcoat: 0.8 })); inner.position.y = 0.065; disc.add(inner);
   const ringMat = lamp(STATE_COL.open, 1.4);
-  const ring = mesh(new THREE.TorusGeometry(0.74, 0.035, 10, 72), ringMat, { cast: false }); ring.rotation.x = Math.PI / 2; ring.position.y = 0.08; g.add(ring);
+  const ring = mesh(new THREE.TorusGeometry(0.74, 0.035, 10, 72), ringMat, { cast: false }); ring.rotation.x = Math.PI / 2; ring.position.y = 0.08; disc.add(ring);
   // 안쪽 화살촉 3개(돌아감)
   const spin = new THREE.Group(); spin.position.y = 0.09; spin.userData.noAO = true; g.add(spin);
   const chev = new THREE.Shape(); chev.moveTo(-0.1, 0); chev.lineTo(0, 0.12); chev.lineTo(0.1, 0); chev.lineTo(0.06, 0); chev.lineTo(0, 0.07); chev.lineTo(-0.06, 0); chev.closePath();
@@ -165,7 +185,7 @@ function gate(id) {
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.78, 3.4, 48, 1, true), new THREE.MeshBasicMaterial({ color: PALETTE.mustard, map: new THREE.CanvasTexture(bc), transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, fog: false }));
   beam.position.y = 1.7; beam.visible = false; beam.userData.noAO = true; g.add(beam);
   // 안내판
-  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 210;
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 240;
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   const sign = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, toneMapped: false, depthWrite: false, fog: false, transparent: true }));
   sign.center.set(0.5, 0); sign.position.y = 1.55; sign.renderOrder = 5; sign.userData.noAO = true; g.add(sign);
@@ -173,21 +193,32 @@ function gate(id) {
   // 멀리서 탭해도 잡히는 투명 판정 구
   const hit = new THREE.Mesh(new THREE.SphereGeometry(1.0, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 1.1; hit.userData.gate = id; g.add(hit);
 
-  let st = { state: 'open', label: '' };
+  let st = { state: 'open', label: '' }, fold = 0, glow = 0, fade = 0;
   const api = {
     id, group: g, pos: g.position, hit, sign,
     get state() { return st.state; },
     set(next) {
       st = next; drawSign(cv, id, st); tex.needsUpdate = true;
       const c = STATE_COL[st.state]; ringMat.emissive.setHex(c); ringMat.color.setHex(c).multiplyScalar(0.28); chevMat.color.setHex(c);
-      ringMat.emissiveIntensity = st.state === 'locked' ? 0.2 : 1.6; chevMat.opacity = st.state === 'locked' ? 0.25 : 0.85; beam.visible = st.state === 'next';
+      beam.visible = st.state === 'next';
     },
     redraw() { drawSign(cv, id, st); tex.needsUpdate = true; },
-    update(t, dt, near, camDist) {
-      spin.rotation.y += dt * (near ? 2.4 : 0.7);
-      const s = (near ? 1.12 : 1) * THREE.MathUtils.clamp(camDist / 11, 1, 1.55);   // 멀리 있는 안내판도 읽히게
-      sign.scale.x += (SIGN_W * s - sign.scale.x) * Math.min(1, dt * 8); sign.scale.y = sign.scale.x * cv.height / cv.width;
-      sign.position.y = 1.55 + Math.sin(t * 1.6 + g.position.x) * 0.05;
+    /** o.near: '들어가기' 거리 · o.prox: 0~1 다가올수록 1 · o.brief: 홀로그램 브리핑 중(안내판을 접는다) · o.dim: 다른 문 브리핑 중(흐리게) */
+    update(t, dt, { near = false, prox = 0, brief = false, dim = false } = {}, camDist = 10) {
+      const k = Math.min(1, dt * 8);
+      spin.rotation.y += dt * (0.7 + prox * 2.2);
+      fold += ((brief ? 1 : 0) - fold) * Math.min(1, dt * 10);
+      const s = (1 + prox * 0.1) * THREE.MathUtils.clamp(camDist / 11, 1, 1.55);   // 멀리 있는 안내판도 읽히게, 다가가면 살짝 커짐
+      sign.scale.x += (SIGN_W * s - sign.scale.x) * k; sign.scale.y = sign.scale.x * cv.height / cv.width * (1 - fold);
+      fade += ((dim ? 0.82 : 0) - fade) * k;   // 다른 문을 브리핑하는 동안은 한 걸음 물러난다
+      sign.material.opacity = (1 - fold) * (1 - fade); sign.visible = fold < 0.98 && fade < 0.99;
+      sign.position.y = 1.55 + Math.sin(t * 1.6 + g.position.x) * 0.05 + fold * 0.6;
+      // 원판 반응: 다가가면 고리가 밝아지고 원판이 살짝 부푼다
+      glow += (prox - glow) * k;
+      ringMat.emissiveIntensity = (st.state === 'locked' ? 0.2 : 1.6) * (1 + glow * 0.9);
+      disc.scale.setScalar(1 + glow * 0.05 + (near ? Math.sin(t * 6) * 0.008 : 0));
+      chevMat.opacity = (st.state === 'locked' ? 0.25 : 0.85) * (1 - fold * 0.8);
+      beam.visible = st.state === 'next' && fold < 0.5 && fade < 0.5;
       if (beam.visible) beam.material.opacity = 0.24 + Math.sin(t * 2.4) * 0.08;
     },
   };
@@ -419,10 +450,11 @@ export async function createBaseScene(stage) {
 
   let t = 0;
   const tmp = new THREE.Vector3();
-  function update(dt, botPos, camPos, nearId) {
+  /** gateFx(id) → { near, prox, brief } (문마다 반응 정도) */
+  function update(dt, botPos, camPos, gateFx) {
     t += dt; bot.update(dt);
     anim.forEach((f) => f?.(t, dt));
-    gates.forEach((g) => g.update(t, dt, g.id === nearId, tmp.copy(g.pos).sub(camPos).length()));
+    gates.forEach((g) => g.update(t, dt, gateFx?.(g.id), tmp.copy(g.pos).sub(camPos).length()));
     rocket.userData.ghostMat.opacity = 0.16 + Math.sin(t * 2.2) * 0.05;
     // 키 라이트가 봇을 따라간다(그림자 텍셀이 흔들리지 않게 0.5m 격자에 붙인다)
     const sx = Math.round(botPos.x * 2) / 2, sz = Math.round(botPos.z * 2) / 2;
@@ -439,5 +471,5 @@ export async function createBaseScene(stage) {
     return { pos: p, ry: Math.atan2(d.x, d.z) };
   }
 
-  return { root, bot, gates, rocket, colliders, update, keyLight: key, walkable, spawnFor, dispose: () => bot.dispose() };
+  return { root, bot, gates, rocket, colliders, update, keyLight: key, walkable, spawnFor, zoneOf: (id) => new THREE.Vector3(ZONES[id].x, 0, ZONES[id].z), dispose: () => bot.dispose() };
 }
