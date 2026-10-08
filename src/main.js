@@ -121,6 +121,21 @@ function enterRoom(roomId) {
   }
 }
 
+// v4 3D 기지 허브 — 미션 문 → 방. 착륙 유도등 1단계만 3D 판이 있고, 나머지는 기존 방(2D)으로 들어간다.
+function sceneHub3d(opts) {
+  recordsEntry.hide(); studentChip.hide();
+  import('./scenes/hub3d.js').then((m) => m.showHub3d(app(), {
+    ...opts,
+    onRoom: (id, { mode }) => (mode === '3d' ? nav.push(sceneLanding3d) : pushRoom(id)),
+    onExit: () => { location.search = ''; },
+    fallback: () => sceneHub(),   // WebGL2 가 없는 기기는 기존 허브
+  }));
+}
+function sceneLanding3d() {
+  recordsEntry.hide(); studentChip.hide();
+  import('./scenes/landingGame.js').then((m) => m.showLandingGame(app(), { onExit: () => nav.back() }));
+}
+
 // 배경 이미지 사전 로드 (404 방지)
 function preloadAssets() {
   ['main-bg', 'login-bg', 'setup-bg', 'hub-bg', 'stage-led-bg', 'game-led-cover', 'wiring-led']
@@ -161,7 +176,14 @@ function boot() {
     import('./scenes/lab3d.js').then((m) => m.showLab3d(app(), { onExit: () => { location.search = ''; } }));
     return;
   }
-  // v4 3D 게임 미리보기(?v4=led) — 아직 학생 동선(허브 → 방)에 연결하지 않은 시험판.
+  // v4 3D 기지 허브 미리보기(?v4=hub) — 미션 문에서 방으로 들어가고, 뒤로가기로 기지에 돌아온다.
+  //   &all=1 잠금 무시 · &parts=n 로켓 부품 n개 붙인 모습만 보기(둘 다 기록은 바꾸지 않는다)
+  if (q.get('v4') === 'hub') {
+    const n = q.get('parts');
+    nav.start(() => sceneHub3d({ openAll: q.get('all') === '1', partsPreview: n != null && n !== '' ? Number(n) : null }));
+    return;
+  }
+  // v4 3D 게임 미리보기(?v4=led) — 착륙 유도등 1단계만 단독으로.
   if (q.get('v4') === 'led') {
     import('./scenes/landingGame.js').then((m) => m.showLandingGame(app(), { onExit: () => { location.search = ''; } }));
     return;

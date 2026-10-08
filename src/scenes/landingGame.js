@@ -8,6 +8,8 @@ import { bgm } from '../app/bgm.js';
 import { board } from '../app/board.js';
 import { results } from '../app/results.js';
 import { gradeOf } from '../engine/utils.js';
+import { progress as medals } from '../app/progress.js';   // 이 파일 안의 progress() 는 HUD 진행 막대라 이름을 갈라 둔다
+import { roomCleared } from '../content/curriculum.js';
 
 const W_PERFECT = 90, W_GOOD = 170, LEAD = 1450, PASS_ACC = 0.85;
 const PINS = [2, 3, 4];                 // 초록 · 노랑 · 빨강
@@ -27,7 +29,7 @@ export async function showLandingGame(root, { onExit } = {}) {
   const g = await import('../gfx3d/index.js');
   if (!g.supports3D()) { const { showLedGame } = await import('./ledGame.js'); showLedGame(root, { onExit }); return; }
 
-  root.innerHTML = `<style>.lnd{position:fixed;inset:0;overflow:hidden;background:#121838}.lnd-stage{position:absolute;inset:0}
+  root.innerHTML = `<style>body:has(.lnd) .nav-back{display:none!important}.lnd{position:fixed;inset:0;overflow:hidden;background:#121838}.lnd-stage{position:absolute;inset:0}
     .lnd-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px "Noto Sans KR",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}</style>
     <section class="lnd" aria-label="착륙 유도등"><div class="lnd-stage" id="lnd-stage"></div><button class="lnd-skip" id="lnd-skip" type="button">인트로 건너뛰기 ⏭</button></section>`;
   const el = root.querySelector('.lnd'), host = root.querySelector('#lnd-stage'), skipBtn = root.querySelector('#lnd-skip');
@@ -38,7 +40,7 @@ export async function showLandingGame(root, { onExit } = {}) {
   const wait = (ms) => new Promise((r) => later(ms, r));
   function cleanup() {
     if (done) return; done = true;
-    timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey); bgm.setDuck(1);
+    timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
     offTick?.(); hud?.dispose(); land?.dispose(); stage?.dispose();
     PINS.forEach((p) => { if (board.connected) board.digital(p, false).catch(() => {}); });
   }
@@ -154,10 +156,11 @@ export async function showLandingGame(root, { onExit } = {}) {
   }
   function miss() { S.combo = 0; S.wobble = 1; sfx.no(); signal(2); judgePop('MISS', '#ff6f6f'); bot.setExpression('놀람'); later(650, () => { if (S.phase === 'play') bot.setExpression('기본'); }); }
   function onKey(e) {
-    if (e.code === 'Escape' && ['play', 'count'].includes(S.phase)) { e.preventDefault(); pause(); return; }
+    // 캡처 단계에서 받아 막는다 — 안 막으면 전역 뒤로가기(nav.js 의 Esc)가 같이 돌아 게임이 꺼진다. 일시정지 창이 떠 있으면 창이 받게 둔다
+    if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
     if (S.phase === 'play' && (e.code === 'Space' || e.key === ' ')) { e.preventDefault(); press(); }
   }
-  window.addEventListener('keydown', onKey);
+  window.addEventListener('keydown', onKey, true);
   hud.action('').addEventListener('pointerdown', (e) => { e.preventDefault(); press(); });
   host.addEventListener('pointerdown', () => { if (S.phase === 'play') press(); });
 
@@ -178,7 +181,9 @@ export async function showLandingGame(root, { onExit } = {}) {
   async function endPlay() {
     if (S.ended) return; S.ended = true; S.phase = 'land'; hud.action('');
     const acc = S.hits / S.beats.length, grade = gradeOf(acc), pass = acc >= PASS_ACC, pct = Math.round(acc * 100);
-    results.record('led', { accuracy: pct, grade, passed: pass, summary: '타이밍 착륙', metrics: [{ label: '적중', value: `${S.hits}/${S.beats.length}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    // 단계 이름은 2D 판(ledGame) 1단계와 같은 '타이밍 쇼' 로 남긴다 — results 는 이름으로 단계를 가르므로, 다르면 방이 3단계로 세어져 메달이 안 나온다
+    results.record('led', { accuracy: pct, grade, passed: pass, summary: '타이밍 쇼', metrics: [{ label: '적중', value: `${S.hits}/${S.beats.length}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    if (roomCleared('led') && !medals.isCleared('led')) medals.mark('led');   // 2단계를 이미 통과했다면 이번 판으로 메달
     S.pass = pass; S.landT = 0; bgm.setDuck(1); hud.combo(0, 0, 0);
     if (pass) {
       await wait(1700); bot.play('환호', { once: true }); bot.setExpression('웃음');
@@ -192,7 +197,7 @@ export async function showLandingGame(root, { onExit } = {}) {
     if (done) return;
     S.phase = 'result';
     const choice = hud.result({
-      title: pass ? '착륙 성공!' : '조금만 더!', sub: pass ? '보급선이 무사히 내려왔어요. 2단계 라이트 연주(3D)는 준비 중이에요.' : '정확도 85%(A등급)를 넘기면 착륙해요.',
+      title: pass ? '착륙 성공!' : '조금만 더!', sub: pass ? (medals.isCleared('led') ? '보급선이 무사히 내려왔어요. 엔진 부품을 로켓에 달러 가요!' : '보급선이 무사히 내려왔어요. 2단계 라이트 연주는 기지의 미션 문에서 이어서 할 수 있어요.') : '정확도 85%(A등급)를 넘기면 착륙해요.',
       grade, stats: [['적중', `${S.hits}/${S.beats.length}`], ['정확도', `${pct}%`], ['최고 콤보', `${S.maxCombo}`]], primary: pass ? '계속' : '나가기', secondary: '다시 하기',
     });
     hud.lightStars(starsOf(grade));

@@ -34,7 +34,7 @@ export async function placeKit(parent, name, { x = 0, y = 0, z = 0, ry = 0, s = 
   scene.traverse((m) => {
     if (!m.isMesh) return;
     m.material = (RESTYLE[m.material.name] || RESTYLE._defaultMat)(smooth); m.castShadow = m.receiveShadow = true;
-    if (smooth) { let g = m.geometry.clone(); g.deleteAttribute('normal'); g.deleteAttribute('uv'); g = mergeVertices(g, 1e-3); g.computeVertexNormals(); m.geometry = g; }
+    if (smooth) { let g = m.geometry.clone(); g.deleteAttribute('normal'); g.deleteAttribute('uv'); g = mergeVertices(g, 1e-3); g.computeVertexNormals(); delete g.userData.gfxShared; m.geometry = g; }   // 복제본은 이 장면 것 — clone 이 원본의 '공용' 표시까지 베껴 와 정리에서 빠지던 것을 지운다
   });
   const g = new Group(); g.name = 'kit:' + name; g.add(scene); g.scale.setScalar(s); g.rotation.y = ry; g.position.set(x, y, z);
   parent.add(g); return g;
