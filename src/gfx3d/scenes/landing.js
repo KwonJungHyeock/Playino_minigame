@@ -10,7 +10,8 @@ import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 
 const LAMP_COLORS = [PALETTE.led.green, PALETTE.led.yellow, PALETTE.led.red];
-const PAD = new THREE.Vector3(0, 0, -1.0), PAD_R = 1.9, PAD_H = 0.14;
+export const PAD = new THREE.Vector3(0, 0, -1.0), PAD_R = 1.9, PAD_H = 0.14;
+export const SHIP_REST = PAD_H + 0.17;   // 셔틀 발이 착륙장에 닿는 높이
 
 // 행성 표면: 가운데는 평평, 바깥은 완만한 언덕 · 구덩이. 정점 색으로 모래 결을 낸다.
 function ground() {
@@ -105,6 +106,7 @@ const ease = (t) => t * t * (3 - 2 * t);
 
 /** 장면을 만든다. 반환: { update(dt), setLamp(i,on), bot } — 견본은 스스로 착륙 시나리오를 반복한다(demo=true). */
 export async function createLandingScene(stage, { demo = true } = {}) {
+  // demo=false: 시연 자동 진행을 끄고 게임이 셔틀 높이 · 유도등을 직접 움직인다
   const { scene, camera, renderer } = stage;
   const root = new THREE.Group(); root.name = 'LandingScene'; scene.add(root);
   addSpaceSky(scene, {});
@@ -147,11 +149,13 @@ export async function createLandingScene(stage, { demo = true } = {}) {
   camera.fov = 36; camera.far = 120; camera.position.set(2.9, 2.5, 5.6); camera.lookAt(-0.4, 1.05, -1.0); camera.updateProjectionMatrix();
 
   let t = 0, landed = false;
-  const LOOP = 10;
+  const LOOP = 10, lampUntil = [0, 0, 0];
+  /** 게임용: i 번 유도등을 sec 초 동안 켰다 끈다(겹쳐 부르면 늘어남). */
+  const pulseLamp = (i, sec = 0.28) => { lampUntil[i] = t + sec; setLamp(i, true); };
   function update(dt) {
     t += dt; bot.update(dt);
     const rimOn = Math.floor(t * 10) % 20; pad.userData.rim.forEach((m, k) => { m.material.emissiveIntensity = (k - rimOn + 20) % 20 < 4 ? 3 : 0.35; });
-    if (!demo) return;
+    if (!demo) { lampUntil.forEach((u, i) => { if (u && t >= u) { lampUntil[i] = 0; setLamp(i, false); } }); return; }
     const u = t % LOOP;
     if (u < 0.05) { landed = false; bot.setExpression('기본'); }
     if (u < 1) { ship.position.y = 4.5; setFlame(0.3); [0, 1, 2].forEach((i) => setLamp(i, false)); }
@@ -167,5 +171,5 @@ export async function createLandingScene(stage, { demo = true } = {}) {
     }
     ship.rotation.y += dt * 0.15;
   }
-  return { root, update, setLamp, bot, ship, dispose: () => bot.dispose() };
+  return { root, update, setLamp, pulseLamp, setFlame, bot, ship, pad, lamps, desk, dispose: () => bot.dispose() };
 }
