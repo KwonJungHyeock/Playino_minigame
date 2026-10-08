@@ -34,13 +34,14 @@ export function createStage(host, o = {}) {
   const camera = new THREE.PerspectiveCamera(o.fov ?? 30, 1, o.near ?? 0.05, o.far ?? 60);
   const ticks = new Set();
   const clock = new THREE.Clock();
-  let alive = true, last = performance.now(), stage = null;
+  let alive = true, last = performance.now(), stage = null, composer = null;
 
   const governor = createGovernor(tier, (pr, shadows) => { R.setPixelRatio(pr); R.shadowMap.enabled = shadows; R.shadowMap.needsUpdate = true; size(); stage?.onQuality?.(pr, shadows); });
 
   function size() {
     const w = host.clientWidth || 1, h = host.clientHeight || 1;
     R.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    if (composer) { composer.setPixelRatio(R.getPixelRatio()); composer.setSize(w, h); }
   }
   const ro = new ResizeObserver(size);
 
@@ -49,7 +50,7 @@ export function createStage(host, o = {}) {
     const now = performance.now(); governor.sample(now - last); last = now;
     const dt = Math.min(clock.getDelta(), 0.05);
     ticks.forEach((fn) => fn(dt));
-    R.render(scene, camera);
+    if (composer) composer.render(dt); else R.render(scene, camera);
   }
 
   host.appendChild(R.domElement);
@@ -58,14 +59,19 @@ export function createStage(host, o = {}) {
 
   stage = {
     THREE, scene, camera, renderer: R, tier, governor,
+    /** 후처리 합성기를 쓴다(post.js). null 이면 바로 그리기. */
+    setComposer(c) { composer?.dispose(); composer = c; size(); },
     /** 매 프레임 호출(dt 초). 반환값을 부르면 해제. */
     onTick(fn) { ticks.add(fn); return () => ticks.delete(fn); },
+    /** 실시간 루프를 멈추고 dt 만큼 한 프레임씩 진행(영상 캡처 · 자동 점검용). */
+    step(dt) { R.setAnimationLoop(null); ticks.forEach((fn) => fn(dt)); if (composer) composer.render(dt); else R.render(scene, camera); },
     /** 무대 해제 — 루프 정지 · 관찰 해제 · 장면 자원 반납 · 캔버스 분리. 두 번 불러도 안전. */
     dispose() {
       if (!alive) return; alive = false;
       R.setAnimationLoop(null); ro.disconnect(); ticks.clear();
+      if (composer) { composer.passes.forEach((p) => p.dispose?.()); composer.dispose(); composer = null; }
       [...scene.children].forEach(disposeObject);
-      scene.environment = null; scene.background = null;
+      scene.environment = null; scene.background = null; scene.fog = null;
       R.renderLists.dispose();
       R.domElement.remove();
       if (owner === stage) owner = null;

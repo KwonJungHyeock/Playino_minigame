@@ -72,6 +72,18 @@ CC-BY 는 출처 표기 화면이 필요하고, CC-BY-NC · 개인용 한정은 
 
 받은 팩은 `art/3d-kits/README.md` 장부에 출처 · 라이선스를 적고, 쓸 모델만 `scripts/optimize-glb.mjs` 로 줄여 `src/assets/3d/` 로 옮긴다.
 
+## 견본 장면 — 착륙 유도등 (2026-10-08)
+
+무료 모델만으로는 로봇(삼각형 117k · 유광 비닐)과 결이 맞지 않아(각진 저폴리), **혼합 방식**으로 정했다.
+
+- **핵심 소품은 직접 모델링** — 로봇이 가까이서 만지는 것: 착륙장 · 3색 유도등 기둥 · 관제 콘솔 · 셔틀 (`src/gfx3d/scenes/landing.js`, `shapes.js` 의 둥근 형태 + `materials.js` 의 비닐 재질)
+- **배경은 무료 모델** — Kenney Space Kit(CC0) 12종을 팔레트 재질로 바꿔 끼움(`kits.js`)
+- **공통 연출** — 그라데이션 하늘 · 별 · 고리 행성 · 안개(`sky.js`), 접촉 그림자(GTAO) + 빛 번짐(블룸)(`post.js`, 저사양은 블룸만)
+- 게임 연결점: `setLamp(0|1|2, on)` = 초록 D2 · 노랑 D3 · 빨강 D4 (현 LED 게임 핀과 같음)
+- 확인: `?lab3d&scene=landing`
+
+무료 팩 현황: Kenney 5팩 수령(CC0). Quaternius 는 Google Drive 경유라 `*.googleusercontent.com` 허용이 더 필요하고, 라이선스가 QAL 로 바뀌어 원본은 공개 저장소에 둘 수 없다. KayKit(itch.io) 은 다운로드 자동화가 아직 막혀 있다.
+
 ## 다음 단계 (미착수)
 
 2. 파일럿 — 센서 복도를 3D 기지 통로로 + 첫 게임(LED) 3D 재작성 → 미리보기 링크로 태블릿 확인
