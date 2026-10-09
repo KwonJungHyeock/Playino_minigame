@@ -111,3 +111,5 @@ const r = await L.done;   // { right, total, firstTry, skipped }
 - [ ] 따라가기 · 정밀 막은 난이도 시뮬레이션으로 초보 통과율을 확인했다(목표: 초보 30~70% · 숙련 95%↑) · 도우미(`createAssist`)를 붙였다
 - [ ] 바이저봇 한마디(`createBarks` + `barks.watch(S)`) · 미션 고유 축하 · 실패 몸짓(`actor.routine`)이 있다
 - [ ] 보상 부품은 `partShowcase(key)` — 로켓에 붙는 것과 같은 모양 / 환경음(`sfx.ambient`)은 cleanup 에서 끈다
+- [ ] 손맛(`createJuice` + `juice.watch(S)`) · 맞으면 소품 `bounce` · 움직이는 물체 `trail`
+- [ ] 둘러보기(`createExplore` + `STAR_SPOTS[id]` 2곳) · 결과창 사진(`createPhoto`) · 자유 실험(`createSandbox` + brief 의 `a === 'free'`) · S등급 별(`stars.mark(id, 2)`) — 넷 다 cleanup 에서 dispose

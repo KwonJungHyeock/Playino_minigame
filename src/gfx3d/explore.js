@@ -24,6 +24,7 @@ function starMesh() {
 
 const CSS = `.xp-bar{position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 18px;border-radius:999px;background:rgba(10,14,40,.78);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(10px);color:#fff;font:700 14px "Pretendard Variable","Noto Sans KR",sans-serif;white-space:nowrap;pointer-events:auto}
 .xp-bar b{color:#ffd25a}.xp-bar button{border:0;border-radius:999px;padding:9px 16px;background:linear-gradient(180deg,#b5fff7,#7ae9e0);color:#14203a;font:400 16px "Jua","Pretendard Variable",sans-serif;cursor:pointer}
+body:has(.xp-bar) .fs-toggle{visibility:hidden}
 @media (max-width:640px){.xp-bar{flex-wrap:wrap;justify-content:center;white-space:normal;width:calc(100% - 32px);border-radius:22px;font-size:13px}}`;
 
 /**

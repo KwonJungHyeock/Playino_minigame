@@ -140,6 +140,7 @@ export function createHud(host, o) {
   const hud = {
     root, explore: null,   // 둘러보기(gfx3d/explore.js) — 게임이 넣으면 단계 설명 창에 단추가 붙는다
     photo: null,   // 기념사진(gfx3d/photo.js) — 넣으면 결과창에 '📷 사진' 단추가 붙는다
+    sandbox: false,   // 자유 실험(gfx3d/sandbox.js) — 켜지면 단계 설명 창에 '🧪 자유 실험'(data-act="free") 단추가 붙는다
     /** 미션 목표 한 줄 + 진행 막대(0~1, null 이면 숨김) */
     goal(textLine, progress = null) {
       $('#hud-obj').classList.remove('off'); $('#hud-goal').textContent = textLine;
@@ -189,6 +190,7 @@ export function createHud(host, o) {
     window(html, { keys = {} } = {}) {
       return new Promise((res) => {
         let body = html.includes('hud-eye">일시정지<') ? html.replace(/(<div class="hud-row">)/, `${comfortRow()}$1`) : html;   // 일시정지 창엔 늘 '보기 편하게' 설정
+        if (hud.sandbox && body.includes('data-act="lesson"')) body = body.replace(/(<button class="hud-btn" data-act="lesson")/, '<button class="hud-btn" data-act="free" type="button">🧪 자유 실험</button>$1');   // 단계 설명 창엔 '자유 실험'
         if (hud.explore && body.includes('data-act="lesson"')) body = body.replace(/(<button class="hud-btn" data-act="lesson")/, `<button class="hud-btn" data-explore type="button">${hud.explore.label()}</button>$1`);   // 단계 설명 창엔 '둘러보기'
         if (hud.photo && body.includes('class="hud-res"')) body = body.replace(/(<button class="hud-btn" data-act="retry")/, '<button class="hud-btn" data-photo type="button">📷 사진</button>$1');   // 결과창엔 '기념사진'
         const v = document.createElement('div'); v.className = 'hud-veil'; v.innerHTML = `<div class="hud-win hud-glass" role="dialog">${body}</div>`; root.appendChild(v);

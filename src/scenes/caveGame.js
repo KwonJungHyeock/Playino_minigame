@@ -19,6 +19,7 @@ import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
 import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
+import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
 
 const ADC = 0, NEO = 6, HUE_MAX = 320, PASS = 0.8;
@@ -67,7 +68,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   const el = root.querySelector('.cav'), host = root.querySelector('#cav-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#cav-skip'), ctl = $('#cav-ctl'), sl = $('#cav-sl'), holdEl = $('#cav-hold');
 
-  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null, sandbox = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null, neoTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -75,7 +76,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); clearInterval(neoTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.neoFill(NEO, 0, 0, 0).catch(() => {});
     if (window.__caveGame?.el === el) delete window.__caveGame;
@@ -131,6 +132,19 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   explore = createExplore({ stage, hud, host, bot, actor, id: 'lamp' }); hud.explore = explore;   // 둘러보기 · 숨은 별 조각
   photo = createPhoto({ stage, hud, bot, actor, title: '어둠 동굴 탐사', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
+  // 자유 실험: 점수 없이 등불 색을 바꿔 보며 몬스터 고리 색에 맞춰 흩어 보기
+  sandbox = createSandbox({ stage, hud, tip: '띠를 끌거나 ←→ · 센서가 있으면 손으로 가려요. 고리 색에 맞추면 몬스터가 흩어져요',
+    enter: () => { S.fr = { prev: S.phase, ctl: ctl.hidden, target: randHue(null), holdT: 0, busy: false }; S.phase = 'free'; showMode(1); scn.newMonster(S.fr.target); scn.monster(0, 0); ctl.hidden = false; bot.setExpression('웃음'); actor.look(() => scn.monTop()); },
+    frame: (dt) => {
+      const f = S.fr, d = hueDiff(S.hue, f.target);
+      if (!f.busy) {
+        f.holdT = d <= 24 ? f.holdT + dt : Math.max(0, f.holdT - dt); scn.monster(0, clamp(f.holdT, 0, 1));
+        if (f.holdT >= 1) { f.busy = true; scn.defeat(); sfx.perfect(); popAt(scn.monTop(), '흩어졌다! ✨', hueCss(f.target)); actor.hop(2.6); later(1500, () => { if (S.phase !== 'free') return; f.target = randHue(f.target); f.holdT = 0; f.busy = false; scn.newMonster(f.target); scn.monster(0, 0); }); }
+      }
+      return `<span class="f">analogRead</span>(A0) → <b>${$('#cav-v').textContent}</b> · <span class="f">map</span> → <b>${Math.round(S.hue)}°</b> · 고리 <b>${Math.round(f.target)}°</b> · 차이 <i>${Math.round(d)}°</i>`;
+    },
+    exit: () => { S.phase = S.fr.prev; ctl.hidden = S.fr.ctl; S.fr = null; actor.look(null); bot.setExpression('기본'); },
+  });
   const showMode = (n) => scn.show(n === 1 ? 'match' : n === 2 ? 'track' : 'spell');
 
   // ── 인트로 ──
@@ -222,6 +236,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
+    if (a === 'free') { await sandbox.run(); if (!done) brief(); return; }
     beginPlay();
   }
 
@@ -294,7 +309,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
 
   function onKey(e) {
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
-    if (!['play', 'count'].includes(S.phase) || S.pausedAt || S.sensor != null) return;
+    if (!['play', 'count', 'free'].includes(S.phase) || S.pausedAt || S.sensor != null) return;
     const d = { ArrowRight: 0.05, ArrowUp: 0.05, ArrowLeft: -0.05, ArrowDown: -0.05 }[e.code];   // 2D 판과 같은 한 칸
     if (d) { e.preventDefault(); if (document.activeElement === sl) sl.blur(); S.manual = clamp(S.manual + d, 0, 1); }
   }
