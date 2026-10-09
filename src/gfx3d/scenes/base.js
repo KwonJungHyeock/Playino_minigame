@@ -28,6 +28,7 @@ export const ZONES = {
   lamp:   { x: -4.8, z: -17.2, gate: 3.0 },
   bomb:   { x: 4.8, z: -17.2, gate: 2.6 },
   final:  { x: CENTER.x, z: CENTER.z, gate: PAD_R + 1.0, toward: [0, 1] },   // 발사대 남쪽
+  challenge: { x: -6.6, z: 10.0, gate: 2.5 },   // 자유 도전 아치(남서쪽 언덕)
 };
 export const GATE_R = 1.35;   // 이 안에 들어오면 '들어가기' 가 뜬다
 
@@ -111,6 +112,13 @@ function rocketKit() {
   part('nose', () => { const n = mesh(dome(0.4 * S, 32), vinyl(PALETTE.red)); n.position.y = 3.98 * S; n.scale.y = 0.95; return n; });
   part('antenna', () => { const a = new THREE.Group(); const rod = mesh(roundedCylinder(0.025, 0.55 * S, 0.01, 0), vinyl(PALETTE.steel)); rod.position.y = 4.32 * S; a.add(rod); const tip = mesh(new THREE.SphereGeometry(0.07 * S, 16, 12), lamp(PALETTE.coral, 2.5), { cast: false }); tip.position.y = 4.9 * S; a.add(tip); return a; });
   part('fuel', () => { const f = new THREE.Group(); const tank = mesh(new THREE.CapsuleGeometry(0.2 * S, 0.7 * S, 8, 24), vinyl(PALETTE.white)); tank.position.set(-0.82 * S, 1.3 * S, -0.2 * S); f.add(tank); const glow = mesh(new THREE.CapsuleGeometry(0.12 * S, 0.5 * S, 8, 16), lamp(PALETTE.mint, 2.2), { cast: false }); glow.position.set(-0.82 * S, 1.3 * S, -0.02 * S); glow.scale.z = 0.6; f.add(glow); return f; });
+  // 보너스 칸: 몸통 양옆 부스터 두 개(도전 챌린지 보상 — 8개 부품과 따로)
+  part('booster', () => { const b = new THREE.Group(); for (const s of [-1, 1]) { const a = new THREE.Group(); a.position.set(s * 0.9 * S, 0.78 * S, 0.32 * S); b.add(a);
+    a.add(mesh(new THREE.CapsuleGeometry(0.17 * S, 0.62 * S, 8, 24), vinyl(PALETTE.mustard)));
+    const band = mesh(new THREE.TorusGeometry(0.175 * S, 0.03, 10, 32), vinyl(PALETTE.coral)); band.rotation.x = Math.PI / 2; band.position.y = 0.12 * S; a.add(band);
+    const noz = mesh(new THREE.CylinderGeometry(0.1 * S, 0.16 * S, 0.16 * S, 24, 1, true), vinyl(PALETTE.charcoal, { side: THREE.DoubleSide })); noz.position.y = -0.48 * S; a.add(noz);
+    const strap = mesh(roundedBox(0.3 * S, 0.06 * S, 0.12 * S, 0.02), vinyl(PALETTE.steel)); strap.position.set(-s * 0.15 * S, 0.3 * S, 0); a.add(strap); }
+    return b; });
   part('core', () => { const r = mesh(new THREE.TorusGeometry(0.76 * S, 0.07, 14, 72), lamp(PALETTE.cyan, 2.6), { cast: false }); r.rotation.x = Math.PI / 2; r.position.y = 1.32 * S; return r; });
 
   /** k: 0 = 아직(흐린 청사진) · 0~1 = 조립 중(단계 일부 통과, 밝은 청사진) · 1 = 장착 */
@@ -372,6 +380,23 @@ function reactorZone(stat, live, at) {
   return (t) => { const k = 0.5 + 0.5 * Math.sin(t * 3.1) * Math.sin(t * 1.7 + 1); core.material.emissiveIntensity = 1.8 + k * 1.6; glow.intensity = 1.6 + k * 1.8; core.scale.x = core.scale.z = 1 + k * 0.03; };
 }
 
+// 자유 도전 아치: 체크무늬 아치 + 작은 원판 위에서 도는 줄무늬 빔(코스 예고) + 깃발
+function challengeZone(stat, live, at) {
+  const g = new THREE.Group(); g.position.copy(at); g.rotation.y = Math.atan2(CENTER.x - at.x, CENTER.z - at.z); stat.add(g);
+  const base = mesh(roundedCylinder(1.35, 0.22, 0.08, 0.03, 56), vinyl(P.navy)); g.add(base);
+  const top = mesh(roundedCylinder(1.22, 0.06, 0.03, 0, 56), vinyl(P.white)); top.position.y = 0.2; g.add(top);
+  for (const s of [-1, 1]) { const post = mesh(roundedCylinder(0.12, 2.5, 0.04, 0), vinyl(P.mustard)); post.position.set(s * 1.25, 0, 0.9); g.add(post); }
+  for (let i = 0; i < 10; i++) { const c = mesh(roundedBox(0.25, 0.2, 0.08, 0.03), vinyl(i % 2 ? P.charcoal : P.white)); c.position.set(-1.12 + i * 0.25, 2.42 + (i % 2) * 0.0, 0.9); g.add(c); }
+  const bar = mesh(roundedBox(2.6, 0.12, 0.12, 0.05), vinyl(P.coral)); bar.position.set(0, 2.62, 0.9); g.add(bar);
+  // 도는 빔(살아 있는 부분)
+  const spin = new THREE.Group(); live.add(spin); spin.position.set(at.x, 0.62, at.z);
+  const n = 7, len = 2.1, seg = len / n;
+  for (let i = 0; i < n; i++) { const c = mesh(new THREE.CylinderGeometry(0.09, 0.09, seg * 0.98, 14), vinyl(i % 2 ? P.white : P.coral)); c.rotation.z = Math.PI / 2; c.position.x = -len / 2 + seg * (i + 0.5); spin.add(c); }
+  const hub = mesh(roundedCylinder(0.2, 0.42, 0.08, 0.02, 24), vinyl(P.mustard)); hub.position.y = -0.4; spin.add(hub);
+  const bolt = mesh(new THREE.OctahedronGeometry(0.22, 0), lamp(P.mustard, 2.6), { cast: false }); bolt.position.set(at.x, 3.25, at.z); bolt.scale.set(0.7, 1.3, 0.7); live.add(bolt);
+  return (t) => { spin.rotation.y = t * 1.6; bolt.rotation.y = t * 1.4; bolt.position.y = 3.25 + Math.sin(t * 2.2) * 0.1; bolt.material.emissiveIntensity = 1.8 + Math.sin(t * 5) * 0.8; };
+}
+
 // 길: 발사대 둘레 원 + 각 미션 문으로 뻗는 디딤판(인스턴스 1개로 그린다)
 function walkways(gates) {
   const pts = [], R = PAD_R + 1.0;
@@ -431,6 +456,7 @@ export async function createBaseScene(stage) {
   roverZone(stat, live, at('pot')); col(ZONES.pot.x + 0.6, ZONES.pot.z - 1.0, 1.8); col(ZONES.pot.x - 0.8, ZONES.pot.z + 1.1, 0.75);
   anim.push(shieldZone(stat, live, at('button'))); col(ZONES.button.x, ZONES.button.z, 1.1); col(ZONES.button.x + 1.15, ZONES.button.z + 0.6, 0.5);
   anim.push(await caveZone(stat, live, at('lamp'))); col(ZONES.lamp.x, ZONES.lamp.z - 0.6, 2.4);
+  anim.push(challengeZone(stat, live, at('challenge'))); col(ZONES.challenge.x, ZONES.challenge.z - 0.2, 1.3);
   anim.push(reactorZone(stat, live, at('bomb'))); col(ZONES.bomb.x, ZONES.bomb.z, 1.4); col(ZONES.bomb.x + 1.9, ZONES.bomb.z + 0.3, 0.8);
 
   // 배경: 거주 돔 · 연료 탱크 · 무료 모델(Kenney, CC0) 바위 · 수정 · 기계
@@ -442,7 +468,7 @@ export async function createBaseScene(stage) {
     placeKit(stat, 'machine_generator', { x: 3.6, z: -12.6, s: 1.3, ry: -0.4 }),
     placeKit(stat, 'barrels', { x: -10.6, z: 1.2, s: 1.2, ry: 0.5 }),
     placeKit(stat, 'barrels', { x: 11.6, z: -7.2, s: 1.1, ry: 2.2 }),
-    placeKit(stat, 'rock_largeB', { x: -5.2, z: 9.4, s: 1.4, ry: 1.1, smooth: true }),
+    placeKit(stat, 'rock_largeB', { x: -10.4, z: 11.4, s: 1.4, ry: 1.1, smooth: true }),
     placeKit(stat, 'rock_crystals', { x: 6.8, z: 9.2, s: 1.2, ry: 0.4, smooth: true }),
     placeKit(stat, 'rocks_smallA', { x: -1.8, z: 7.4, s: 1.3, ry: 2.0, smooth: true }),
     placeKit(stat, 'rocks_smallB', { x: -3.4, z: 3.6, s: 1.2, ry: 0.7, smooth: true }),
@@ -452,7 +478,7 @@ export async function createBaseScene(stage) {
     placeKit(stat, 'meteor_detailed', { x: -9.2, z: -15.6, s: 1.5, ry: 0.9, smooth: true }),
     placeKit(stat, 'rock_crystalsLargeB', { x: 0.2, z: -19.4, s: 1.3, ry: 2.9, smooth: true }),
   ]);
-  [[3.6, -12.6, 0.9], [-10.6, 1.2, 0.6], [11.6, -7.2, 0.6], [-5.2, 9.4, 0.9], [6.8, 9.2, 0.6], [-1.8, 7.4, 0.45], [-3.4, 3.6, 0.4], [12.6, -12.8, 0.8], [-12.8, 6.2, 1.0], [9.6, 10.4, 0.8], [0.2, -19.4, 0.8]].forEach(([x, z, r]) => col(x, z, r));
+  [[3.6, -12.6, 0.9], [-10.6, 1.2, 0.6], [11.6, -7.2, 0.6], [-10.4, 11.4, 0.9], [6.8, 9.2, 0.6], [-1.8, 7.4, 0.45], [-3.4, 3.6, 0.4], [12.6, -12.8, 0.8], [-12.8, 6.2, 1.0], [9.6, 10.4, 0.8], [0.2, -19.4, 0.8]].forEach(([x, z, r]) => col(x, z, r));
   // 기지 가로등(발사대 둘레) — 같은 재질 하나를 공유해 합쳐진다
   // 길(디딤판)을 막지 않게, 미션 문으로 뻗는 길 사이사이의 가운데에 세운다
   const postLamp = lamp(P.led.yellow, 2.2);

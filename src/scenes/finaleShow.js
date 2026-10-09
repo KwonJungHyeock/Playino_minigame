@@ -10,6 +10,7 @@ import { board } from '../app/board.js';
 import { DEV_TOOLS } from '../app/flags.js';
 import { icon } from '../app/icons.js';
 import { results } from '../app/results.js';
+import { bonus } from '../app/bonus.js';
 import { gradeOf as utilGrade, clamp, lerp } from '../engine/utils.js';
 
 const ADC = 0, NEO = 6, BUZZ = 5, BTN = 4, PASS = 0.8, HUE_MAX = 320;
@@ -38,6 +39,7 @@ export function showFinaleShow(root, { onExit } = {}) {
         <span class="lh-item" id="fs-act">1막</span>
         <span class="lh-item"><b id="fs-hlbl">🎯</b> <b id="fs-hit">0</b>/<span id="fs-tot">0</span></span>
         <span class="lh-item">⭐ <b id="fs-score">0</b></span>
+        <span class="lh-item" id="fs-shield" hidden>🚀 부스터 보호막</span>
       </div>
       <div class="fs-play" id="fs-play"></div>
       <div class="led-prep" id="fs-prep">
@@ -98,6 +100,10 @@ export function showFinaleShow(root, { onExit } = {}) {
   function stopRaf() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
   function stopActCleanup() { if (actCleanup) { try { actCleanup(); } catch (_) {} actCleanup = null; } stopRaf(); if (btnPollTimer) { clearInterval(btnPollTimer); btnPollTimer = null; } }
 
+  // 보너스 부품 '부스터 날개'(도전 챌린지 보상): 발사 쇼 전체에서 실수 한 번을 막아 준다
+  let shield = bonus.has('booster') ? 1 : 0;
+  const shieldEl = root.querySelector('#fs-shield'); if (shieldEl) shieldEl.hidden = !shield;
+  function useShield() { if (!shield) return false; shield = 0; if (shieldEl) { shieldEl.textContent = '🚀 부스터가 막아 줬어!'; setTimeout(() => { shieldEl.hidden = true; }, 2400); } sfx.ok(); return true; }
   function nextAct(i) {
     stopActCleanup(); playEl.innerHTML = ''; ai = i;
     if (i >= ACTS.length) { finishAll(); return; }
@@ -209,7 +215,7 @@ export function showFinaleShow(root, { onExit } = {}) {
       timers.push(setTimeout(() => { phase = 'input'; inIdx = 0; info.textContent = '이제 따라 쳐봐! 🎹'; pads.forEach((p) => p.classList.remove('locked')); }, 600 + seq.length * 620 + 150));
     }
     function grow() { seq.push(Math.floor(Math.random() * NOTES.length)); best = Math.max(best, seq.length - 1); setHud('🎵 길이', Math.max(0, seq.length - 1), TARGET); playback(); }
-    function fail() { lives--; if (lives < 0) { actDone('melody', best, TARGET); return; } info.textContent = `앗! 다시 들어봐 (남은 기회 ${lives + 1}) 💪`; clearTimers(); timers.push(setTimeout(playback, 800)); }
+    function fail() { if (useShield()) { info.textContent = '🚀 부스터가 실수를 막아 줬어! 다시 들어봐'; clearTimers(); timers.push(setTimeout(playback, 800)); return; } lives--; if (lives < 0) { actDone('melody', best, TARGET); return; } info.textContent = `앗! 다시 들어봐 (남은 기회 ${lives + 1}) 💪`; clearTimers(); timers.push(setTimeout(playback, 800)); }
     pads.forEach((p) => p.addEventListener('pointerdown', (e) => {
       e.preventDefault(); if (phase !== 'input') return;
       const i = +p.dataset.i; flash(i); tone(NOTES[i][1]);
@@ -237,6 +243,7 @@ export function showFinaleShow(root, { onExit } = {}) {
       if (judged) return; judged = true;
       const ok = pos >= LOW && pos <= HIGH;
       if (ok) { hits++; bumpScore(110); sfx.ok(); cueEl.textContent = 'PERFECT! ✨'; }
+      else if (useShield()) { hits++; bumpScore(110); cueEl.textContent = '🚀 부스터가 막아 줬어!'; }
       else { sfx.no(); cueEl.textContent = pos < LOW ? '너무 빨라요! ⏪' : '너무 늦었어요! ⏩'; }
       setHud('🔘 큐', hits, CUES);
       setTimeout(() => { if (next()) cueEl.textContent = '큐 마커가 빛나는 존에 올 때 눌러!'; }, 520);
@@ -249,7 +256,7 @@ export function showFinaleShow(root, { onExit } = {}) {
     let last = performance.now();
     function loop(now) {
       const ms = Math.min(40, now - last); last = now;
-      if (!judged) { pos += ms * SPEED; if (pos >= 1) { judged = true; sfx.no(); cueEl.textContent = '놓쳤어요! 💨'; setHud('🔘 큐', hits, CUES); setTimeout(() => { if (next()) cueEl.textContent = '큐 마커가 빛나는 존에 올 때 눌러!'; }, 420); } }
+      if (!judged) { pos += ms * SPEED; if (pos >= 1) { judged = true; if (useShield()) { hits++; cueEl.textContent = '🚀 부스터가 막아 줬어!'; } else { sfx.no(); cueEl.textContent = '놓쳤어요! 💨'; } setHud('🔘 큐', hits, CUES); setTimeout(() => { if (next()) cueEl.textContent = '큐 마커가 빛나는 존에 올 때 눌러!'; }, 420); } }
       marker.style.left = clamp(pos, 0, 1) * 100 + '%';
       marker.classList.toggle('in', pos >= LOW && pos <= HIGH && !judged);
       raf = requestAnimationFrame(loop);

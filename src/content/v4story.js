@@ -13,6 +13,8 @@ export const STORY = {
   button: { no: 'MISSION 06', name: '운석 방어막', icon: '🛡️', line: '날아오는 운석을 버튼 두 개로 막아 내자.', reward: '방어막 노즈콘', part: 'nose' },
   lamp:   { no: 'MISSION 07', name: '어둠 동굴 탐사', icon: '🔦', line: '깜깜한 동굴 속 연료 수정을 빛 색으로 찾아내자.', reward: '연료 수정', part: 'fuel' },
   bomb:   { no: 'MISSION 08', name: '원자로 진정', icon: '⚛️', line: '들끓는 원자로를 다이얼로 살살 달래 동력을 얻자.', reward: '동력 코어', part: 'core' },
+  // 자유 도전(센서 없음 · 캐릭터 조작) — 커리큘럼 방이 아니다. 깨면 보너스 부품(app/bonus.js), 마지막 탈출에서 이점
+  challenge: { no: 'CHALLENGE', name: '운석 폭풍 런', icon: '⚡', line: '센서 없이 몸으로! 하늘 위 시험 트랙을 끝까지 달려.', reward: '부스터 날개', part: 'booster', bonus: true, concept: '몸으로 하는 자유 도전 · 센서 없음' },
   final:  { no: 'FINAL', name: '발사 쇼', icon: '🚀', line: '모은 부품으로 로켓을 완성하고 카운트다운!', reward: '행성 탈출', part: null },
 };
 
@@ -20,4 +22,4 @@ export const STORY = {
 export const ACTS = { ch1: '깨어나기', ch2: '기지 복구', ch3: '깊은 곳으로', ch4: '탈출' };
 
 // 로켓에 붙는 부품 순서(방 ID). 허브의 '로켓 부품 n/8' 이 이 목록을 센다.
-export const PART_ROOMS = Object.keys(STORY).filter((id) => STORY[id].part);
+export const PART_ROOMS = Object.keys(STORY).filter((id) => STORY[id].part && !STORY[id].bonus);   // 보너스 부품은 8개에 세지 않는다

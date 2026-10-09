@@ -11,8 +11,9 @@ import { progress } from '../app/progress.js';
 import { results } from '../app/results.js';
 import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curriculum.js';
 import { STORY, ACTS, PART_ROOMS } from '../content/v4story.js';
+import { bonus, BONUS } from '../app/bonus.js';
 
-const THREE_D = new Set(['led', 'buzzer']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
+const THREE_D = new Set(['led', 'buzzer', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
 const PLANET_R = 11;   // 작은 행성 반지름(m) — 걸으면 지평선 너머에서 스팟이 솟는다(gfx3d/curve.js)
 const SPEED = 3.1, BOT_R = 0.32;
 const HOLD_T = 0.8;              // 꾹 누르는 시간(초) — 실수로 들어가지 않을 만큼, 기다림이 느껴지지 않을 만큼
@@ -169,6 +170,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   // ── 진행 상태(curriculum 판정 그대로) ──
   const save = loadSave();
   function stateOf(id) {
+    if (STORY[id].bonus) { const b = bonus.get(STORY[id].part); return { locked: false, cleared: !!b?.at, passed: b?.at ? 1 : 0, total: 1, played: !!b?.tries, stages: [], best: b?.best }; }   // 자유 도전: 늘 열림
     const room = ROOMS[id], st = roomStages(id), total = st.length, passed = st.filter((s) => s?.passed).length;
     return { locked: !openAll && !chapterUnlocked(room.chapter), cleared: progress.isCleared(id), passed, total, played: results.has(id), stages: st };
   }
@@ -185,12 +187,14 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
       const s = stateOf(gt.id), story = STORY[gt.id];
       let state = 'open', label = s.played ? '다시 도전해도 좋아요' : '들어가 볼까?';
       if (s.locked) { state = 'locked'; label = '앞 무대를 먼저 해 봐요'; }
-      else if (s.cleared) { state = 'cleared'; label = story.part ? '부품 획득' : story.reward; }
+      else if (s.cleared) { state = 'cleared'; label = story.bonus ? '보너스 획득' : story.part ? '부품 획득' : story.reward; }
+      else if (story.bonus) label = '보너스 도전!';
       else if (gt.id === next) { state = 'next'; label = '다음 목적지'; }
       else if (s.passed) label = `단계 ${s.passed}/${s.total} 통과`;
       gt.set({ state, label });
     });
     PART_ROOMS.forEach((id, i) => base.rocket.userData.setPart(STORY[id].part, partK(id, i)));
+    base.rocket.userData.setPart('booster', bonus.has('booster') || (partsPreview ?? 0) >= PART_ROOMS.length ? 1 : 0);   // 보너스 칸
     const n = partsDone();
     hud.root.querySelector('.hud-obj-t small').textContent = `로켓 부품 ${n} / ${PART_ROOMS.length}`;
     hud.goal(`다음 목적지 · ${STORY[next].name}`, n / PART_ROOMS.length);
@@ -334,7 +338,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     const st = stateOf(id), s = STORY[id], gt = gateOf(id), lm = base.zoneOf(id);
     const pick = s.stages && !st.locked ? Math.max(0, st.stages.findIndex((x) => !x?.passed)) : 0;
     S.brief = { id, st, sel: pick, dir: clearDir(id) };
-    brief.show({ pos: gt.pos, name: s.name, sub: st.locked ? '잠겨 있어요' : `${s.no} · ${ACTS[ROOMS[id].chapter]}`, locked: st.locked, cleared: st.cleared,
+    brief.show({ pos: gt.pos, name: s.name, sub: st.locked ? '잠겨 있어요' : `${s.no} · ${ROOMS[id] ? ACTS[ROOMS[id].chapter] : '자유 도전'}`, locked: st.locked, cleared: st.cleared,
       mini: s.part || (id === 'basics' ? 'card' : 'rocket'), total: st.total, passed: st.passed, selectable: !!s.stages && !st.locked, selected: pick });
     S.target = gt.pos.clone(); S.pending = null;
     // 카메라 쪽을 보되 구역 쪽으로 고개를 살짝 — 바이저 얼굴이 보이게
@@ -358,6 +362,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   function infoLines(id, st) {
     const s = STORY[id], room = ROOMS[id];
     if (st.locked) return [['열리는 조건', `${prevActOf(id)} 미션을 한 번씩`], ['그다음 받는 것', s.reward]];
+    if (s.bonus) { const fmt = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`; return [['도전', s.concept], ['보너스 부품', st.cleared ? `${s.reward} <small>· 받았어요</small>` : `${s.reward} <small>· ${BONUS.booster.perk}</small>`], ['최고 기록', st.best ? fmt(st.best) : '아직 없음']]; }
     const lines = [['배우는 것', room.concept], [s.part ? '받는 부품' : '얻는 것', st.cleared ? `${s.reward} <small>· 받았어요</small>` : s.reward]];
     if (s.stages) lines.push(['고른 단계', stageLabel(id, S.brief.sel)]);
     else lines.push(['진행', st.cleared ? '모두 통과' : st.passed ? `${st.passed} / ${st.total} 단계 통과` : st.played ? '도전 중' : `처음 · ${st.total}단계`]);
@@ -638,7 +643,8 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
       }
       bot.play('환호', { once: true }); bot.setExpression('웃음');
       const n = partsDone();
-      await hud.say(n >= PART_ROOMS.length ? '로켓 부품을 다 모았어! 발사대로 가자!' : `${STORY[newParts[newParts.length - 1]].reward} 장착 완료! 로켓 부품 ${n}/${PART_ROOMS.length}`, { mood: '웃음' });
+      const lastId = newParts[newParts.length - 1];
+      await hud.say(STORY[lastId].bonus ? `보너스 부품 ${STORY[lastId].reward} 장착! 탈출할 때 힘이 돼.` : n >= PART_ROOMS.length ? '로켓 부품을 다 모았어! 발사대로 가자!' : `${STORY[lastId].reward} 장착 완료! 로켓 부품 ${n}/${PART_ROOMS.length}`, { mood: '웃음' });
       bot.setExpression('기본'); S.shot = null;
     }
     S.busy = false; S.near = null;
@@ -690,7 +696,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
 
   // 처음이면 인트로, 아니면 새로 얻은 것부터 축하
   bgm.setDuck(1);
-  const clearedNow = order.filter((id) => progress.isCleared(id));
+  const clearedNow = order.filter((id) => progress.isCleared(id)).concat(bonus.has('booster') ? ['challenge'] : []);   // 보너스도 처음 얻으면 장착 연출
   const seen = Array.isArray(save.cleared) ? save.cleared : null;
   const fresh = seen ? clearedNow.filter((id) => !seen.includes(id)) : [];
   save.cleared = clearedNow; writeSave(save);
