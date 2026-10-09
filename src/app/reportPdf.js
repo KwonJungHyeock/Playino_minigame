@@ -4,6 +4,7 @@
 // 데이터는 report.js buildReport() 하나 — 기지 '탐사 일지' 창과 같은 숫자.
 import { buildReport, QUESTIONS } from './report.js';
 import { esc } from './achievement.js';
+import { GAME } from '../content/v4story.js';
 
 const A4 = { w: 794, h: 1123 }, PT = { w: 595.28, h: 841.89 };
 
@@ -72,12 +73,12 @@ const gradeCell = (s) => `<span class="st"><span class="g g-${s.grade || 'none'}
 const starRow = (a) => `<span class="sr">${a.map((x) => (x ? '★' : '<i>★</i>')).join('')}</span>`;
 
 function pages(R, face) {
-  const top = (n, title) => `<div class="rp-top"><div><div class="b">VISORBOT ESCAPE · EXPEDITION REPORT</div><h1>${title}</h1></div><div class="pg">${n} / 4</div></div>`;
-  const foot = `<div class="rp-foot"><span>바이저봇 탈출기 · 에듀이노 AI</span><span>${esc(R.student.label || '이름 없음')} · ${R.made} 만듦</span></div>`;
+  const top = (n, title) => `<div class="rp-top"><div><div class="b">${GAME.en} · EXPEDITION REPORT</div><h1>${title}</h1></div><div class="pg">${n} / 4</div></div>`;
+  const foot = `<div class="rp-foot"><span>${GAME.title} · 에듀이노 AI</span><span>${esc(R.student.label || '이름 없음')} · ${R.made} 만듦</span></div>`;
   const p1 = `<section class="rp">${top(1, '탐사 대원증')}
     <div class="rp-id"><div class="face"><img src="${face}" alt=""></div><dl>
       <div><dt>탐사 대원</dt><dd>${esc(R.student.label || '이름 없음')}</dd></div>
-      <div><dt>함께한 로봇</dt><dd>${esc(R.bot.name)}</dd></div>
+      <div><dt>함께한 친구</dt><dd>${esc(R.bot.name)}</dd></div>
       <div><dt>꾸민 모습</dt><dd class="looks">${R.bot.look.map((l) => `<span><i style="background:${l.hex}"></i>${l.label} · ${esc(l.name)}</span>`).join('')}</dd></div>
       <div class="rp-stamp${R.escaped ? '' : ' ing'}">${R.escaped ? '🚀 행성 탈출 성공!' : '🔭 탐사 중'}</div>
     </dl></div>
@@ -153,11 +154,11 @@ export async function downloadReport({ onStep } = {}) {
       images.push({ bytes: b64bytes(canvas.toDataURL('image/jpeg', 0.88)), w: canvas.width, h: canvas.height });
     }
   } finally { holder.remove(); st.remove(); }
-  const blob = makePdf(images, `바이저봇 탈출기 탐사 보고서 — ${R.student.name || ''}`);
+  const blob = makePdf(images, `${GAME.title} 탐사 보고서 — ${R.student.name || ''}`);
   const d = new Date(), stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
   const url = URL.createObjectURL(blob), a = document.createElement('a');
   // 파일 이름은 영문: 한글 이름을 'download' 로 바꿔 버리는 브라우저가 있어서(학생 이름은 PDF 안 · 제목 정보에)
-  a.href = url; a.download = `visorbot-report${R.student.no ? `-${R.student.no.replace(/\D/g, '')}` : ''}-${stamp}.pdf`; document.body.appendChild(a); a.click(); a.remove();
+  a.href = url; a.download = `red-planet-report${R.student.no ? `-${R.student.no.replace(/\D/g, '')}` : ''}-${stamp}.pdf`; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30000);
   return { pages: images.length, bytes: blob.size, name: a.download };
 }

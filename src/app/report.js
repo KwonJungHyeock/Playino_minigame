@@ -39,7 +39,7 @@ export function describe(e) {
     case 'free': return `${nm} · 🧪 자유 실험 ${fmtMs(e.ms)}`;
     case 'star': return `${nm} · ⭐ 별 조각 ${e.i === 2 ? '(S등급)' : '(숨은 별)'}`;
     case 'photo': return `📷 기념사진 — ${e.title || ''}`;
-    case 'profile': return `🎨 바이저봇 '${e.name}' 만들기`;
+    case 'profile': return `🎨 에디 꾸미기 · '${e.name}'`;
     case 'session': return '🚀 기지 접속';
     default: return null;
   }

@@ -4,6 +4,9 @@
 // stageTitles: 3D 판에서 보여 줄 이름이 기록 이름과 다를 때(기록은 stages 그대로 — 메달 판정이 2D 판과 이어지게).
 // 원본 기획: docs/V4-STORY.md
 
+// 게임 제목(타이틀 · 기지 · 사진 띠 · 보고서) — 캐릭터 이름(에디)을 넣지 않고 모험이 느껴지게
+export const GAME = { title: '붉은 행성 대탈출', en: 'RED PLANET ESCAPE', tagline: '코드로 기지를 고치고, 로켓을 쏘아 올려라!' };
+
 export const STORY = {
   basics: { no: 'PROLOGUE', name: '부팅 훈련', icon: '🔋', line: '충격으로 꺼졌던 센서를 하나씩 깨워 보자.', reward: '기지 출입 카드', part: null },
   led:    { no: 'MISSION 01', name: '착륙 유도등', icon: '🛬', line: '보급선이 엔진 부품을 싣고 내려와. 유도등으로 길을 안내하자.', reward: '엔진 노즐', part: 'engine', stages: ['타이밍 쇼', '라이트 연주'] },

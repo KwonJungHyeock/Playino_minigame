@@ -1,4 +1,4 @@
-// creator.js — v4 '캐릭터 만들기'. 나만의 바이저봇: 이름 + 바이저 빛 · 망토 · 헬멧 · 귀 장식. 고르는 즉시 3D 바이저봇이 바뀌고 반응한다.
+// creator.js — v4 '캐릭터 만들기'. 나만의 에디(에듀이노 대표 캐릭터): 이름 + 바이저 빛 · 망토 · 헬멧 · 귀 장식. 고르는 즉시 3D 바이저봇이 바뀌고 반응한다.
 // 기본 칸(need 0)은 처음부터, 나머지는 별 조각으로 연다(app/profile.js). 다 고르면 onDone — 허브 '꾸미기'에서 언제든 다시 바꾼다.
 // 3D 를 못 쓰는 기기는 얼굴 그림(portrait)으로 대신 보여 준다. cleanup 은 무대 · 바이저봇 · 입력을 짝 맞춰 푼다.
 import { sfx } from '../app/sfx.js';
@@ -7,7 +7,7 @@ import { student } from '../app/student.js';
 import { esc } from '../app/achievement.js';
 import { STYLE, PARTS, style, profile, DEFAULT_NAME } from '../app/profile.js';
 
-const NAMES = ['삐삐', '루미', '볼트', '코코', '반짝이', '토리', '누리', '별이', '두리', '마루', '띵동', '로로'];
+const NAMES = ['에디', '꼬마 에디', '에디 대장', '반짝 에디', '로켓 에디', '삐삐', '루미', '볼트', '코코', '별이', '띵동', '로로'];
 const CSS = `
 .crt{position:fixed;inset:0;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(360px,460px);background:radial-gradient(120% 90% at 30% 100%,#3a2a5c 0%,#1a2050 42%,#070a1f 100%);color:#fff;font-family:"Pretendard Variable","Noto Sans KR",system-ui,sans-serif}
 .crt::before{content:'';position:absolute;inset:0;background-image:radial-gradient(1.4px 1.4px at 12% 18%,#fff8,transparent),radial-gradient(1px 1px at 28% 64%,#fff6,transparent),radial-gradient(1.6px 1.6px at 46% 26%,#fffa,transparent),radial-gradient(1px 1px at 62% 80%,#fff5,transparent),radial-gradient(1.2px 1.2px at 78% 14%,#fff8,transparent),radial-gradient(1px 1px at 8% 86%,#fff6,transparent),radial-gradient(1.3px 1.3px at 36% 8%,#fff7,transparent);pointer-events:none}
@@ -35,6 +35,7 @@ const CSS = `
 .crt-go:active{transform:translateY(4px);box-shadow:0 1px 0 #b98a1c}
 .crt-back{align-self:flex-start;border:0;background:none;color:rgba(255,255,255,.6);font:600 13px "Pretendard Variable",sans-serif;cursor:pointer;padding:0}
 @media (max-width:760px){.crt{grid-template-columns:1fr;grid-template-rows:42vh 1fr}.crt-panel{border-left:0;border-top:1px solid rgba(255,255,255,.12);padding:16px 16px max(16px,env(safe-area-inset-bottom));gap:11px}.crt h1{font-size:26px}.crt-row button{font-size:11px}.crt-say{font-size:17px}.crt-tip{display:none}}
+body:has(.crt) .fs-toggle{right:auto;left:max(16px,env(safe-area-inset-left))}   /* 출발 단추와 겹치지 않게 */
 @media (prefers-reduced-motion:reduce){.crt-say.pop{animation:none}}`;
 
 /**
@@ -43,16 +44,16 @@ const CSS = `
  */
 export async function showCreator(root, { onDone, onBack, step = '캐릭터 만들기' } = {}) {
   const who = student.get()?.name || '';
-  let name = profile.created() ? profile.name() : '';
+  let name = profile.created() ? profile.name() : DEFAULT_NAME;
   root.innerHTML = `<style>${CSS}</style><section class="crt" aria-label="캐릭터 만들기">
     <div class="crt-stage" id="crt-stage"><div class="crt-say" id="crt-say"></div><div class="crt-tip">끌어서 돌려 보기</div></div>
     <div class="crt-panel">
       ${onBack ? '<button class="crt-back" id="crt-back" type="button">← 이전</button>' : ''}
       <div class="crt-eye">${esc(step)}</div>
-      <h1>나만의 바이저봇</h1>
-      <p>${who ? `${esc(who)} 메이커와 함께 탈출할 친구예요. ` : ''}이름을 짓고 모습을 골라요. 별 조각을 모으면 더 많은 색이 열려요(지금 ⭐ ${stars.total()}).</p>
-      <div class="crt-h">이름 <small>8글자까지</small></div>
-      <div class="crt-name"><input id="crt-name" maxlength="8" placeholder="${DEFAULT_NAME}" autocomplete="off" value="${esc(name)}" aria-label="바이저봇 이름"/><button id="crt-dice" type="button" aria-label="이름 추천">🎲</button></div>
+      <h1>나만의 에디</h1>
+      <p>${who ? `${esc(who)} 메이커, ` : ''}에듀이노 친구 <b>에디</b>와 함께 붉은 행성을 탈출해요. 모습을 골라 나만의 에디를 꾸며요 — 별 조각을 모으면 색이 더 열려요(지금 ⭐ ${stars.total()}).</p>
+      <div class="crt-h">이름 <small>그대로 '에디' 또는 별명(8글자)</small></div>
+      <div class="crt-name"><input id="crt-name" maxlength="8" placeholder="${DEFAULT_NAME}" autocomplete="off" value="${esc(name)}" aria-label="에디 이름"/><button id="crt-dice" type="button" aria-label="이름 추천">🎲</button></div>
       ${PARTS.map(([part, label]) => `<div class="crt-h">${label}</div><div class="crt-row" role="group" aria-label="${label}">${STYLE[part].map((o) => { const ok = style.unlocked(part, o.id); return `<button type="button" data-part="${part}" data-id="${o.id}" style="--c:#${o.hex.toString(16).padStart(6, '0')}" aria-pressed="${style.get()[part] === o.id}" ${ok ? '' : 'disabled'}><i></i>${o.name}${ok ? '' : `<small>⭐ ${o.need}</small>`}</button>`; }).join('')}</div>`).join('')}
       <button class="crt-go" id="crt-go" type="button">이 모습으로 출발 ▶</button>
     </div></section>`;

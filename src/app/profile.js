@@ -5,7 +5,7 @@ import { stars } from './stars.js';
 import { journal } from './journal.js';
 
 const KEY = 'eduino.v4.profile.v1', LOOK_KEY = 'eduino.v4.style.v1';
-export const DEFAULT_NAME = '바이저봇';
+export const DEFAULT_NAME = '에디';   // 에듀이노 대표 캐릭터
 
 export const STYLE = {
   led: [{ id: 'cyan', hex: 0x8ff7ee, need: 0, name: '하늘' }, { id: 'pink', hex: 0xff9ad8, need: 0, name: '분홍' }, { id: 'yellow', hex: 0xffe066, need: 0, name: '노랑' }, { id: 'green', hex: 0x86ff8f, need: 6, name: '초록' }, { id: 'violet', hex: 0xbea4ff, need: 12, name: '보라' }, { id: 'white', hex: 0xffffff, need: 20, name: '하양' }],
@@ -19,7 +19,7 @@ const DEF = { led: 'cyan', cape: 'red', helmet: 'white', ear: 'gold' };
 const read = (k) => { try { const v = JSON.parse(localStorage.getItem(k) || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } };
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
-/** 바이저봇 모습(부위별 고른 칸 id) */
+/** 에디 모습(부위별 고른 칸 id) */
 export const style = {
   get() { const v = read(LOOK_KEY), o = {}; for (const [p] of PARTS) o[p] = STYLE[p].some((x) => x.id === v[p]) ? v[p] : DEF[p]; return o; },
   set(part, id) { const opt = STYLE[part]?.find((o) => o.id === id); if (!opt || stars.total() < opt.need) return false; write(LOOK_KEY, { ...read(LOOK_KEY), [part]: id }); return true; },
@@ -28,10 +28,10 @@ export const style = {
   css: (part) => `#${style.hex(part).toString(16).padStart(6, '0')}`,
 };
 
-/** 바이저봇 이름 · 만든 날 */
+/** 에디 이름 · 만든 날 */
 export const profile = {
   get: () => read(KEY),
-  name: () => { const n = String(read(KEY).name || '').trim(); return n || DEFAULT_NAME; },
+  name: () => { const n = String(read(KEY).name || '').trim(); return n && n !== '바이저봇' ? n : DEFAULT_NAME; },   // 예전 기본 이름(바이저봇)은 에디로
   created: () => !!read(KEY).at,
   set({ name }) { const n = String(name || '').trim().slice(0, 8); write(KEY, { ...read(KEY), name: n || DEFAULT_NAME, at: read(KEY).at || Date.now() }); journal.add('profile', { name: n || DEFAULT_NAME }); },
   reset() { try { localStorage.removeItem(KEY); localStorage.removeItem(LOOK_KEY); } catch {} },

@@ -10,7 +10,7 @@ import { bgm } from '../app/bgm.js';
 import { progress } from '../app/progress.js';
 import { results } from '../app/results.js';
 import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curriculum.js';
-import { STORY, ACTS, PART_ROOMS } from '../content/v4story.js';
+import { STORY, ACTS, PART_ROOMS, GAME } from '../content/v4story.js';
 import { bonus, BONUS } from '../app/bonus.js';
 import { stars, STAR_ROOMS } from '../app/stars.js';
 import { PARTS, profile } from '../app/profile.js';
@@ -158,7 +158,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
       <div class="hub3-go-t"><b id="hub3-go-b">꾹 눌러 출발</b><span class="h3-kb"><span class="hud-key wide">스페이스</span>꾹 누르기</span><span class="h3-kb h3-pick" id="hub3-pick-k"></span><span class="h3-tp" id="hub3-pick-t"></span></div></div>
     <div class="hub3-hint off" id="hub3-hint"><span class="k"><span class="hud-key">←↑↓→</span> 또는 <span class="hud-key">WASD</span> 걷기 · 문 위에서 <span class="hud-key">스페이스</span> 꾹</span><span class="t">가고 싶은 곳을 누르면 걸어가요</span></div>
     <div class="hub3-iris" id="hub3-iris"></div>
-    <div class="hub3-tools" id="hub3-tools"><button type="button" id="hub3-style" aria-label="바이저봇 꾸미기">🎨 꾸미기 <b id="hub3-star-n"></b></button><button type="button" id="hub3-photo" aria-label="기념사진 찍기">📷</button><button type="button" id="hub3-log" aria-label="탐사 일지 · 보고서">📒 일지</button></div>
+    <div class="hub3-tools" id="hub3-tools"><button type="button" id="hub3-style" aria-label="에디 꾸미기">🎨 꾸미기 <b id="hub3-star-n"></b></button><button type="button" id="hub3-photo" aria-label="기념사진 찍기">📷</button><button type="button" id="hub3-log" aria-label="탐사 일지 · 보고서">📒 일지</button></div>
     <button class="hub3-skip" id="hub3-skip" type="button" hidden>인트로 건너뛰기 ⏭</button></section>`;
   const el = root.querySelector('.hub3'), host = root.querySelector('#hub3-stage'), hint = root.querySelector('#hub3-hint'), skipBtn = root.querySelector('#hub3-skip');
   const $ = (s) => root.querySelector(s);
@@ -187,7 +187,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   base = await createBaseScene(stage);
   if (done) { base.dispose(); return; }
   const post = addPost(stage, { bloom: 0.4, bloomRadius: 0.7, threshold: 1.05 });
-  hud = createHud(el, { mission: { icon: '🚀', eyebrow: '바이저봇 탈출기', title: '에듀이노 기지' }, onPause: () => pause() });
+  hud = createHud(el, { mission: { icon: '🚀', eyebrow: GAME.title, title: '에듀이노 기지' }, onPause: () => pause() });
   curveMod = curve;
   const THREE = stage.THREE, cam = stage.camera, bot = base.bot, botObj = bot.object;
   botObj.rotation.order = 'YXZ';   // 방향(Y) 먼저, 그다음 몸 기울기(앞뒤 X · 좌우 Z)
@@ -697,7 +697,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     cam.position.copy(S.shot.pos); camLook.copy(S.shot.look); camV.set(0, 0, 0); lookV.set(0, 0, 0);
     curveC.copy(S.shot.look).setY(0);   // 행성 초점도 바로 그 자리로
     bot.setExpression('졸림');
-    await hud.banner('에듀이노 기지', '바이저봇 탈출기', { ms: 2100 }); if (skip) return;
+    await hud.banner('에듀이노 기지', GAME.title, { ms: 2100 }); if (skip) return;
     S.shot = null; await wait(900); if (skip) return;
     await hud.dialogue([
       { text: '으… 여기가 어디지? 시스템 다시 켜는 중…', mood: '졸림' },
