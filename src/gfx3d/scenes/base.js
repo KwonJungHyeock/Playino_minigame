@@ -43,7 +43,7 @@ const gatePos = (id) => {
 const BOUND = { cx: 0, cz: -3, rx: 13.6, rz: 17.6 };
 const boundK = (x, z) => Math.hypot((x - BOUND.cx) / BOUND.rx, (z - BOUND.cz) / BOUND.rz);
 
-const GROUND = { lit: 0xae8c80, dark: 0x7d6264, edge: 0x3c3242 };
+const GROUND = { lit: 0xc29a88, dark: 0x93706a, edge: 0x3f3246 };   // 따뜻한 붉은 모래(도전 챌린지 · 타이틀 행성과 같은 계열)
 
 function ground() {
   const g = new THREE.PlaneGeometry(130, 130, 120, 120); g.rotateX(-Math.PI / 2);
@@ -134,34 +134,32 @@ function stateIcon(x, state, cx, cy, s, col) {
   x.restore();
 }
 function roundRect(x, X, y, w, h, r) { x.beginPath(); x.moveTo(X + r, y); x.arcTo(X + w, y, X + w, y + h, r); x.arcTo(X + w, y + h, X, y + h, r); x.arcTo(X, y + h, X, y, r); x.arcTo(X, y, X + w, y, r); x.closePath(); }
-// 안내판 = 바이저가 띄우는 홀로그램 표지. 상자 없이 모서리 꺾쇠 + 큰 이름 + 상태 한 줄, 아래로 원판을 가리키는 점선.
-// 어떤 배경에서도 읽히게 글자 뒤에만 옅은 어둠 번짐 + 어두운 외곽선을 깐다.
+// 안내판 = 바이저가 띄우는 표지. 도전 챌린지처럼 깔끔하게: 짙은 유리 알약(상태색 테) + 큰 이름 + 상태 칩, 아래로 원판을 가리키는 점선.
 function drawSign(cv, id, st) {
-  const x = cv.getContext('2d'), W = cv.width, H = cv.height, s = STORY[id], col = STATE_CSS[st.state] || STATE_CSS.open;
+  const x = cv.getContext('2d'), W = cv.width, H = cv.height, s = STORY[id], col = STATE_CSS[st.state] || STATE_CSS.open, locked = st.state === 'locked';
   x.clearRect(0, 0, W, H);
-  x.save(); x.translate(W / 2, 90); x.scale(1, 0.34);   // 납작한 타원 번짐 — 사각형 가장자리가 생기지 않게
-  const sc = x.createRadialGradient(0, 0, 0, 0, 0, W * 0.5); sc.addColorStop(0, 'rgba(12,16,44,.7)'); sc.addColorStop(0.55, 'rgba(12,16,44,.42)'); sc.addColorStop(1, 'rgba(12,16,44,0)');
-  x.fillStyle = sc; x.fillRect(-W / 2, -W / 2, W, W); x.restore();
-  // 모서리 꺾쇠
-  const bx = 22, by = 14, bw = W - 44, bh = 150, L = 26;
-  x.strokeStyle = col; x.lineWidth = 5; x.lineCap = 'round'; x.globalAlpha = st.state === 'locked' ? 0.6 : 0.95;
-  for (const [px, py, dx, dy] of [[bx, by, 1, 1], [bx + bw, by, -1, 1], [bx, by + bh, 1, -1], [bx + bw, by + bh, -1, -1]]) { x.beginPath(); x.moveTo(px + dx * L, py); x.lineTo(px, py); x.lineTo(px, py + dy * L); x.stroke(); }
-  x.globalAlpha = 1;
-  // 이름
   x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.lineJoin = 'round';
-  let fs = 50; x.font = `${fs}px "Jua","Pretendard Variable","Noto Sans KR",sans-serif`; while (x.measureText(s.name).width > bw - 40 && fs > 34) { fs -= 2; x.font = `${fs}px "Jua","Pretendard Variable","Noto Sans KR",sans-serif`; }
-  // 게임 로고 글자: 남색 입체 그림자 → 남색 외곽선 → 흰 글자(위가 밝은 그라데이션)
-  x.fillStyle = '#1b1f4a'; x.fillText(s.name, W / 2, 91);
-  x.lineWidth = 11; x.strokeStyle = '#1b1f4a'; x.strokeText(s.name, W / 2, 86);
-  const tg = x.createLinearGradient(0, 86 - fs, 0, 86); tg.addColorStop(0, '#ffffff'); tg.addColorStop(1, st.state === 'locked' ? '#c9d0ea' : '#fff1c8');
-  x.fillStyle = tg; x.fillText(s.name, W / 2, 86);
-  // 상태 한 줄(아이콘 + 글)
-  const label = st.label || ''; x.font = '800 24px "Pretendard Variable","Noto Sans KR",sans-serif';
-  const tw = x.measureText(label).width, ix = W / 2 - (tw + 34) / 2;
-  stateIcon(x, st.state, ix + 11, 129, 22, col);
-  x.textAlign = 'left'; x.lineWidth = 7; x.strokeStyle = 'rgba(10,14,40,.6)'; x.strokeText(label, ix + 34, 138); x.fillStyle = col; x.fillText(label, ix + 34, 138);
+  let fs = 46; x.font = `${fs}px "Jua","Pretendard Variable","Noto Sans KR",sans-serif`; while (x.measureText(s.name).width > W - 120 && fs > 32) { fs -= 2; x.font = `${fs}px "Jua","Pretendard Variable","Noto Sans KR",sans-serif`; }
+  const nameW = x.measureText(s.name).width, label = st.label || '';
+  x.font = '800 22px "Pretendard Variable","Noto Sans KR",sans-serif'; const lw = label ? x.measureText(label).width + 52 : 0;
+  const pw = Math.min(W - 16, Math.max(nameW + 64, lw + 40)), px = (W - pw) / 2, py = 10, ph = 128;
+  // 알약 판(그림자 → 짙은 유리 → 상태색 테)
+  x.fillStyle = 'rgba(4,6,22,.35)'; roundRect(x, px + 3, py + 7, pw, ph, 30); x.fill();
+  x.fillStyle = locked ? 'rgba(18,22,48,.82)' : 'rgba(10,14,40,.86)'; roundRect(x, px, py, pw, ph, 30); x.fill();
+  x.lineWidth = 4; x.strokeStyle = col; x.globalAlpha = locked ? 0.55 : 0.95; roundRect(x, px + 2, py + 2, pw - 4, ph - 4, 28); x.stroke(); x.globalAlpha = 1;
+  // 이름(위가 밝은 흰 글자)
+  x.font = `${fs}px "Jua","Pretendard Variable","Noto Sans KR",sans-serif`;
+  const tg = x.createLinearGradient(0, 64 - fs, 0, 64); tg.addColorStop(0, '#ffffff'); tg.addColorStop(1, locked ? '#c9d0ea' : '#fff1c8');
+  x.fillStyle = tg; x.fillText(s.name, W / 2, label ? 66 : 92);
+  // 상태 칩: 색 알약 + 아이콘 + 글
+  if (label) {
+    const cw = lw, cx0 = W / 2 - cw / 2, cy0 = 84;
+    x.fillStyle = col; x.globalAlpha = locked ? 0.28 : 0.22; roundRect(x, cx0, cy0, cw, 36, 18); x.fill(); x.globalAlpha = 1;
+    stateIcon(x, st.state, cx0 + 24, cy0 + 18, 20, col);
+    x.font = '800 22px "Pretendard Variable","Noto Sans KR",sans-serif'; x.textAlign = 'left'; x.fillStyle = col; x.fillText(label, cx0 + 42, cy0 + 26);
+  }
   // 원판을 가리키는 점선
-  x.fillStyle = col; x.globalAlpha = 0.75; for (let y = 172; y < H - 4; y += 11) { x.beginPath(); x.arc(W / 2, y, 3, 0, Math.PI * 2); x.fill(); } x.globalAlpha = 1;
+  x.fillStyle = col; x.globalAlpha = 0.75; for (let y = 160; y < H - 4; y += 11) { x.beginPath(); x.arc(W / 2, y, 3, 0, Math.PI * 2); x.fill(); } x.globalAlpha = 1;
 }
 
 function gate(id) {
@@ -366,18 +364,23 @@ function challengeZone(stat, live, at) {
 
 // 길: 발사대 둘레 원 + 각 미션 문으로 뻗는 디딤판(인스턴스 1개로 그린다)
 function walkways(gates) {
-  const pts = [], R = PAD_R + 1.0;
-  for (let i = 0; i < 40; i++) { const a = (i / 40) * Math.PI * 2; pts.push([CENTER.x + Math.cos(a) * R, CENTER.z + Math.sin(a) * R]); }
+  // 도전 챌린지처럼 깔끔한 이어진 길: 발사대 둘레 고리 + 미션 문으로 뻗는 길(흰 포장 + 짙은 테두리). 행성 휘기가 먹도록 잘게 나눈 판
+  const g = new THREE.Group(); g.name = 'Walkway';
+  const top = vinyl(P.shell, { roughness: 0.62, sheen: 0.2 }), rim = vinyl(0x5a4f6a, { roughness: 0.7 });
+  const R = PAD_R + 1.0, Y = 0.13;   // 땅의 잔물결(± 0.1)보다 살짝 위
+  const flat = (geo, mat, y) => { geo.rotateX(-Math.PI / 2); const m = mesh(geo, mat, { cast: false }); m.position.y = y; m.receiveShadow = true; g.add(m); return m; };
+  flat(new THREE.RingGeometry(R - 0.5, R + 0.5, 160, 2), rim, Y - 0.01).position.set(CENTER.x, Y - 0.01, CENTER.z);
+  flat(new THREE.RingGeometry(R - 0.4, R + 0.4, 160, 2), top, Y).position.set(CENTER.x, Y, CENTER.z);
   for (const gt of gates) {
     if (gt.id === 'final') continue;
-    const a = new THREE.Vector2(gt.pos.x - CENTER.x, gt.pos.z - CENTER.z), len = a.length() - R - 0.95; a.normalize();
-    for (let s = 0.75; s < len; s += 0.82) pts.push([CENTER.x + a.x * (R + s), CENTER.z + a.y * (R + s)]);
+    const a = new THREE.Vector2(gt.pos.x - CENTER.x, gt.pos.z - CENTER.z), len = a.length() - R - 0.8; if (len < 0.3) continue; a.normalize();
+    const mid = new THREE.Vector2(CENTER.x, CENTER.z).addScaledVector(a, R + 0.35 + len / 2), yaw = Math.atan2(a.x, a.y), segs = Math.max(4, Math.round(len * 3));
+    for (const [w, mat, y] of [[1.0, rim, Y - 0.01], [0.8, top, Y]]) {
+      const geo = new THREE.PlaneGeometry(w, len + 0.4, 1, segs); const m = flat(geo, mat, y);
+      m.position.set(mid.x, y, mid.y); m.rotation.set(0, yaw, 0);
+    }
   }
-  const im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.26, 0.275, 0.05, 20), vinyl(P.shell, { roughness: 0.6 }), pts.length)   // 디딤판은 작아 둥근 모서리가 안 보인다 — 단순 원기둥으로 삼각형을 아낀다;
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
-  pts.forEach(([x, z], i) => { q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), i); sc.setScalar(0.9 + ((i * 37) % 10) / 40); m.compose(new THREE.Vector3(x, 0.0, z), q, sc); im.setMatrixAt(i, m); });
-  im.receiveShadow = true; im.name = 'Walkway';
-  return im;
+  return g;
 }
 
 /**

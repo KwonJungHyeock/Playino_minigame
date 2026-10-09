@@ -19,7 +19,7 @@ import { buildReport, reflect, QUESTIONS } from '../app/report.js';
 
 const THREE_D = new Set(['basics', 'led', 'buzzer', 'rgb', 'cds', 'pot', 'button', 'lamp', 'bomb', 'final', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
 const PLANET_R = 11;   // 작은 행성 반지름(m) — 걸으면 지평선 너머에서 스팟이 솟는다(gfx3d/curve.js)
-const SPEED = 3.1, BOT_R = 0.32;
+const SPEED = 3.1, RUN = 1.75, BOT_R = 0.32;   // RUN: Shift 달리기 배수
 const HOLD_T = 0.8;              // 꾹 누르는 시간(초) — 실수로 들어가지 않을 만큼, 기다림이 느껴지지 않을 만큼
 const ON_R = 0.95, OFF_R = 1.3;  // 이 안에 멈추면 브리핑이 열리고, 이 밖으로 나가면 닫힌다
 const SAVE_KEY = 'eduino.v4.hub.v1';
@@ -49,7 +49,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .hub3 ::selection{background:var(--gold);color:#2b2418}
     .hub3-stage{position:absolute;inset:0;cursor:pointer}
     .hub3-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px "Pretendard Variable","Noto Sans KR",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
-    .hub3-hint{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;display:flex;gap:8px;align-items:center;color:#fff;font:700 14px "Pretendard Variable","Noto Sans KR",sans-serif;text-shadow:0 2px 0 rgba(10,14,40,.5),0 0 12px rgba(10,14,40,.7);pointer-events:none;transition:opacity .4s}
+    .hub3-hint{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;display:flex;gap:8px;align-items:center;max-width:calc(100% - 120px);padding:8px 14px;border-radius:14px;background:rgba(10,14,40,.72);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(8px);color:#fff;font:700 13px/1.6 "Pretendard Variable","Noto Sans KR",sans-serif;pointer-events:none;transition:opacity .4s}   /* 도전 챌린지와 같은 조작 안내 띠 */
     .hub3-hint.off{opacity:0}.hub3-hint .hud-key{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 6px;border-radius:6px;background:#fff;color:#1c2140;font:800 11px "Pretendard Variable","Noto Sans KR",sans-serif;text-shadow:none}
     .hub3-hint .t{display:none}
     /* 오른쪽 위: 꾸미기 · 기념사진(일시정지 왼쪽) */
@@ -157,9 +157,9 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     <div class="hub3-say" id="hub3-say" aria-live="polite"><b></b><span></span></div>
     <div class="hub3-go" id="hub3-go"><button class="hub3-hold" id="hub3-hold" type="button" aria-label="꾹 눌러 출발"><svg class="rg" viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="46"/><circle class="arc" cx="50" cy="50" r="46" pathLength="100"/></svg><span class="cap"></span></button>
       <div class="hub3-go-t"><b id="hub3-go-b">꾹 눌러 출발</b><span class="h3-kb"><span class="hud-key wide">스페이스</span>꾹 누르기</span><span class="h3-kb h3-pick" id="hub3-pick-k"></span><span class="h3-tp" id="hub3-pick-t"></span></div></div>
-    <div class="hub3-hint off" id="hub3-hint"><span class="k"><span class="hud-key">←↑↓→</span> 또는 <span class="hud-key">WASD</span> 걷기 · 문 위에서 <span class="hud-key">스페이스</span> 꾹</span><span class="t">가고 싶은 곳을 누르면 걸어가요</span></div>
+    <div class="hub3-hint off" id="hub3-hint"><span class="k"><span class="hud-key">←↑↓→</span> 또는 <span class="hud-key">WASD</span> 걷기 · <span class="hud-key">Shift</span> 달리기 · <span class="hud-key">스페이스</span> 점프 · <span class="hud-key">C</span> 시점 · 문 위에서 <span class="hud-key">스페이스</span> 꾹</span><span class="t">가고 싶은 곳을 누르면 걸어가요</span></div>
     <div class="hub3-iris" id="hub3-iris"></div>
-    <div class="hub3-tools" id="hub3-tools"><button type="button" id="hub3-style" aria-label="에디 꾸미기">🎨 꾸미기 <b id="hub3-star-n"></b></button><button type="button" id="hub3-photo" aria-label="기념사진 찍기">📷</button><button type="button" id="hub3-log" aria-label="탐사 일지 · 보고서">📒 일지</button></div>
+    <div class="hub3-tools" id="hub3-tools"><button type="button" id="hub3-style" aria-label="에디 꾸미기">🎨 꾸미기 <b id="hub3-star-n"></b></button><button type="button" id="hub3-view" aria-label="시점 바꾸기" title="시점 바꾸기(C)">🎥</button><button type="button" id="hub3-photo" aria-label="기념사진 찍기">📷</button><button type="button" id="hub3-log" aria-label="탐사 일지 · 보고서">📒 일지</button></div>
     <button class="hub3-skip" id="hub3-skip" type="button" hidden>인트로 건너뛰기 ⏭</button></section>`;
   const el = root.querySelector('.hub3'), host = root.querySelector('#hub3-stage'), hint = root.querySelector('#hub3-hint'), skipBtn = root.querySelector('#hub3-skip');
   const $ = (s) => root.querySelector(s);
@@ -239,7 +239,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   const S = {
     busy: true, near: null, target: null, pending: null, vel: new THREE.Vector3(), moved: false, shot: null, t: 0,
     brief: null, faceTo: null, hold: { k: 0, on: false, denied: false, tick: 0 }, launch: null,
-    lastSp: 0, roll: 0, pitch: 0, sq: 0, sqV: 0, stepAcc: 0, slideCd: 0, basis: null, jumpV: 0, shake: 0,
+    lastSp: 0, roll: 0, pitch: 0, sq: 0, sqV: 0, stepAcc: 0, slideCd: 0, basis: null, jumpV: 0, shake: 0, jy: 0, jv: 0, running: false,
   };
   const keys = new Set();
   const KEYMAP = { ArrowUp: [0, -1], KeyW: [0, -1], ArrowDown: [0, 1], KeyS: [0, 1], ArrowLeft: [-1, 0], KeyA: [-1, 0], ArrowRight: [1, 0], KeyD: [1, 0] };
@@ -267,7 +267,8 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   function move(dt) {
     const dir = inputDir(tmpA);
     want.set(0, 0, 0);
-    if (dir.lengthSq() > 0) { S.target = null; S.pending = null; S.faceTo = null; want.copy(dir).normalize().multiplyScalar(SPEED); if (!S.moved) { S.moved = true; hint.classList.add('off'); } }
+    S.running = keys.has('ShiftLeft') || keys.has('ShiftRight');
+    if (dir.lengthSq() > 0) { S.target = null; S.pending = null; S.faceTo = null; want.copy(dir).normalize().multiplyScalar(SPEED * (S.running ? RUN : 1)); if (!S.moved) { S.moved = true; hint.classList.add('off'); } }
     else if (S.target && !S.busy) {
       tmpB.subVectors(S.target, botObj.position); tmpB.y = 0;
       const d = tmpB.length();
@@ -288,6 +289,8 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     const spd = Math.hypot(S.vel.x, S.vel.z);
     // 방향 — 움직이면 진행 방향, 서 있으면 바라볼 곳(브리핑 때 구역 쪽)
     let w = 0;
+    S.idleT = spd < 0.1 && !keys.size ? (S.idleT || 0) + dt : 0;
+    if (view === 2 && S.idleT > 0.7 && !S.brief && !S.target && !S.busy) S.faceTo = Math.atan2(cam.position.x - botObj.position.x, cam.position.z - botObj.position.z);   // 정면 시점: 서 있으면 카메라(나)를 본다
     const faceYaw = spd > 0.25 ? Math.atan2(S.vel.x, S.vel.z) : S.faceTo;
     if (faceYaw != null) { let d = faceYaw - botObj.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); const step = d * Math.min(1, dt * (spd > 0.25 ? 12 : 7)); botObj.rotation.y += step; w = step / Math.max(dt, 1e-4); }
     // 기울기
@@ -296,22 +299,24 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     S.roll += (rollT - S.roll) * Math.min(1, dt * 9); S.pitch += (pitchT - S.pitch) * Math.min(1, dt * 7);
     botObj.rotation.z = S.roll; botObj.rotation.x = S.pitch;
     // 걷기 섞기 + 발 빠르기 맞추기(발이 땅에서 미끄러져 보이지 않게)
-    bot.locomote(smooth(0.12, 1.3, spd), clamp(spd / SPEED, 0.55, 1.15));
+    bot.locomote(smooth(0.12, 1.3, spd), clamp(spd / SPEED, 0.55, S.running ? 1.75 : 1.15));
     // 발밑 먼지: 걸음마다 조금, 급히 멈추면 앞쪽으로 한 줌
     S.stepAcc += spd * dt;
-    if (spd > 1.4 && S.stepAcc > (lowFx ? 1.2 : 0.62)) { S.stepAcc = 0; puff(2, 0.6); }
+    if (S.jy > 0.02) S.stepAcc = 0;   // 공중에선 먼지 없음
+    else if (spd > SPEED * 1.25 && S.stepAcc > (lowFx ? 0.8 : 0.38)) { S.stepAcc = 0; puff(lowFx ? 3 : 6, 1.1, 1.35); }   // 달리기: 발마다 뿌연 먼지 꼬리
+    else if (spd > 1.4 && S.stepAcc > (lowFx ? 1.2 : 0.62)) { S.stepAcc = 0; puff(2, 0.6); }
     S.slideCd -= dt;
     if (S.lastSp > 2.3 && spd < S.lastSp - 0.12 && want.lengthSq() === 0 && S.slideCd <= 0) { S.slideCd = 0.6; puff(lowFx ? 2 : 5, -0.9); S.sqV -= 1.6; }
     S.lastSp = spd;
   }
   // 먼지 한 줌 — back>0 이면 뒤로, <0 이면 앞으로 흩날림
-  function puff(n, back) {
+  function puff(n, back, big = 1) {
     const p = botObj.position, yaw = botObj.rotation.y, fx = Math.sin(yaw), fz = Math.cos(yaw);
     dust.burst(n, () => {
       const a = (Math.random() - 0.5) * 1.6, s = 0.4 + Math.random() * 0.5;
       return [[p.x - fx * 0.15 * back + (Math.random() - 0.5) * 0.3, 0.06, p.z - fz * 0.15 * back + (Math.random() - 0.5) * 0.3],
         [(-fx * back + Math.cos(yaw) * a) * s, 0.35 + Math.random() * 0.35, (-fz * back - Math.sin(yaw) * a) * s],
-        { life: 0.7 + Math.random() * 0.3, size: 0.14, grow: 2.6, color: 0xf6d2bf, alpha: 0.55, gravity: 0.2, damp: 3 }];
+        { life: (0.7 + Math.random() * 0.3) * big, size: 0.14 * big, grow: 2.6, color: 0xf6d2bf, alpha: 0.55, gravity: 0.2, damp: 3 }];
     });
   }
 
@@ -329,7 +334,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     if (S.busy || S.launch) return;
     const spd = Math.hypot(S.vel.x, S.vel.z), moving = keys.size > 0;
     if (S.brief) { const f = fxOf.get(S.brief.id); if (f.d > OFF_R) closeBrief(); }
-    else if (best && bd < ON_R && spd < 1.3 && !moving) openBrief(best);
+    else if (best && bd < ON_R && spd < 1.3 && !moving && S.jy < 0.02) openBrief(best);
   }
 
   // ── 홀로그램 브리핑 ──
@@ -537,7 +542,22 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     const tremble = S.hold.k > 0.6 && !S.launch ? Math.sin(S.t * 70) * 0.006 * S.hold.k : 0;
     botObj.scale.set(sxz + tremble, sy, sxz - tremble);
     if (S.launch?.fired && !reduce) { S.jumpV -= 26 * dt; botObj.position.y = Math.max(0, botObj.position.y + S.jumpV * dt); }
-    else if (!S.launch) botObj.position.y = 0;
+    else if (!S.launch) {   // 점프: 스페이스 — 늘었다가 착지하면 납작 + 먼지 고리
+      if (S.jy > 0 || S.jv > 0) {
+        S.jv -= 24 * dt; S.jy += S.jv * dt;
+        if (S.jy <= 0) { S.jy = 0; S.jv = 0; S.sqV -= 2.6; ring(lowFx ? 5 : 12); sfx.land?.(); }
+      }
+      botObj.position.y = S.jy;
+    }
+  }
+  function jump() {
+    if (S.busy || S.launch || S.brief || S.jy > 0.02) return;
+    S.jv = 6.4; S.jy = 0.001; S.sqV += 2.2; bot.play('점프', { once: true }); sfx.boing?.(); puff(lowFx ? 2 : 4, 0.2);
+  }
+  // 착지 먼지: 발밑에서 둥글게 퍼진다
+  function ring(n) {
+    const p = botObj.position;
+    dust.burst(n, (k, m) => { const a = (k / m) * Math.PI * 2; return [[p.x + Math.cos(a) * 0.2, 0.05, p.z + Math.sin(a) * 0.2], [Math.cos(a) * 1.5, 0.25 + Math.random() * 0.3, Math.sin(a) * 1.5], { life: 0.75, size: 0.16, grow: 2.4, color: 0xf6d2bf, alpha: 0.6, gravity: 0.1, damp: 3.4 }]; });
   }
 
   // ── 꾸미기 · 기념사진(오른쪽 위) ──
@@ -567,6 +587,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   }
   on($('#hub3-style'), 'click', styleWin);
   on($('#hub3-photo'), 'click', openPhoto);
+  on($('#hub3-view'), 'click', () => { if (!S.busy) cycleView(); });
   on($('#hub3-log'), 'click', () => journalWin());
 
   // ── 탐사 일지 · 돌아보기 · 보고서 PDF(app/report.js · reportPdf.js) ──
@@ -623,13 +644,16 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   // 캡처 단계 — Esc 를 전역 뒤로가기(nav.js)보다 먼저 받는다. 창이 떠 있을 땐(busy) 창이 받게 둔다
   on(window, 'keydown', (e) => {
     if (KEYMAP[e.code]) { if (!S.busy) { keys.add(e.code); e.preventDefault(); } return; }
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { if (!S.busy) keys.add(e.code); return; }   // 달리기(누르는 동안)
+    if (e.code === 'KeyC' && !S.busy && !e.repeat) { cycleView(); return; }
     if (S.busy) return;
     if (e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
     { const m = S.brief && /^(?:Digit|Numpad)([1-9])$/.exec(e.code); if (m) { selectStage(+m[1] - 1); return; } }   // 단계 수만큼(셋째 단계가 있는 미션 포함) — 범위 밖은 select 가 무시
     if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault(); if (e.repeat) return;
       if (S.brief) holdStart();
-      else if (S.near) { const gp = gateOf(S.near).pos; walkTo(gp.x, gp.z, S.near); }
+      else if (e.code === 'Enter' && S.near) { const gp = gateOf(S.near).pos; walkTo(gp.x, gp.z, S.near); }
+      else if (e.code === 'Space') jump();
     }
   }, true);
   on(window, 'keyup', (e) => { keys.delete(e.code); if (e.code === 'Space' || e.code === 'Enter') holdEnd(); });
@@ -672,7 +696,21 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   on(host, 'pointercancel', release);
 
   // ── 카메라: 임계 감쇠 스프링으로 부드럽게. 걸을 땐 가는 쪽을 조금 앞서 보여 준다. 연출 중엔 S.shot ──
-  const OFF = new THREE.Vector3(0, 6.4, 8.6), LOOK = new THREE.Vector3(0, 0.7, -1.3);
+  // 시점 3가지(C 키 · 🎥 단추): 멀리(기지 한눈에) · 가까이(어깨 뒤 낮게 — 꾸민 에디가 크게) · 정면(앞에서 얼굴을 보며 걷기)
+  const VIEWS = [
+    { name: '멀리', off: new THREE.Vector3(0, 6.4, 8.6), look: new THREE.Vector3(0, 0.7, -1.3) },
+    { name: '가까이', off: new THREE.Vector3(0, 2.7, 4.9), look: new THREE.Vector3(0, 0.95, -0.9) },
+    { name: '정면', off: new THREE.Vector3(0.6, 2.0, -4.4), look: new THREE.Vector3(0, 0.95, 0.4) },
+  ];
+  const VIEW_KEY = 'eduino.v4.view';
+  let view = (() => { try { return Math.max(0, Math.min(VIEWS.length - 1, +localStorage.getItem(VIEW_KEY) || 0)); } catch { return 0; } })();
+  let OFF = VIEWS[view].off, LOOK = VIEWS[view].look;
+  function cycleView() {
+    view = (view + 1) % VIEWS.length; OFF = VIEWS[view].off; LOOK = VIEWS[view].look; S.basis = null;
+    try { localStorage.setItem(VIEW_KEY, String(view)); } catch {}
+    sfx.click(); hud.toast(`🎥 시점: ${VIEWS[view].name}`, ''); $('#hub3-view').title = `시점: ${VIEWS[view].name}`;
+    if (!S.brief && !S.shot) { const f = follow(); cam.position.copy(f.pos); camLook.copy(f.look); camV.set(0, 0, 0); lookV.set(0, 0, 0); }   // 컷으로 바로(옮겨 가며 머리 위를 지나지 않게)
+  }
   const camLook = new THREE.Vector3(), camV = v3(), lookV = v3(), wantPos = v3(), wantLook = v3(), shakeV = v3();
   function damp(cur, target, vel, st, dt) {   // Unity SmoothDamp 과 같은 식(벡터)
     const o = 2 / st, x = o * dt, e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
@@ -684,10 +722,12 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     const a = cam.aspect, k = a < 1 ? 1.32 : a < 1.3 ? 1.12 : 1;
     const p = botObj.position;
     wantPos.copy(p).setY(0).addScaledVector(OFF, k).addScaledVector(S.vel, 0.22);
-    wantLook.copy(p).setY(0).add(LOOK).setZ(p.z + (a < 1 ? -2.6 : LOOK.z)).addScaledVector(S.vel, 0.42);   // 세로 화면은 앞쪽을 더 보여 준다
+    wantLook.copy(p).setY(0).add(LOOK).setZ(p.z + (a < 1 && view === 0 ? -2.6 : LOOK.z)).addScaledVector(S.vel, view ? 0.2 : 0.42);   // 세로 화면은 앞쪽을 더 보여 준다
+    if (view) { wantPos.y += S.jy * 0.5; wantLook.y += S.jy * 0.6; }   // 가까운 시점은 점프를 따라 고개를 든다
     return { pos: wantPos, look: wantLook };
   };
-  const fitFov = () => { const fov = cam.aspect < 1 ? 50 : 38; if (cam.fov !== fov) { cam.fov = fov; cam.updateProjectionMatrix(); } };
+  let fovRun = 0;   // 달릴 때 시야가 살짝 넓어진다(속도감)
+  const fitFov = (dt = 0) => { fovRun += ((S.running && Math.hypot(S.vel.x, S.vel.z) > SPEED * 1.2 ? 1 : 0) - fovRun) * Math.min(1, dt * 4); const fov = Math.round(((cam.aspect < 1 ? 50 : 38) + fovRun * 5) * 10) / 10; if (cam.fov !== fov) { cam.fov = fov; cam.updateProjectionMatrix(); } };
 
   // ── 연출: 처음 온 날 인트로 · 새 부품 장착 ──
   let skip = false;
@@ -763,7 +803,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     S.t += dt;
     const ts = launchFrame(dt), wdt = dt * ts;   // 히트스톱 동안 세상 시간은 멈춘다
     if (wdt > 0) { move(wdt); scanGates(); holdFrame(wdt); bodyFrame(wdt); }
-    fitFov();
+    fitFov(dt);
     const want2 = S.shot || (S.brief ? briefShot(S.brief.id) : follow());
     if (S.launch) want2.look.y += botObj.position.y * 0.7;   // 뛰어오르는 바이저봇을 고개 들어 따라본다
     const st = S.shot ? 0.62 : S.brief ? 0.42 : 0.3;
