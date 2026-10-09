@@ -15,6 +15,9 @@ import { STORY } from '../content/v4story.js';
 import { createAssist } from '../gfx3d/assist.js';
 import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
+import { createExplore } from '../gfx3d/explore.js';
+import { createPhoto } from '../gfx3d/photo.js';
+import { stars } from '../app/stars.js';
 
 const PIN = 5, LEAD = 1600, W_PERFECT = 110, W_GOOD = 200, PASS_ACC = 0.85;
 const C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392, A4 = 440, C5 = 523.25;
@@ -54,7 +57,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
       <div class="bcn-pads" id="bcn-pads" hidden>${[0, 1, 2].map((i) => `<button class="bcn-pad" type="button" data-lane="${i}" style="--c:${LANE_CSS[i]}" aria-label="${['낮은', '중간', '높은'][i]} 음 신호"><i>${i + 1}</i><em>${'DFJ'[i]}</em><b>${['낮은 음', '중간 음', '높은 음'][i]}</b></button>`).join('')}</div></section>`;
   const el = root.querySelector('.bcn'), host = root.querySelector('#bcn-stage'), skipBtn = root.querySelector('#bcn-skip'), padsEl = root.querySelector('#bcn-pads');
 
-  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -62,7 +65,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.noTone?.(PIN)?.catch?.(() => {});
     if (window.__beaconGame?.el === el) delete window.__beaconGame;
@@ -104,6 +107,8 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   juice = createJuice({ stage, hud, rhythm: true });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
+  explore = createExplore({ stage, hud, host, bot, actor, id: 'buzzer' }); hud.explore = explore;   // 둘러보기 · 숨은 별 조각
+  photo = createPhoto({ stage, hud, bot, actor, title: '구조 신호 비콘', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
   const COMBO_AT = new THREE.Vector3(HIT_X - 0.95, 2.6, WIRE_Z);
 
   // 신호 알갱이(빛 공 + 꼬리)
@@ -265,6 +270,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     if (S.ended) return; S.ended = true; S.phase = 'land'; padsEl.hidden = true;
     const stageNo = S.mode, acc = S.hits / S.beats.length, grade = gradeOf(acc), pass = acc >= PASS_ACC, pct = Math.round(acc * 100);
     results.record('buzzer', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[stageNo - 1], metrics: [{ label: '적중', value: `${S.hits}/${S.beats.length}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    if (grade === 'S' && stars.mark('buzzer', 2)) hud.toast('⭐ S등급 별 조각을 얻었어!', 'ok');   // 별 조각 3번째
     const assistOn = assist.record(S.mode, pass);
     if (roomCleared('buzzer') && !medals.isCleared('buzzer')) medals.mark('buzzer');
     const medal = medals.isCleared('buzzer');

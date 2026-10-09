@@ -15,6 +15,9 @@ import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
 import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
+import { createExplore } from '../gfx3d/explore.js';
+import { createPhoto } from '../gfx3d/photo.js';
+import { stars } from '../app/stars.js';
 
 const PINS = [4, 5];
 const GAMES = [   // 2D 판(buttonGame · flagGame)과 같다
@@ -57,7 +60,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   const el = root.querySelector('.shd'), host = root.querySelector('#shd-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#shd-skip'), padsEl = $('#shd-pads'), clockEl = $('#shd-clock'), readEl = $('#shd-read');
 
-  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, hwTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -65,7 +68,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(hwTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__shieldGame?.el === el) delete window.__shieldGame;
   }
@@ -98,6 +101,8 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
+  explore = createExplore({ stage, hud, host, bot, actor, id: 'button' }); hud.explore = explore;   // 둘러보기 · 숨은 별 조각
+  photo = createPhoto({ stage, hud, bot, actor, title: '운석 방어막', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
 
   // ── 입력: 화면 단추 · 키 · 진짜 버튼(누르는 순간) ──
@@ -338,6 +343,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
     results.record('button', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[stageNo - 1], metrics: stageNo === 1
       ? [{ label: '잡은 두더지', value: `${S.score}마리` }, { label: '목표', value: `${game.target}마리` }, { label: '최고 콤보', value: `${S.bestCombo}` }]
       : [{ label: '점수', value: `${S.score}점` }, { label: '목표', value: `${game.target}점` }, { label: '최고 콤보', value: `${S.bestCombo}` }] });
+    if (grade === 'S' && stars.mark('button', 2)) hud.toast('⭐ S등급 별 조각을 얻었어!', 'ok');   // 별 조각 3번째
     if (roomCleared('button') && !medals.isCleared('button')) medals.mark('button');
     const medal = medals.isCleared('button');
     S.pass = pass; bgm.setDuck(1); scn.hideMeteor(0); scn.hideMeteor(1); actor.arms(null, null).look(camPos);

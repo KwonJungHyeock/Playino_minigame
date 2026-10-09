@@ -16,6 +16,9 @@ import { roomCleared } from '../content/curriculum.js';
 import { createAssist } from '../gfx3d/assist.js';
 import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
+import { createExplore } from '../gfx3d/explore.js';
+import { createPhoto } from '../gfx3d/photo.js';
+import { stars } from '../app/stars.js';
 
 const W_PERFECT = 90, W_GOOD = 170, LEAD = 1450, PASS_ACC = 0.85;
 const PINS = [2, 3, 4];                 // 초록 · 노랑 · 빨강
@@ -73,7 +76,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
       <div class="lnd-pads" id="lnd-pads" hidden>${[0, 1, 2].map((i) => `<button class="lnd-pad" type="button" data-lane="${i}" style="--c:${LANE_CSS[i]}" aria-label="${LANE_NAME[i]} 유도등 (${i + 1})"><i>${i + 1}</i><b>${['낮은 음', '중간 음', '높은 음'][i]}</b></button>`).join('')}</div></section>`;
   const el = root.querySelector('.lnd'), host = root.querySelector('#lnd-stage'), skipBtn = root.querySelector('#lnd-skip'), padsEl = root.querySelector('#lnd-pads');
 
-  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, land = null, hud = null, song = null, offTick = null, done = false;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -81,7 +84,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); song?.dispose(); land?.dispose(); stage?.dispose();
     PINS.forEach((p) => { if (board.connected) board.digital(p, false).catch(() => {}); });
   }
@@ -117,6 +120,8 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   juice = createJuice({ stage, hud, rhythm: true });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
+  explore = createExplore({ stage, hud, host, bot, actor, id: 'led' }); hud.explore = explore;   // 둘러보기 · 숨은 별 조각
+  photo = createPhoto({ stage, hud, bot, actor, title: '착륙 유도등', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
   const RING_TOP = new THREE.Vector3(PAD.x, 0.25, PAD.z + TARGET_R), COMBO_AT = new THREE.Vector3(PAD.x + TARGET_R + 0.75, 0.6, PAD.z);
 
   // 판정 고리(가운데) + 다가오는 신호 고리
@@ -335,6 +340,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     if (S.ended) return; S.ended = true; S.phase = 'land'; padsEl.hidden = true;
     const acc = S.hits / S.beats.length, grade = gradeOf(acc), pass = acc >= PASS_ACC, pct = Math.round(acc * 100);
     results.record('led', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[1], metrics: [{ label: '적중', value: `${S.hits}/${S.beats.length}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    if (grade === 'S' && stars.mark('led', 2)) hud.toast('⭐ S등급 별 조각을 얻었어!', 'ok');   // 별 조각 3번째
     const assistOn = assist.record(S.mode, pass);
     if (roomCleared('led') && !medals.isCleared('led')) medals.mark('led');   // 1단계도 통과했다면 메달 → 기지 로켓에 엔진 노즐
     const medal = medals.isCleared('led');
@@ -397,6 +403,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     const acc = S.hits / S.beats.length, grade = gradeOf(acc), pass = acc >= PASS_ACC, pct = Math.round(acc * 100);
     // 단계 이름은 2D 판(ledGame) 1단계와 같은 '타이밍 쇼' 로 남긴다 — results 는 이름으로 단계를 가르므로, 다르면 방이 3단계로 세어져 메달이 안 나온다
     results.record('led', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[0], metrics: [{ label: '적중', value: `${S.hits}/${S.beats.length}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    if (grade === 'S' && stars.mark('led', 2)) hud.toast('⭐ S등급 별 조각을 얻었어!', 'ok');   // 별 조각 3번째
     const assistOn = assist.record(S.mode, pass);
     if (roomCleared('led') && !medals.isCleared('led')) medals.mark('led');   // 2단계를 이미 통과했다면 이번 판으로 메달
     S.pass = pass; S.landT = 0; bgm.setDuck(1); hud.combo(0, 0, 0);

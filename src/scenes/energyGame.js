@@ -16,6 +16,9 @@ import { STORY } from '../content/v4story.js';
 import { comfort } from '../gfx3d/comfort.js';
 import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
+import { createExplore } from '../gfx3d/explore.js';
+import { createPhoto } from '../gfx3d/photo.js';
+import { stars } from '../app/stars.js';
 
 const NEO = 6, PASS_ACC = 0.85, MAXD = Math.sqrt(3 * 255 * 255);
 const TARGETS = [   // 2D 판과 같은 목표 색
@@ -76,7 +79,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   const skipBtn = $('#eng-skip'), ctl = $('#eng-ctl'), goBtn = $('#eng-go'), resoEl = $('#eng-reso');
   const sliders = [...root.querySelectorAll('.eng-sl')].map((l) => ({ l, input: l.querySelector('input'), out: l.querySelector('b') }));
 
-  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -84,7 +87,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.neoFill(NEO, 0, 0, 0).catch(() => {});
     window.removeEventListener('eduino:comfort', onComfort);
@@ -125,6 +128,8 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
+  explore = createExplore({ stage, hud, host, bot, actor, id: 'rgb' }); hud.explore = explore;   // 둘러보기 · 숨은 별 조각
+  photo = createPhoto({ stage, hud, bot, actor, title: '에너지 셀 색 맞추기', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
 
   // ── 빛 섞기(장면 · 조종판 · 보드를 한 번에) ──
   const css = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
@@ -339,6 +344,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     if (S.ended) return; S.ended = true; S.phase = 'land'; ctl.hidden = true;
     const stageNo = S.mode, avg = S.accs.reduce((a, b) => a + b, 0) / S.accs.length, grade = gradeOf(avg), pass = avg >= PASS_ACC, pct = Math.round(avg * 100);
     results.record('rgb', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[stageNo - 1], metrics: [{ label: '평균 정확도', value: `${pct}%` }, { label: '맞춘 색', value: `${S.accs.length}개` }] });
+    if (grade === 'S' && stars.mark('rgb', 2)) hud.toast('⭐ S등급 별 조각을 얻었어!', 'ok');   // 별 조각 3번째
     if (roomCleared('rgb') && !medals.isCleared('rgb')) medals.mark('rgb');
     const medal = medals.isCleared('rgb');
     S.pass = pass; bgm.setDuck(1); scn.setTarget([255, 255, 255]);

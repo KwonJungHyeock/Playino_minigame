@@ -14,6 +14,9 @@ import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
 import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
+import { createExplore } from '../gfx3d/explore.js';
+import { createPhoto } from '../gfx3d/photo.js';
+import { stars } from '../app/stars.js';
 
 const ADC = 0, LEAD = 1700, PASS_ACC = 0.85;
 const GAMES = [   // 2D 판과 같다
@@ -57,7 +60,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   const el = root.querySelector('.sol'), host = root.querySelector('#sol-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#sol-skip'), readEl = $('#sol-read'), padEl = $('#sol-pad'), vEl = $('#sol-v'), barEl = $('#sol-bar'), stEl = $('#sol-st');
 
-  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -65,7 +68,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); window.removeEventListener('keyup', onKeyUp, true); window.removeEventListener('blur', release); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__solarGame?.el === el) delete window.__solarGame;
   }
@@ -117,6 +120,8 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
+  explore = createExplore({ stage, hud, host, bot, actor, id: 'cds' }); hud.explore = explore;   // 둘러보기 · 숨은 별 조각
+  photo = createPhoto({ stage, hud, bot, actor, title: '태양광 충전소', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
   function setView(v) { S.view = v; scn.show(v); const c = camGoal(); cam.position.copy(c.p); camT.copy(c.t); wasDark = null; actor.face(null).point(null).pose(v === 'flight' ? 'fly' : null).look(v === 'flight' ? null : sensorTop, 0.8); }
 
   // ── 빛 상태(가리기 단추 · 스페이스 · 진짜 센서) ──
@@ -326,6 +331,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     if (S.ended) return; S.ended = true; S.phase = 'land'; padEl.hidden = true; readEl.hidden = true; release(); scn.hideOrbs();
     const stageNo = S.mode, acc = S.hits / S.total, grade = gradeOf(acc), pass = acc >= PASS_ACC, pct = Math.round(acc * 100);
     results.record('cds', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[stageNo - 1], metrics: [{ label: '적중', value: `${S.hits}/${S.total}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    if (grade === 'S' && stars.mark('cds', 2)) hud.toast('⭐ S등급 별 조각을 얻었어!', 'ok');   // 별 조각 3번째
     if (roomCleared('cds') && !medals.isCleared('cds')) medals.mark('cds');
     const medal = medals.isCleared('cds');
     S.pass = pass; bgm.setDuck(1);

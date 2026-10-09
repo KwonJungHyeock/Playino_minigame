@@ -19,6 +19,9 @@ import { student } from '../app/student.js';
 import { createAssist } from '../gfx3d/assist.js';
 import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
+import { createExplore } from '../gfx3d/explore.js';
+import { createPhoto } from '../gfx3d/photo.js';
+import { stars } from '../app/stars.js';
 
 const ADC = 0, NEO = 6, BUZZ = 5, BTN = 4, PASS = 0.8, HUE_MAX = 320;
 const NOTES = [['도', 262], ['레', 294], ['미', 330], ['파', 349], ['솔', 392], ['라', 440], ['시', 494]];
@@ -80,7 +83,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   const skipBtn = $('#lch-skip'), readEl = $('#lch-read'), dialEl = $('#lch-dial'), knobEl = dialEl.querySelector('.knob'), padsEl = $('#lch-pads'), pads = [...padsEl.querySelectorAll('.lch-pad')], cueEl = $('#lch-cue');
   const c1 = $('#lch-c1'), c2 = $('#lch-c2'), stEl = $('#lch-st');
 
-  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null, btnTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -88,7 +91,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); clearInterval(btnTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     neoOff();
     if (window.__launchGame?.el === el) delete window.__launchGame;
@@ -157,6 +160,8 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
+  explore = createExplore({ stage, hud, host, bot, actor, id: 'final' }); hud.explore = explore;   // 둘러보기 · 숨은 별 조각
+  photo = createPhoto({ stage, hud, bot, actor, title: '발사 쇼', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
   let shake = 0;
   const MODE = ['color', 'melody', 'cue'];
@@ -364,6 +369,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     if (S.ended) return; S.ended = true; S.phase = 'land'; setCtl(0); readEl.hidden = true; scn.setCue(-1); neoOff();
     const n = S.mode, acc = S.total ? S.hits / S.total : 0, grade = gradeOf(acc), pass = acc >= PASS, pct = Math.round(acc * 100), last = n === 3;
     results.record('final', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[n - 1], metrics: [{ label: '성공', value: `${S.hits}/${S.total}` }, { label: '정확도', value: `${pct}%` }] });
+    if (grade === 'S' && stars.mark('final', 2)) hud.toast('⭐ S등급 별 조각을 얻었어!', 'ok');   // 별 조각 3번째
     const assistOn = assist.record(n, pass);
     if (roomCleared('final') && !medals.isCleared('final')) medals.mark('final');
     const medal = medals.isCleared('final');

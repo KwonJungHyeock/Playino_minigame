@@ -12,6 +12,7 @@ import { results } from '../app/results.js';
 import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curriculum.js';
 import { STORY, ACTS, PART_ROOMS } from '../content/v4story.js';
 import { bonus, BONUS } from '../app/bonus.js';
+import { stars, STAR_ROOMS } from '../app/stars.js';
 
 const THREE_D = new Set(['led', 'buzzer', 'rgb', 'cds', 'pot', 'button', 'lamp', 'bomb', 'final', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
 const PLANET_R = 11;   // 작은 행성 반지름(m) — 걸으면 지평선 너머에서 스팟이 솟는다(gfx3d/curve.js)
@@ -48,6 +49,20 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .hub3-hint{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;display:flex;gap:8px;align-items:center;color:#fff;font:700 14px "Pretendard Variable","Noto Sans KR",sans-serif;text-shadow:0 2px 0 rgba(10,14,40,.5),0 0 12px rgba(10,14,40,.7);pointer-events:none;transition:opacity .4s}
     .hub3-hint.off{opacity:0}.hub3-hint .hud-key{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 6px;border-radius:6px;background:#fff;color:#1c2140;font:800 11px "Pretendard Variable","Noto Sans KR",sans-serif;text-shadow:none}
     .hub3-hint .t{display:none}
+    /* 오른쪽 위: 꾸미기 · 기념사진(일시정지 왼쪽) */
+    .hub3-tools{position:absolute;top:max(14px,env(safe-area-inset-top));right:calc(max(16px,env(safe-area-inset-right)) + 62px);z-index:6;display:flex;gap:8px}
+    .hub3-tools button{height:52px;min-width:52px;padding:0 14px;border-radius:18px;border:1px solid rgba(255,255,255,.16);background:rgba(18,24,56,.66);backdrop-filter:blur(10px);color:#fff;font:400 17px "Jua","Pretendard Variable","Noto Sans KR",sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px}
+    .hub3-tools button:focus-visible{outline:3px solid var(--led);outline-offset:3px}.hub3-tools b{color:var(--gold);font:800 14px "Pretendard Variable",sans-serif}
+    .hub3-tools.off{display:none}
+    .sty-row{display:flex;flex-wrap:wrap;gap:8px;margin:5px 0 10px}.sty-row button{position:relative;display:grid;justify-items:center;gap:3px;width:60px;padding:6px 0 5px;border-radius:14px;border:2px solid transparent;background:rgba(255,255,255,.07);color:#fff;font:700 12px "Pretendard Variable",sans-serif;cursor:pointer}
+    .sty-row button i{width:26px;height:26px;border-radius:50%;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 0 12px var(--c);background:var(--c)}
+    .sty-row button[aria-pressed=true]{border-color:var(--gold);background:rgba(255,210,90,.12)}
+    .sty-row button:disabled{cursor:not-allowed;opacity:.55}.sty-row button:disabled i{filter:grayscale(.85) brightness(.6);box-shadow:none}
+    .sty-row button small{font-weight:800;color:var(--gold)}
+    .sty-h{font:800 13px "Pretendard Variable",sans-serif;color:var(--sub);letter-spacing:.02em}
+    .sty-stars{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 12px}.sty-stars span{padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.07);font:800 13px "Pretendard Variable",sans-serif;letter-spacing:1px}.sty-stars i{font-style:normal;color:rgba(255,255,255,.22)}.sty-stars i.on{color:var(--gold)}
+    @media (max-width:560px){.hub3-tools button{height:44px;min-width:44px;padding:0 10px;font-size:15px}.hub3-tools{right:calc(max(16px,env(safe-area-inset-right)) + 58px)}.sty-row button{width:50px}}
+    .hub3:has(.ph) .hub3-tools,.hub3:has(.ph) .hub3-hint{display:none}
 
     /* 목표 칸 — 유리 상자 대신 바이저 꺾쇠 + 글자 */
     .hub3 .hud-obj.hud-glass{background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:8px 14px 8px 18px;transition:opacity .3s,transform .4s cubic-bezier(.16,1,.3,1)}
@@ -131,6 +146,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
       <div class="hub3-go-t"><b id="hub3-go-b">꾹 눌러 출발</b><span class="h3-kb"><span class="hud-key wide">스페이스</span>꾹 누르기</span><span class="h3-kb h3-pick" id="hub3-pick-k"></span><span class="h3-tp" id="hub3-pick-t"></span></div></div>
     <div class="hub3-hint off" id="hub3-hint"><span class="k"><span class="hud-key">←↑↓→</span> 또는 <span class="hud-key">WASD</span> 걷기 · 문 위에서 <span class="hud-key">스페이스</span> 꾹</span><span class="t">가고 싶은 곳을 누르면 걸어가요</span></div>
     <div class="hub3-iris" id="hub3-iris"></div>
+    <div class="hub3-tools" id="hub3-tools"><button type="button" id="hub3-style" aria-label="바이저봇 꾸미기">🎨 꾸미기 <b id="hub3-star-n"></b></button><button type="button" id="hub3-photo" aria-label="기념사진 찍기">📷</button></div>
     <button class="hub3-skip" id="hub3-skip" type="button" hidden>인트로 건너뛰기 ⏭</button></section>`;
   const el = root.querySelector('.hub3'), host = root.querySelector('#hub3-stage'), hint = root.querySelector('#hub3-hint'), skipBtn = root.querySelector('#hub3-skip');
   const $ = (s) => root.querySelector(s);
@@ -138,7 +154,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   const brackets = [...visorEl.querySelectorAll('.vb')], scanEl = visorEl.querySelector('.vs-scan');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  let curveMod = null, stage = null, base = null, hud = null, brief = null, dust = null, sparks = null, offTick = null, done = false;
+  let curveMod = null, stage = null, base = null, hud = null, brief = null, dust = null, sparks = null, offTick = null, done = false, photo = null;
   const timers = new Set(), typers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
   const wait = (ms) => new Promise((r) => later(ms, r));
@@ -147,13 +163,13 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); typers.forEach(clearInterval); listeners.forEach((f) => f());
-    offTick?.(); brief?.dispose(); hud?.dispose(); base?.dispose(); stage?.dispose(); curveMod?.setCurve(false);
+    offTick?.(); photo?.dispose(); brief?.dispose(); hud?.dispose(); base?.dispose(); stage?.dispose(); curveMod?.setCurve(false);
     if (window.__hub3d?.el === el) delete window.__hub3d;
   }
 
   // ── 3D ──
   stage = g.createStage(host, { fov: 38, far: 140, hold: true, coverText: '기지에 불을 켜는 중…' });   // 다 짓고 warm() 할 때까지 가림막
-  const [{ createBaseScene, GATE_R, CENTER }, { addPost }, { createHud }, { createBriefing }, { createParticles }, curve] = await Promise.all([import('../gfx3d/scenes/base.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/briefing.js'), import('../gfx3d/fx.js'), import('../gfx3d/curve.js')]);
+  const [{ createBaseScene, GATE_R, CENTER }, { addPost }, { createHud }, { createBriefing }, { createParticles }, curve, { createPhoto }, { STYLE, style, applyStyle }] = await Promise.all([import('../gfx3d/scenes/base.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/briefing.js'), import('../gfx3d/fx.js'), import('../gfx3d/curve.js'), import('../gfx3d/photo.js'), import('../gfx3d/style.js')]);
   if (done) return;
   base = await createBaseScene(stage);
   if (done) { base.dispose(); return; }
@@ -367,6 +383,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     const lines = [['배우는 것', room.concept], [s.part ? '받는 부품' : '얻는 것', st.cleared ? `${s.reward} <small>· 받았어요</small>` : s.reward]];
     if (s.stages) lines.push(['고른 단계', stageLabel(id, S.brief.sel)]);
     else lines.push(['진행', st.cleared ? '모두 통과' : st.passed ? `${st.passed} / ${st.total} 단계 통과` : st.played ? '도전 중' : `처음 · ${st.total}단계`]);
+    if (STAR_ROOMS.includes(id)) lines.push(['별 조각', `${stars.get(id).map((x) => (x ? '★' : '☆')).join('')} <small>· 둘러보기 2 · S등급 1</small>`]);
     return lines;
   }
   const stageLabel = (id, i) => `${i + 1}단계 · ${STORY[id].stageTitles?.[i] || STORY[id].stages[i]}`;   // 보이는 이름(기록 이름은 stages)
@@ -508,6 +525,34 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     if (S.launch?.fired && !reduce) { S.jumpV -= 26 * dt; botObj.position.y = Math.max(0, botObj.position.y + S.jumpV * dt); }
     else if (!S.launch) botObj.position.y = 0;
   }
+
+  // ── 꾸미기 · 기념사진(오른쪽 위) ──
+  const starN = $('#hub3-star-n'), showStars = () => { starN.textContent = `⭐ ${stars.total()}`; };
+  showStars();
+  photo = createPhoto({ stage, hud, bot, title: '에듀이노 기지', subject: botObj, dist: 4.2 });
+  async function openPhoto() {
+    if (S.busy) return; holdEnd(); S.busy = true; keys.clear(); closeBrief();
+    await photo.open(); if (done) return; S.busy = false; S.near = null;
+  }
+  async function styleWin() {
+    if (S.busy) return; holdEnd(); S.busy = true; keys.clear();
+    const have = stars.total(), cur = style.get();
+    const row = (part) => `<div class="sty-row" role="group">${STYLE[part].map((o) => { const ok = have >= o.need; return `<button type="button" data-part="${part}" data-id="${o.id}" style="--c:#${o.hex.toString(16).padStart(6, '0')}" aria-pressed="${cur[part] === o.id}" ${ok ? '' : 'disabled'}><i></i>${o.name}${ok ? '' : `<small>⭐ ${o.need}</small>`}</button>`; }).join('')}</div>`;
+    const grid = STAR_ROOMS.map((id) => `<span title="${STORY[id]?.name || id}">${STORY[id]?.icon || ''}${stars.get(id).map((x) => `<i${x ? ' class="on"' : ''}>★</i>`).join('')}</span>`).join('');
+    const win = hud.window(`<div class="hud-eye">바이저봇 꾸미기</div><h2>별 조각 ⭐ ${have} / ${stars.max()}</h2>
+      <p>미션마다 <b>🔭 둘러보기</b>에서 숨은 별 2개, <b>S등급</b>으로 1개. 모을수록 새 색이 열려요.</p>
+      <div class="sty-h">바이저 빛</div>${row('led')}<div class="sty-h">망토</div>${row('cape')}
+      <div class="sty-stars">${grid}</div>
+      <div class="hud-row"><span class="hud-sp"></span><button class="hud-btn main" data-act="ok" type="button"><span class="hud-key wide">스페이스</span>다 했어요</button></div>`, { keys: { Space: 'ok', Escape: 'ok', Enter: 'ok' } });
+    hud.lastWindow?.querySelectorAll('[data-part]').forEach((b) => b.addEventListener('click', () => {
+      if (!style.set(b.dataset.part, b.dataset.id)) return;
+      hud.lastWindow.querySelectorAll(`[data-part="${b.dataset.part}"]`).forEach((x) => x.setAttribute('aria-pressed', x === b));
+      applyStyle(botObj); bot.play('인사', { once: true }); bot.setExpression('웃음'); sfx.pop?.();
+    }));
+    await win; if (done) return; S.busy = false; S.near = null;
+  }
+  on($('#hub3-style'), 'click', styleWin);
+  on($('#hub3-photo'), 'click', openPhoto);
 
   // ── 일시정지 ──
   async function pause() {

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import robotUrl from '../assets/3d/visor-bot.glb?url';
 import { instantiate } from './assets.js';
 import { disposeObject } from './dispose.js';
+import { applyStyle } from './style.js';
 
 export const ROBOT_URL = robotUrl;
 const BLINK_MS = 130;
@@ -28,6 +29,7 @@ export async function loadRobot() {
     }
   });
 
+  applyStyle(object);   // 별 조각으로 연 꾸미기(바이저 빛 · 망토)
   const mixer = new THREE.AnimationMixer(object);
   const actions = Object.fromEntries(animations.map((c) => [c.name, mixer.clipAction(c)]));
   let cur = null, after = null, expr = 'default', t = 0, nextBlink = 2.2, blinkT = -1;

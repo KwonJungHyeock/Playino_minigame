@@ -138,7 +138,8 @@ export function createHud(host, o) {
   on(window, 'keydown', onKey, true);
 
   const hud = {
-    root,
+    root, explore: null,   // 둘러보기(gfx3d/explore.js) — 게임이 넣으면 단계 설명 창에 단추가 붙는다
+    photo: null,   // 기념사진(gfx3d/photo.js) — 넣으면 결과창에 '📷 사진' 단추가 붙는다
     /** 미션 목표 한 줄 + 진행 막대(0~1, null 이면 숨김) */
     goal(textLine, progress = null) {
       $('#hud-obj').classList.remove('off'); $('#hud-goal').textContent = textLine;
@@ -187,12 +188,18 @@ export function createHud(host, o) {
     /** 가운데 창. html 안의 [data-act] 버튼을 누르면 그 값으로 resolve. keys: {Space:'go'} */
     window(html, { keys = {} } = {}) {
       return new Promise((res) => {
-        const v = document.createElement('div'); v.className = 'hud-veil'; v.innerHTML = `<div class="hud-win hud-glass" role="dialog">${html.includes('hud-eye">일시정지<') ? html.replace(/(<div class="hud-row">)/, `${comfortRow()}$1`) : html}</div>`; root.appendChild(v);   // 일시정지 창엔 늘 '보기 편하게' 설정
+        let body = html.includes('hud-eye">일시정지<') ? html.replace(/(<div class="hud-row">)/, `${comfortRow()}$1`) : html;   // 일시정지 창엔 늘 '보기 편하게' 설정
+        if (hud.explore && body.includes('data-act="lesson"')) body = body.replace(/(<button class="hud-btn" data-act="lesson")/, `<button class="hud-btn" data-explore type="button">${hud.explore.label()}</button>$1`);   // 단계 설명 창엔 '둘러보기'
+        if (hud.photo && body.includes('class="hud-res"')) body = body.replace(/(<button class="hud-btn" data-act="retry")/, '<button class="hud-btn" data-photo type="button">📷 사진</button>$1');   // 결과창엔 '기념사진'
+        const v = document.createElement('div'); v.className = 'hud-veil'; v.innerHTML = `<div class="hud-win hud-glass" role="dialog">${body}</div>`; root.appendChild(v);
+        v.querySelector('[data-photo]')?.addEventListener('click', async () => { v.style.visibility = 'hidden'; await hud.photo.open(); v.style.visibility = ''; v.querySelector('.hud-btn.main')?.focus({ preventScroll: true }); });
+        v.querySelector('[data-explore]')?.addEventListener('click', async (e) => { const b = e.currentTarget; v.style.visibility = 'hidden'; await hud.explore.start(); v.style.visibility = ''; b.textContent = hud.explore.label(); v.querySelector('.hud-btn.main')?.focus({ preventScroll: true }); });
         v.querySelectorAll('[data-comfort]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.comfort; comfort[k] = !comfort[k]; b.setAttribute('aria-pressed', comfort[k]); window.dispatchEvent(new CustomEvent('eduino:comfort')); }));
         const close = (val) => { window.removeEventListener('keydown', k, true); v.remove(); res(val); };
         // 창이 뜬 직후 0.4초는 키 입력을 받지 않는다 — 앞 대화를 넘기던 연타 · 키 반복으로 창이 그냥 지나가지 않게
         const opened = performance.now();
-        const k = (e) => { const a = keys[e.code] || keys[e.key]; if (!a) return; e.preventDefault(); e.stopImmediatePropagation(); if (e.repeat || performance.now() - opened < 400) return; if (!v.querySelector(`[data-act="${a}"]`)?.disabled) close(a); };
+        // 둘러보는 동안(창이 숨었을 때)엔 창 단축키를 쉰다
+        const k = (e) => { if (v.style.visibility === 'hidden') return; const a = keys[e.code] || keys[e.key]; if (!a) return; e.preventDefault(); e.stopImmediatePropagation(); if (e.repeat || performance.now() - opened < 400) return; if (!v.querySelector(`[data-act="${a}"]`)?.disabled) close(a); };
         window.addEventListener('keydown', k, true); listeners.push(() => window.removeEventListener('keydown', k, true));
         v.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => close(b.dataset.act)));
         hud.lastWindow = v; v.querySelector('.hud-btn.main')?.focus({ preventScroll: true });

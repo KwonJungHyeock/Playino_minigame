@@ -17,6 +17,9 @@ import { STORY } from '../content/v4story.js';
 import { createAssist } from '../gfx3d/assist.js';
 import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
+import { createExplore } from '../gfx3d/explore.js';
+import { createPhoto } from '../gfx3d/photo.js';
+import { stars } from '../app/stars.js';
 
 const ADC = 0, PASS_ACC = 0.8, LAG = 0.12;   // 3D 판 관성(난이도 측정 뒤 0.2 → 0.12초)
 const GAMES = [   // 2D 판과 같다
@@ -58,7 +61,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   const el = root.querySelector('.rov'), host = root.querySelector('#rov-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#rov-skip'), readEl = $('#rov-read'), dialEl = $('#rov-dial'), knobEl = dialEl.querySelector('.knob');
 
-  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -66,7 +69,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__roverGame?.el === el) delete window.__roverGame;
   }
@@ -118,6 +121,8 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   const toScreen = (v) => { const p = v.clone().project(cam), rr = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * rr.width, y: (-p.y * 0.5 + 0.5) * rr.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
+  explore = createExplore({ stage, hud, host, bot, actor, id: 'pot', walk: false }); hud.explore = explore;   // 둘러보기 · 숨은 별 조각
+  photo = createPhoto({ stage, hud, bot, actor, title: '로버 추력 조절', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
   function setView(v) { S.view = v; scn.show(v === 'ride' ? 'ride' : 'jump'); const c = camGoal(); cam.position.copy(c.p); camT.copy(c.t); }
   const popAt = (text, color) => { const p = toScreen(scn.roverTop()); hud.pop(text, color, p.x, p.y); };
 
@@ -298,6 +303,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
     if (S.ended) return; S.ended = true; S.phase = 'land'; dialEl.hidden = true; readEl.hidden = true;
     const stageNo = S.mode, acc = S.hits / S.total, grade = gradeOf(acc), pass = acc >= PASS_ACC, pct = Math.round(acc * 100);
     results.record('pot', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[stageNo - 1], metrics: [{ label: '적중', value: `${S.hits}/${S.total}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    if (grade === 'S' && stars.mark('pot', 2)) hud.toast('⭐ S등급 별 조각을 얻었어!', 'ok');   // 별 조각 3번째
     const assistOn = assist.record(stageNo, pass);
     if (roomCleared('pot') && !medals.isCleared('pot')) medals.mark('pot');
     const medal = medals.isCleared('pot');

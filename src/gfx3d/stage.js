@@ -75,6 +75,8 @@ export function createStage(host, o = {}) {
     THREE, scene, camera, renderer: R, tier, governor,
     /** 후처리 합성기를 쓴다(post.js). null 이면 바로 그리기. */
     setComposer(c) { composer?.dispose(); composer = c; size(); },
+    /** 지금 장면을 한 장 그려 PNG 데이터 주소로(사진 찍기 — 그린 직후 같은 순간에 읽어야 빈 화면이 아니다) */
+    snapshot(type = 'image/png') { draw(); return R.domElement.toDataURL(type); },
     /** 히트스톱: ms 동안 시간이 k 배로 흐른다(맞는 순간의 멈칫). 박자 게임은 쓰지 않는다 */
     hitstop(ms = 70, k = 0.12) { slowT = Math.max(slowT, ms / 1000); slowK = k; },
     /** 매 프레임 호출(dt 초). 반환값을 부르면 해제. */
