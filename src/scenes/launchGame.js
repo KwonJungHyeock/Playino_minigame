@@ -21,6 +21,7 @@ import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
 import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
+import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
 
 const ADC = 0, NEO = 6, BUZZ = 5, BTN = 4, PASS = 0.8, HUE_MAX = 320;
@@ -83,7 +84,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   const skipBtn = $('#lch-skip'), readEl = $('#lch-read'), dialEl = $('#lch-dial'), knobEl = dialEl.querySelector('.knob'), padsEl = $('#lch-pads'), pads = [...padsEl.querySelectorAll('.lch-pad')], cueEl = $('#lch-cue');
   const c1 = $('#lch-c1'), c2 = $('#lch-c2'), stEl = $('#lch-st');
 
-  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null, sandbox = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null, btnTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -91,7 +92,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); clearInterval(btnTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     neoOff();
     if (window.__launchGame?.el === el) delete window.__launchGame;
@@ -134,7 +135,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     clearInterval(senseTimer); if (!board.connected) { S.sensor = null; return; }
     senseTimer = setInterval(async () => { if (done) return; const v = await board.analogRead(ADC).catch(() => null); if (v == null) return; S.sensor = clamp(v / 1023, 0, 1); }, 90);   // 2D 판과 같은 간격
     let lastB = 1; clearInterval(btnTimer);
-    btnTimer = setInterval(async () => { if (done || S.mode !== 3 || S.phase !== 'play') return; const v = await board.digitalRead(BTN).catch(() => null); if (v == null) return; if (lastB === 0 && v === 1) press(); lastB = v; }, 55);   // 2D 판처럼 눌림 엣지
+    btnTimer = setInterval(async () => { if (done || !(S.mode === 3 && S.phase === 'play' || S.phase === 'free')) return; const v = await board.digitalRead(BTN).catch(() => null); if (v == null) return; if (lastB === 0 && v === 1) press(); lastB = v; }, 55);   // 2D 판처럼 눌림 엣지
   }
   let lastNeo = '';
   function neo(rgb) { if (!board.connected) return; const k = rgb.join(','); if (k === lastNeo) return; lastNeo = k; board.neoFill(NEO, ...rgb).catch(() => {}); }
@@ -165,6 +166,28 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
   let shake = 0;
   const MODE = ['color', 'melody', 'cue'];
+  // 자유 실험: 점수 없이 다이얼로 조명 색(analogRead → map → 색상)을 바꿔 로켓 얼굴 색에 맞춰 보기 · 큐 단추는 엔진 부릉 · 1~7 키는 부저 음
+  sandbox = createSandbox({ stage, hud, tip: '다이얼을 끌거나 ←→ · 가변저항을 돌려요. 로켓 얼굴 색에 맞추면 반짝! · 큐 단추(스페이스)는 엔진 부릉 · 1~7 키는 부저 음',
+    enter: () => { S.fr = { prev: S.phase, mode: S.mode, col: S.col, view: S.view, read: readEl.hidden, n: 0, busy: false, flare: 0, max: false, note: -1, noteT: 0, btnT: 0 }; S.phase = 'free'; S.mode = 1; S.view = 'show'; S.col = { idx: 0, hold: 0, roundT: 0, target: 40 };
+      scn.show('color'); scn.setHeat(0); if (S.fr.mode === 1) scn.setChecks(0); setCtl(3); $('#lch-zone').hidden = true; readEl.hidden = false; bot.setExpression('웃음'); newColor(); },
+    frame: (dt) => {
+      const f = S.fr, c = S.col, hue = S.knob * HUE_MAX, diff = hueDiff(hue, c.target), near = diff <= COLOR.tol;
+      f.flare = Math.max(0, f.flare - dt * 0.8); scn.setHeat(Math.min(1, f.flare)); if (f.flare < 0.5) f.max = false; f.noteT = Math.max(0, f.noteT - dt); f.btnT = Math.max(0, f.btnT - dt);
+      if (!f.busy) {
+        c.hold = near ? c.hold + dt * 1000 : Math.max(0, c.hold - dt * 800); dialEl.style.setProperty('--hold', `${clamp(c.hold / COLOR.hold, 0, 1) * 75}%`); scn.setFace(c.target, near ? 'wow' : 'smile');
+        if (c.hold >= COLOR.hold) {
+          f.busy = true; const i = f.n % COLOR.rounds; f.n++; if (f.mode === 1) scn.check(i); else scn.burst(scn.towerChecks(i), 0x5ff0a0, 18);
+          sfx.perfect(); popAt(scn.rocketFace(), '색 맞춤! ✨', hueCss(c.target)); actor.hop(2.6); bot.setExpression('웃음');
+          if (f.n % COLOR.rounds === 0) later(500, () => { if (S.phase !== 'free') return; scn.party(); popAt(scn.rocketTop(), '조명 쇼 완성! 🎉', '#ffd25a'); });
+          later(1200, () => { if (S.phase !== 'free') return; if (f.n % COLOR.rounds === 0 && f.mode === 1) scn.setChecks(0); f.busy = false; dialEl.style.setProperty('--hold', '0%'); newColor(); });
+        }
+      }
+      const v = Math.round(S.knob * 1023), tail = f.btnT > 0 ? ` · <span class="f">digitalRead</span>(4) → <b>HIGH</b> <i>부릉!</i>` : f.noteT > 0 ? ` · <span class="f">tone</span>(5, <b>${NOTES[f.note][1]}</b>) <i>${NOTES[f.note][0]}</i>` : ` · <i>${near ? '딱 맞아!' : `차이 ${Math.round(diff)}°`}</i>`;
+      return `<span class="f">analogRead</span>(A0) → <b>${v}</b> · <span class="f">map</span>(v, 0, 1023, 0, 320) → <b>${Math.round(hue)}°</b> · 목표 <b>${c.target}°</b>${tail}`;
+    },
+    exit: () => { const f = S.fr; S.phase = f.prev; S.mode = f.mode; S.col = f.col; S.view = f.view; readEl.hidden = f.read; S.fr = null; setCtl(0); dialEl.style.setProperty('--hold', '0%'); scn.setHeat(0); scn.setFace(40, 'smile'); neoOff(); actor.point(null).conduct(null).look(null); bot.setExpression('기본'); },
+  });
+  function freeNote(i) { const f = S.fr; if (!f) return; f.note = i; f.noteT = 0.8; playNote(i); }
   function setCtl(n) { dialEl.classList.toggle('on', n === 1 || n === 3); padsEl.classList.toggle('on', n === 2); cueEl.classList.toggle('on', n === 3); cueEl.classList.toggle('two', n === 3); readEl.classList.toggle('two', n === 3); $('#lch-zone').hidden = n !== 3; readEl.classList.toggle('mel', n === 2); }
 
   // ── 인트로 ──
@@ -262,6 +285,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
+    if (a === 'free') { await sandbox.run(); if (!done) brief(); return; }
     beginPlay();
   }
 
@@ -326,6 +350,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   function nextCue() { const c = S.cue; c.idx++; if (c.idx >= CUE.cues) { endPlay(); return false; } c.pos = 0; c.judged = false; return true; }
   function press() {
     const c = S.cue; scn.press(); pressPose(); cueEl.classList.add('down'); later(120, () => cueEl.classList.remove('down'));
+    if (S.phase === 'free' && S.fr) { const f = S.fr; f.btnT = 0.6; f.flare = Math.min(1.3, f.flare + 0.32); scn.puff(12, 0.7); tone(392 + Math.round(f.flare * 200), 120); if (f.flare >= 1 && !f.max) { f.max = true; sfx.ok(); popAt(scn.rocketTop(), '엔진 최대! 🔥', '#ffd25a'); shake = 0.5; actor.hop(2.2); } return; }   // 자유 실험: 엔진만 부릉(발사 · 판정 없음)
     if (S.mode !== 3 || S.phase !== 'play' || !c || c.judged) return; c.judged = true;
     const mid = (CUE.low + CUE.high) / 2, hw = (CUE.high - CUE.low) / 2 * AK(), timing = Math.abs(c.pos - mid) <= hw, ok = timing && c.inP, at = scn.cueAt(Math.min(1, c.pos), 1.0);   // 때도 맞고 압력도 띠 안이어야
     if (ok || useShield()) { S.hits++; good(at, ok ? 'PERFECT!' : '부스터!', '#ffd25a'); cueHit(); }
@@ -345,7 +370,8 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
 
   function onKey(e) {
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
-    if (S.phase !== 'play' && S.phase !== 'count' || S.pausedAt) return;
+    if (S.phase !== 'play' && S.phase !== 'count' && S.phase !== 'free' || S.pausedAt) return;
+    if (S.phase === 'free') { const m = /^(?:Digit|Numpad)([1-7])$/.exec(e.code); if (m && !e.repeat) { e.preventDefault(); freeNote(+m[1] - 1); return; } if (e.code === 'Space' && !e.repeat) { e.preventDefault(); e.stopImmediatePropagation(); press(); return; } }   // 자유 실험: 1~7 부저 음 · 스페이스 엔진
     if ((S.mode === 1 || S.mode === 3) && S.sensor == null && e.code.startsWith('Arrow')) { const d = { ArrowRight: 0.04, ArrowUp: 0.04, ArrowLeft: -0.04, ArrowDown: -0.04 }[e.code]; if (d) { e.preventDefault(); setManual(S.manual + d); } }   // 2D 판과 같은 한 칸
     else if (S.mode === 2) { const m = /^(?:Digit|Numpad)([1-7])$/.exec(e.code); if (m && !e.repeat) { e.preventDefault(); padIn(+m[1] - 1); } }
     else if (S.mode === 3 && e.code === 'Space' && !e.repeat) { e.preventDefault(); e.stopImmediatePropagation(); press(); }
@@ -435,7 +461,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     if (S.mode === 1 || S.mode === 3 || S.lessonDemo) { const css = S.mode === 3 ? '#ffd25a' : hueCss(hue), v = Math.round(S.knob * 1023); dialEl.style.setProperty('--cv', css); knobEl.style.setProperty('--a', `${-135 + S.knob * 270}deg`); dialEl.setAttribute('aria-valuenow', v);
       if (S.mode === 1 || S.lesson) { c1.innerHTML = `<span class="f">analogRead</span>(A0) → <b>${v}</b>`; c2.innerHTML = `<span class="f">map</span>(v, 0, 1023, 0, 320) → <b>${Math.round(hue)}</b>°`; const tg = S.col?.target; const cvd = comfort.cvd && tg != null && S.mode === 1; stEl.innerHTML = `지금 <span class="lch-sw" style="background:${css}"></span>${cvd ? ` ${Math.round(hue)}°` : ''}${tg != null && S.mode === 1 ? ` 목표 <span class="lch-sw" style="background:${hueCss(tg)}"></span>${cvd ? ` ${tg}°` : ''} <i>${hueDiff(hue, tg) <= COLOR.tol ? '딱 맞아 — 버텨!' : cvd ? (tg > hue ? '오른쪽으로 ▶' : '◀ 왼쪽으로') : '로켓 얼굴 색으로'}</i>` : ''}`;
         const tgEl = $('#lch-tg'); tgEl.hidden = !cvd; if (cvd) tgEl.style.setProperty('--t', `${-135 + (tg / HUE_MAX) * 270}deg`); }
-      if ((S.phase === 'play' || S.lesson) && S.mode !== 3) { const c = hueColor(hue); neo([c.r, c.g, c.b].map((x) => Math.round(Math.pow(x, 1 / 2.2) * 255))); } }
+      if ((S.phase === 'play' || S.phase === 'free' || S.lesson) && S.mode !== 3) { const c = hueColor(hue); neo([c.r, c.g, c.b].map((x) => Math.round(Math.pow(x, 1 / 2.2) * 255))); } }
     if (S.mode === 2 && S.phase === 'play' && !c1.dataset.m2) { c1.dataset.m2 = 1; c1.innerHTML = '<span class="f">for</span> (i = 0; i &lt; 길이; i++) 따라 치기'; }
     if (S.mode !== 2) delete c1.dataset.m2;
     if (S.mode === 3 && S.phase === 'play' && S.cue) { c1.innerHTML = `<span class="f">digitalRead</span>(4) → <b>${cueEl.classList.contains('down') ? 'HIGH' : 'LOW'}</b>`; c1.innerHTML += ` · <span class="f">analogRead</span>(A0) → <b>${Math.round(S.knob * 1023)}</b>`; c2.innerHTML = `count → <b>${Math.max(0, CUE.cues - S.hits)}</b>`; stEl.innerHTML = `압력 <i>${S.cue.inP ? '✓ 좋아' : S.knob < pressureAt(S.cue.t) ? '▲ 더 올려' : '▼ 내려'}</i> · 빛 점 <i>${S.cue.pos >= CUE.low && S.cue.pos <= CUE.high ? '금색 — 지금!' : '도는 중'}</i>`; }

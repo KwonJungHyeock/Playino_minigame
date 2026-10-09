@@ -19,6 +19,7 @@ import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
 import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
+import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
 
 const ADC = 0, PASS_ACC = 0.8, LAG = 0.12;   // 3D 판 관성(난이도 측정 뒤 0.2 → 0.12초)
@@ -61,7 +62,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   const el = root.querySelector('.rov'), host = root.querySelector('#rov-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#rov-skip'), readEl = $('#rov-read'), dialEl = $('#rov-dial'), knobEl = dialEl.querySelector('.knob');
 
-  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null, sandbox = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -69,7 +70,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__roverGame?.el === el) delete window.__roverGame;
   }
@@ -125,6 +126,32 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   photo = createPhoto({ stage, hud, bot, actor, title: '로버 추력 조절', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
   function setView(v) { S.view = v; scn.show(v === 'ride' ? 'ride' : 'jump'); const c = camGoal(); cam.position.copy(c.p); camT.copy(c.t); }
   const popAt = (text, color) => { const p = toScreen(scn.roverTop()); hud.pop(text, color, p.x, p.y); };
+  // 자유 실험: 점수 · 시간 없이 다이얼로 추력을 맞춰 협곡을 몇 번이고 건너 보기(필요 추력 = 협곡 너비)
+  let freeJump = null;
+  function freeGap(f) {
+    if (scn.rover.position.x > 60) setView('jump');   // 너무 멀리 가면 새 협곡에서 다시(바닥 · 배경 밖으로 나가지 않게)
+    let c; do { c = 0.12 + Math.random() * 0.76; } while (Math.abs(c - f.c) < 0.22);
+    f.c = c; f.holdT = 0; scn.setBand(c, f.half); scn.gap(1.0 + c * 3.2);
+  }
+  async function freeHop(f) {
+    f.busy = true; sfx.ok(); popAt(f.n % 3 === 2 ? '멋진 점프! ✨' : '점프!', '#5ff0a0'); bot.setExpression('하트'); later(200, () => actor.pose('wide'));
+    await scn.jump(1.0 + f.c * 3.2); if (done) return;
+    actor.pose('carry').hop(2.6); dialEl.style.setProperty('--hold', '0%'); f.n++; f.busy = false; freeJump = null;
+    if (S.phase === 'free') freeGap(f);
+  }
+  sandbox = createSandbox({ stage, hud, tip: '다이얼을 돌리거나 ← → · 가변저항이 있으면 진짜로 돌려요. 바늘을 초록 띠에 넣고 버티면 점프!',
+    enter: () => { S.fr = { prev: S.phase, dial: dialEl.hidden, c: 0.5, half: 0.09, holdT: 0, busy: false, n: 0 }; S.phase = 'free'; setView('jump'); freeGap(S.fr); dialEl.hidden = false; actor.pose('carry').look(null); bot.setExpression('웃음'); },
+    frame: (dt) => {
+      const f = S.fr, v = Math.round(S.knob * 1023), inZone = Math.abs(S.thrust - f.c) <= f.half;
+      if (!f.busy && !S.pausedAt) {
+        f.holdT = inZone ? f.holdT + dt : Math.max(0, f.holdT - dt * 0.85); dialEl.style.setProperty('--hold', `${Math.min(1, f.holdT / 0.85) * 75}%`); bot.setExpression(inZone ? '웃음' : '기본');
+        if (f.holdT >= 0.85) freeJump = freeHop(f);
+      }
+      const st = f.busy ? '점프!' : inZone ? '딱 맞음 — 버텨!' : S.thrust > f.c ? '너무 셈' : '모자람';
+      return `<span class="f">analogRead</span>(A0) → <b>${v}</b> · <span class="f">map</span> → <b>${mapTo(v)}</b> · 추력 <b>${Math.round(S.thrust * 100)}%</b> / 필요 <b>${Math.round((f.c - f.half) * 100)}~${Math.round((f.c + f.half) * 100)}%</b> · <i>${st}</i>`;
+    },
+    exit: () => { S.phase = S.fr.prev; dialEl.hidden = S.fr.dial; dialEl.style.setProperty('--hold', '0%'); S.fr = null; actor.look(null); bot.setExpression('기본'); },
+  });
 
   // ── 인트로 ──
   const INTRO = 5;
@@ -217,6 +244,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
+    if (a === 'free') { await sandbox.run(); await freeJump; if (!done) brief(); return; }   // 점프 중에 끝내면 착지를 기다렸다가 장면을 되돌린다
     beginPlay();
   }
 
@@ -280,7 +308,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
 
   function onKey(e) {
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
-    if (!['play', 'count'].includes(S.phase) || S.pausedAt || S.sensor != null) return;
+    if (!['play', 'count', 'free'].includes(S.phase) || S.pausedAt || S.sensor != null) return;
     const d = { ArrowRight: 0.045, ArrowUp: 0.045, ArrowLeft: -0.045, ArrowDown: -0.045 }[e.code];   // 2D 판과 같은 한 칸
     if (d) { e.preventDefault(); setManual(S.manual + d); }
   }
@@ -356,7 +384,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
     cam.lookAt(camT);
   });
 
-  window.__roverGame = { el, S, scn, stage, hud, setManual, actor, setView };   // 자동 점검용
+  window.__roverGame = { el, S, scn, stage, hud, setManual, actor, setView, sandbox };   // 자동 점검용
   S.view = S.mode === 2 ? 'ride' : 'jump';
   scn.show('all'); if (S.mode === 2) scn.buildRoad((ts) => trackTarget(ts * 1000, GAMES[1].dur), GAMES[1].dur / 1000, GAMES[1].checks);
   { const c = camGoal(); cam.position.copy(S.mode === 2 ? c.p : introFrom.p); camT.copy(S.mode === 2 ? c.t : introFrom.t); }

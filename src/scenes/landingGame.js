@@ -18,6 +18,7 @@ import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
 import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
+import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
 
 const W_PERFECT = 90, W_GOOD = 170, LEAD = 1450, PASS_ACC = 0.85;
@@ -76,7 +77,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
       <div class="lnd-pads" id="lnd-pads" hidden>${[0, 1, 2].map((i) => `<button class="lnd-pad" type="button" data-lane="${i}" style="--c:${LANE_CSS[i]}" aria-label="${LANE_NAME[i]} 유도등 (${i + 1})"><i>${i + 1}</i><b>${['낮은 음', '중간 음', '높은 음'][i]}</b></button>`).join('')}</div></section>`;
   const el = root.querySelector('.lnd'), host = root.querySelector('#lnd-stage'), skipBtn = root.querySelector('#lnd-skip'), padsEl = root.querySelector('#lnd-pads');
 
-  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null, sandbox = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, land = null, hud = null, song = null, offTick = null, done = false;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -84,7 +85,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); song?.dispose(); land?.dispose(); stage?.dispose();
     PINS.forEach((p) => { if (board.connected) board.digital(p, false).catch(() => {}); });
   }
@@ -122,6 +123,42 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   juice = createJuice({ stage, hud, rhythm: true });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
   explore = createExplore({ stage, hud, host, bot, actor, id: 'led' }); hud.explore = explore;   // 둘러보기 · 숨은 별 조각
   photo = createPhoto({ stage, hud, bot, actor, title: '착륙 유도등', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
+  // 자유 실험: 점수 없이 1·2·3 으로 유도등을 켜고 끄며(digitalWrite HIGH/LOW) 보급선이 바라는 빛 신호를 맞춰 네 번 만에 착륙시키기
+  const FREE_STEPS = 4, dots = (m) => [0, 1, 2].map((i) => `<span style="color:${m & (1 << i) ? LANE_CSS[i] : '#5a6080'}">${m & (1 << i) ? '●' : '○'}</span>`).join('');
+  const freeGoal = (f) => { let m; do m = 1 + Math.floor(Math.random() * 7); while (m === f.goal || m === f.on); return m; };
+  sandbox = createSandbox({ stage, hud, tip: '1·2·3 키나 아래 단추로 유도등을 켜고 꺼요. 목표 신호와 똑같이 켜면 보급선이 한 칸씩 내려와요',
+    enter: () => {
+      S.fr = { prev: S.phase, pads: padsEl.hidden, play: padsEl.classList.contains('on-play'), labels: [...padsEl.children].map((b) => b.querySelector('b').textContent), on: 0, goal: 0, step: 0, shipY: START_ALT, holdT: 0, busy: false, last: -1, lastAt: 0 };
+      S.fr.goal = freeGoal(S.fr); S.phase = 'free'; lampAll(false); hud.action(''); padsEl.hidden = false; padsEl.classList.add('on-play');
+      [...padsEl.children].forEach((b, i) => { b.querySelector('b').textContent = `D${PINS[i]} ${LANE_NAME[i]}`; });
+      bot.setExpression('웃음'); actor.look(shipAt, 0.8);
+    },
+    frame: (dt) => {
+      const f = S.fr;
+      f.shipY = THREE.MathUtils.lerp(START_ALT, SHIP_REST, f.step / FREE_STEPS) + (f.step < FREE_STEPS ? Math.sin(S.t * 1.3) * 0.07 : 0);
+      if (f.step >= FREE_STEPS) land.setFlame(Math.min(1, Math.abs(f.shipY - S.shipY) * 0.6));   // 다 내려오면 엔진을 끈다
+      if (!f.busy) {
+        f.holdT = f.on === f.goal ? f.holdT + dt : 0;
+        if (f.holdT >= 0.25) {
+          f.busy = true; f.step++; sfx.perfect(); juice.kick(0.03); judgePop(f.step >= FREE_STEPS ? '착륙 성공! 🛬' : '신호 일치! ✨', '#5ff0a0'); gesture(() => actor.pose('up').look(shipAt, 0.8).hop(2.6), 700);
+          const landed = f.step >= FREE_STEPS; if (landed) { bot.play('환호', { once: true }); bot.setExpression('하트'); }
+          later(landed ? 2600 : 900, () => { if (S.phase !== 'free' || S.fr !== f) return; if (landed) { f.step = 0; bot.setExpression('웃음'); } f.goal = freeGoal(f); f.holdT = 0; f.busy = false; });
+        }
+      }
+      const cmd = f.last < 0 ? `<span class="f">digitalWrite</span>(2·3·4, <b>LOW</b>)` : `<span class="f">digitalWrite</span>(${PINS[f.last]}, <b>${f.on & (1 << f.last) ? 'HIGH' : 'LOW'}</b>) · <span class="f">delay</span>(<b>${Math.min(9999, Math.round((S.t - f.lastAt) * 1000))}</b>)`;
+      return `${cmd} · 지금 ${dots(f.on)} → 목표 ${dots(f.goal)} · <i>${f.step >= FREE_STEPS ? '착륙!' : `착륙까지 ${FREE_STEPS - f.step}번`}</i>`;
+    },
+    exit: () => {
+      const f = S.fr; S.phase = f.prev; padsEl.hidden = f.pads; padsEl.classList.toggle('on-play', f.play);
+      [...padsEl.children].forEach((b, i) => { b.querySelector('b').textContent = f.labels[i]; });
+      lampAll(false); clearTimeout(gestT); actor.pose(null).point(null).look(shipAt, 0.8); bot.setExpression('기본'); S.fr = null;
+    },
+  });
+  function freeTap(i) {   // 자유 실험: i 번 유도등을 켰다 껐다(토글)
+    const f = S.fr; if (S.phase !== 'free' || !f || S.pausedAt) return;
+    pressPad(i); f.on ^= 1 << i; const on = !!(f.on & (1 << i)); lampOn(i, on); f.last = i; f.lastAt = S.t;
+    if (on) { sfx.note([C4, F4, A4][i], 200, 0.16); gesture(() => actor.point(land.lamps[i].userData.bulb.getWorldPosition(new THREE.Vector3())), 320, () => actor.point(null)); } else sfx.click?.();
+  }
   const RING_TOP = new THREE.Vector3(PAD.x, 0.25, PAD.z + TARGET_R), COMBO_AT = new THREE.Vector3(PAD.x + TARGET_R + 0.75, 0.6, PAD.z);
 
   // 판정 고리(가운데) + 다가오는 신호 고리
@@ -245,6 +282,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
+    if (a === 'free') { await sandbox.run(); if (!done) brief(); return; }
     beginPlay();
   }
 
@@ -375,6 +413,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   function onKey(e) {
     // 캡처 단계에서 받아 막는다 — 안 막으면 전역 뒤로가기(nav.js 의 Esc)가 같이 돌아 게임이 꺼진다. 일시정지 창이 떠 있으면 창이 받게 둔다
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
+    if (S.phase === 'free') { const m = /^(?:Digit|Numpad)([123])$/.exec(e.code); if (m && !e.repeat) { e.preventDefault(); freeTap(+m[1] - 1); } return; }   // 자유 실험: Esc 는 sandbox 가 받는다
     if (S.phase !== 'play') return;
     if (S.mode === 2) { const m = /^(?:Digit|Numpad)([123])$/.exec(e.code); if (m && !e.repeat) { e.preventDefault(); press2(+m[1] - 1); } return; }
     if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); press(); }
@@ -382,7 +421,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   window.addEventListener('keydown', onKey, true);
   hud.action('').addEventListener('pointerdown', (e) => { e.preventDefault(); press(); });
   host.addEventListener('pointerdown', () => { if (S.phase === 'play' && S.mode === 1) press(); });
-  [...padsEl.children].forEach((b, i) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); press2(i); }));
+  [...padsEl.children].forEach((b, i) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); if (S.phase === 'free') freeTap(i); else press2(i); }));
 
   // ── 일시정지 ──
   async function pause() {
@@ -440,7 +479,8 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
 
     // 보급선: 맞힌 만큼 내려오고, 놓치면 흔들린다
     let goalY = START_ALT;
-    if (S.mode === 2) goalY = SHIP_REST;   // 2단계: 보급선은 착륙해 있다
+    if (S.phase === 'free') goalY = S.fr.shipY;   // 자유 실험: 맞힌 신호만큼 내려온다(sandbox frame 이 정한다)
+    else if (S.mode === 2) goalY = SHIP_REST;   // 2단계: 보급선은 착륙해 있다
     else if (S.phase === 'play' || S.phase === 'count') goalY = THREE.MathUtils.lerp(START_ALT, SHIP_REST + 0.9, S.beats.length ? S.hits / S.beats.length : 0);
     else if (S.phase === 'land' || S.phase === 'result') { S.landT += dt; goalY = S.pass ? SHIP_REST : THREE.MathUtils.lerp(SHIP_REST + 0.9, 4.2, Math.min(1, S.landT / 2)); }
     else goalY = START_ALT + Math.sin(S.t) * 0.08;
@@ -490,7 +530,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     }
   }
 
-  window.__landingGame = { S, land, stage, press, press2, hud, song, actor };   // 자동 점검용
+  window.__landingGame = { S, land, stage, press, press2, freeTap, sandbox, hud, song, actor };   // 자동 점검용
   if (S.mode === 2) { ship.position.y = SHIP_REST; cam.position.copy(fitCam()); camT.copy(MUSIC_CAM.t); }
   else { cam.position.copy(introFrom.p); camT.copy(introFrom.t); }
   await stage.warm(); if (done) return;   // 셰이더 · 텍스처를 가림막 뒤에서 미리 — 첫 장면이 멈칫하지 않게

@@ -20,6 +20,7 @@ import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
 import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
+import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
 
 const ADC = 0, LED_PIN = 13, PASS = 0.8;
@@ -66,7 +67,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   const el = root.querySelector('.rea'), host = root.querySelector('#rea-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#rea-skip'), readEl = $('#rea-read'), dialEl = $('#rea-dial'), knobEl = dialEl.querySelector('.knob'), ledEl = $('#rea-led');
 
-  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null, sandbox = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -74,7 +75,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     ledOff();
     if (window.__reactorGame?.el === el) delete window.__reactorGame;
@@ -137,6 +138,23 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   photo = createPhoto({ stage, hud, bot, actor, title: '원자로 진정', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
   let shake = 0;
+  // 자유 실험: 점수 없이 다이얼로 바늘을 초록 띠에 넣어 보기 — 경고등 깜빡임 · 열기가 거리를 따라가고, 버티면 제어봉이 내려가고 띠가 옮겨 간다
+  const freeBand = (c0) => { let c; do { c = 0.12 + Math.random() * 0.76; } while (Math.abs(c - c0) < 0.24); return { c, h: 0.05 + Math.random() * 0.05 }; };
+  sandbox = createSandbox({ stage, hud, tip: '다이얼을 끌거나 ←→ · 가변저항을 돌려요. 경고등이 빨라지는 쪽 → 계속 켜지면 버텨요',
+    enter: () => { S.fr = { prev: S.phase, dial: dialEl.hidden, read: readEl.hidden, holdT: 0, busy: false, n: 0, heat: 0.85 }; S.phase = 'free'; S.demo = freeBand(S.knob); scn.show('arm'); scn.resetRods(); scn.setBand(S.demo.c, S.demo.h, 'match'); scn.setHold(0); dialEl.hidden = false; readEl.hidden = false; bot.setExpression('웃음'); actor.look(() => scn.gaugeAt()); },
+    frame: (dt) => {
+      const f = S.fr, b = S.demo, d = Math.abs(S.knob - b.c), inZone = d <= b.h;
+      if (!f.busy) {
+        f.holdT = inZone ? f.holdT + dt : Math.max(0, f.holdT - dt * 0.85); const hk = clamp(f.holdT / 0.8, 0, 1); scn.setHold(hk); dialEl.style.setProperty('--hold', `${hk * 75}%`);
+        if (f.holdT >= 0.8) {
+          f.busy = true; const i = f.n % 6; f.n++; scn.rod(i, true); scn.mood('calm', 900); actor.routine('pull', 0.7); actor.hop(2.4); sfx.perfect(); popAt(scn.gaugeAt(), '안정! ✨', '#5ff0a0'); f.heat = Math.max(0.3, 0.85 - (i + 1) * 0.09);
+          later(1100, () => { if (S.phase !== 'free') return; if (f.n % 6 === 0) { scn.resetRods(); f.heat = 0.85; hud.toast('제어봉 6개 모두 내렸어! 다시 한 바퀴 ⚛️', 'ok'); } S.demo = freeBand(b.c); scn.setBand(S.demo.c, S.demo.h, 'match'); f.holdT = 0; f.busy = false; scn.setHold(0); dialEl.style.setProperty('--hold', '0%'); });
+        }
+      }
+      return `<span class="f">analogRead</span>(A0) → <b>${Math.round(S.knob * 1023)}</b> · 목표 <b>${Math.round(b.c * 1023)}</b> · d <b>${Math.round(d * 1023)}</b> · ${inZone ? '<span class="f">digitalWrite</span>(13, HIGH) <i>계속 켜짐 — 버텨!</i>' : `<span class="f">delay</span>(<b>${Math.round(blinkMs(d))}</b>) <i>${d < 0.12 ? '거의 다 왔어' : d < 0.25 ? '가까워' : '멀어'}</i>`}`;
+    },
+    exit: () => { const f = S.fr; S.phase = f.prev; dialEl.hidden = f.dial; readEl.hidden = f.read; S.fr = null; S.demo = null; scn.setHold(0); dialEl.style.setProperty('--hold', '0%'); ledOff(); actor.look(null); bot.setExpression('기본'); },
+  });
 
   // ── 인트로 ──
   const INTRO = 5.5;
@@ -227,6 +245,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
+    if (a === 'free') { await sandbox.run(); if (!done) brief(); return; }
     beginPlay();
   }
   function resetProps(n) { if (n === 1) scn.resetRods(); else if (n === 2) scn.resetValves(); else scn.resetSegs(); }
@@ -295,7 +314,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
 
   function onKey(e) {
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
-    if (!['play', 'count'].includes(S.phase) || S.pausedAt || S.sensor != null) return;
+    if (!['play', 'count', 'free'].includes(S.phase) || S.pausedAt || S.sensor != null) return;
     const d = { ArrowRight: 0.04, ArrowUp: 0.04, ArrowLeft: -0.04, ArrowDown: -0.04 }[e.code];   // 2D 판과 같은 한 칸
     if (d) { e.preventDefault(); setManual(S.manual + d); }
   }
@@ -361,8 +380,8 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
     const v = Math.round(S.knob * 1023); $('#rea-v').textContent = v; $('#rea-cap').textContent = Math.round(S.knob * 100);
     knobEl.style.setProperty('--a', `${-135 + S.knob * 270}deg`); dialEl.setAttribute('aria-valuenow', v);
     if (S.phase === 'play' && !S.ended && !S.pausedAt) { if (S.mode === 3) stepTrack(ms); else stepMatch(ms); }
-    // 경고등(2D 판과 같은 깜빡임): 판 안이면 계속 켜짐, 아니면 거리만큼 느리게 — 강의 땐 보기 목표로
-    const live = S.phase === 'play' && !S.ended, demo = S.lesson && S.demo;
+    // 경고등(2D 판과 같은 깜빡임): 판 안이면 계속 켜짐, 아니면 거리만큼 느리게 — 강의 · 자유 실험 땐 보기 목표로
+    const live = S.phase === 'play' && !S.ended, free = S.phase === 'free' && !!S.fr, demo = (S.lesson || free) && S.demo;
     let dist = 1, inZone = false;
     if (demo) { dist = Math.abs(S.knob - S.demo.c); inZone = dist <= S.demo.h; }
     else if (live && S.mode < 3 && S.m) { dist = Math.abs(S.knob - S.m.center); inZone = dist <= S.m.half; }
@@ -370,7 +389,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
     if ((live || demo) && !S.pausedAt) {
       if (inZone) S.led = true;
       else { S.per = blinkMs(dist); S.ledPh += ms; if (S.ledPh >= S.per) { S.ledPh = 0; S.led = !S.led; if (S.led) sfx.note(lerp(330, 760, 1 - clamp(dist / 0.42, 0, 1)), 60); } }
-      if (live) sendLed(S.led);
+      if (live || free) sendLed(S.led);
     } else S.led = false;
     scn.setLed(S.led);
     if (S.led !== lastLed) { lastLed = S.led; ledEl.classList.toggle('on', S.led); const o = $('#rea-o'); o.textContent = S.led ? 'HIGH' : 'LOW'; o.className = S.led ? 'hi' : 'lo'; }
@@ -378,7 +397,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
     $('#rea-st').innerHTML = (live || demo) ? `경고등 <i>${inZone ? '계속 켜짐 — 버텨!' : dist < 0.12 ? '아주 빠르게 · 거의 다 왔어' : dist < 0.25 ? '빠르게 · 가까워' : '느리게 · 멀어'}</i>` : '경고등 <i>대기</i>';
     readEl.style.setProperty('--rc', inZone ? '#5ff0a0' : dist < 0.2 ? '#ffd24a' : '#8ff7ee');
     // 열기(보이기만): 막이 진행될수록 식고, 바늘이 목표에서 멀수록 들끓는다
-    if (live || demo) { const base = demo ? 0.75 : 1 - (S.hits / Math.max(1, S.total)) * 0.6; scn.setHeat(base * (inZone ? 0.45 : 0.6 + clamp(dist / 0.3, 0, 1) * 0.4)); }
+    if (live || demo) { const base = demo ? (free ? S.fr.heat : 0.75) : 1 - (S.hits / Math.max(1, S.total)) * 0.6; scn.setHeat(base * (inZone ? 0.45 : 0.6 + clamp(dist / 0.3, 0, 1) * 0.4)); }
     // 바이저봇: 두 손은 핸들 테에 — 핸들이 돌면 한 손은 오르고 한 손은 내린다
     if (S.onWheel) { const a = clamp((S.knob - 0.5) * 1.5, -1, 1); actor.arms([-1.2 + a * 0.35, 0.12], [-1.2 - a * 0.35, -0.12]); }
     scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);

@@ -16,6 +16,7 @@ import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
 import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
+import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
 
 const ADC = 0, LEAD = 1700, PASS_ACC = 0.85;
@@ -60,7 +61,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   const el = root.querySelector('.sol'), host = root.querySelector('#sol-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#sol-skip'), readEl = $('#sol-read'), padEl = $('#sol-pad'), vEl = $('#sol-v'), barEl = $('#sol-bar'), stEl = $('#sol-st');
 
-  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null, sandbox = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -68,7 +69,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); window.removeEventListener('keyup', onKeyUp, true); window.removeEventListener('blur', release); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__solarGame?.el === el) delete window.__solarGame;
   }
@@ -128,7 +129,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   const isDark = () => (S.forced != null ? S.forced < 0.5 : S.holding || S.sensorDark);
   function press(e) { e?.preventDefault?.(); if (S.holding) return; S.holding = true; padEl.classList.add('on'); }
   function release(e) { e?.preventDefault?.(); S.holding = false; padEl.classList.remove('on'); }
-  padEl.addEventListener('pointerdown', (e) => { if (S.phase !== 'play') return; press(e); padEl.setPointerCapture?.(e.pointerId); });
+  padEl.addEventListener('pointerdown', (e) => { if (!['play', 'free'].includes(S.phase)) return; press(e); padEl.setPointerCapture?.(e.pointerId); });
   padEl.addEventListener('pointerup', release); padEl.addEventListener('pointercancel', release);
   let baseline = 800;
   function startSense() {
@@ -143,6 +144,54 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     vEl.textContent = v; barEl.style.width = (v / 1023 * 100).toFixed(1) + '%'; const dark = isDark(); stEl.textContent = dark ? '어둠' : '밝음'; readEl.style.setProperty('--sol', dark ? '#5d6bd8' : '#ffd24a');
     return v;
   }
+
+  // 자유 실험: 점수 없이 센서를 가렸다 떼며 analogRead 값 · if 기준이 장면을 어떻게 바꾸는지 본다(1단계 무대 = 신호 구슬 · 충전, 2단계 무대 = 자유 비행)
+  const flyGate = (fl) => { const gapH = VH * 0.36; fl.pillars.push({ x: VW + 50, w: 58, gapY: 64 + Math.random() * (VH - 128 - gapH), gapH, passed: false, hit: false }); };
+  function freeStation(f, dt, dark) {
+    f.chg = Math.min(1, f.chg + dt * S.light / 6);
+    if (f.chg >= 1) { f.chg = 0; f.full++; sfx.perfect(); juice.flash('#ffd24a'); bot.play('환호', { once: true }); popAt(bot.object.localToWorld(new THREE.Vector3(0, 1.6, 0)), '배터리 가득! 🔋', '#5ff0a0'); }
+    if (f.busy) { scn.hideOrbs(); return; }
+    f.x = Math.max(HIT_X, f.x - dt * 4.2); lookV.set(f.x, RAIL_Y, RAIL_Z); scn.orb(0, f.x, f.kind, f.x - HIT_X < 0.25); scn.hideOrbs(1);
+    const ok = f.x <= HIT_X && (f.kind === 'shade') === dark; f.holdT = ok ? f.holdT + dt : 0;
+    if (f.holdT < 0.45) return;
+    const sun = f.kind === 'sun'; f.busy = true; f.sig++; sfx.ok(); scn.hitFx(f.kind); actor.hop(2.4); popAt(new THREE.Vector3(HIT_X, RAIL_Y + 0.55, RAIL_Z), sun ? 'BRIGHT!' : 'SHADOW!', sun ? '#ffd24a' : '#a9b2ff');
+    later(700, () => { if (S.phase !== 'free') return; f.kind = Math.random() < 0.75 ? (sun ? 'shade' : 'sun') : f.kind; f.x = FROM_X; f.holdT = 0; f.busy = false; });
+  }
+  function freeFly(f, dt, dark) {   // 2단계와 같은 비행 물리 — 기둥은 넉넉한 틈으로 끝없이, 부딪혀도 벌점 없음
+    const fl = f.fly, d = Math.min(dt, 0.05) * 60;
+    fl.t += d * 16.67; fl.vy += (dark ? 0.62 : -0.52) * d; fl.vy = Math.max(-8.5, Math.min(8.5, fl.vy)) * 0.99; fl.y += fl.vy * d;
+    if (fl.y < 46) { fl.y = 46; fl.vy = 0; } if (fl.y > VH - 46) { fl.y = VH - 46; fl.vy = 0; }
+    if (fl.t > fl.next) { fl.next = fl.t + 1700; flyGate(fl); }
+    const at = () => scn.pilot.position.clone().add(new THREE.Vector3(0, 0.55, 0));
+    for (const p of fl.pillars) {
+      p.x -= 4.6 * d;
+      if (!p.hit && !p.passed && PX + 20 > p.x && PX - 20 < p.x + p.w && (fl.y - 18 < p.gapY || fl.y + 18 > p.gapY + p.gapH)) { p.hit = true; fl.crash = 1; actor.flinch(); bot.setExpression('놀람'); popAt(at(), '쿵!', '#ff8a7a'); later(500, () => { if (S.phase === 'free') bot.setExpression('웃음'); }); }
+      if (!p.passed && p.x + p.w < PX - 20) { p.passed = true; if (!p.hit) { fl.passed++; sfx.ok(); juice.kick(0.02); if (fl.passed % 3 === 0) actor.spin(); popAt(at(), 'NICE!', '#ffd24a'); } }
+    }
+    fl.pillars = fl.pillars.filter((p) => p.x > -200); scn.flyScroll(4.6 * d * K);
+    fl.crash = Math.max(0, fl.crash - dt * 2.5); scn.drone(wy(fl.y), fl.vy, fl.crash);
+    let k = 0; for (const p of fl.pillars) { if (k >= 6) break; scn.pillar(k++, wx(p.x), p.w * K, wy(p.gapY + p.gapH), wy(p.gapY), p.hit); }
+    scn.hidePillars(k);
+  }
+  sandbox = createSandbox({ stage, hud, tip: '가리기 단추 꾹 · 스페이스 꾹 = 그림자, 떼면 빛 — 조도 센서가 있으면 진짜 손으로 가려요',
+    enter: () => {
+      const flight = S.view === 'flight';
+      S.fr = { prev: S.phase, pad: padEl.hidden, read: readEl.hidden, flight, kind: 'shade', x: FROM_X, holdT: 0, busy: false, sig: 0, chg: 0, full: 0, fly: flight ? { y: VH * 0.4, vy: 0, pillars: [], t: 0, next: 900, crash: 0, passed: 0 } : null };
+      S.phase = 'free'; S.forced = null; release(); wasDark = null; padEl.hidden = false; readEl.hidden = false; bot.setExpression('웃음');
+      if (!flight) actor.look(lookV.set(FROM_X, RAIL_Y, RAIL_Z), 0.9);
+      hud.toast(flight ? '빛 = 떠오르기 · 그림자 = 가라앉기 — 기둥 사이를 마음껏 날아 봐요' : '구슬과 같은 빛을 보내 봐요 · 빛을 받으면 배터리가 차요', '');
+    },
+    frame: (dt) => {
+      const f = S.fr, dark = isDark(), v = +vEl.textContent, thr = Math.round((S.sensorV != null ? baseline : 860) * 0.55), lo = v < thr;
+      if (f.flight) freeFly(f, dt, dark); else freeStation(f, dt, dark);
+      const code = `<span class="f">analogRead</span>(A0) → <b>${v}</b> · <span class="f">if</span> (${v} &lt; ${thr}) → `;
+      return f.flight ? `${code}<i>${lo ? '참 · 가라앉기 ⬇' : '거짓 · 떠오르기 ⬆'}</i> · 통과 <b>${f.fly.passed}</b>` : `${code}<i>${lo ? '참 · 어둠 🌑' : '거짓 · 밝음 ☀️'}</i> · 충전 <b>${Math.round(f.chg * 100)}%</b>${f.sig ? ` · 신호 <b>${f.sig}</b>` : ''}`;
+    },
+    exit: () => {
+      const f = S.fr; S.phase = f.prev; padEl.hidden = f.pad; readEl.hidden = f.read; S.fr = null;
+      release(); scn.hideOrbs(); scn.hidePillars(); wasDark = null; actor.point(null).pose(null).face(null); bot.setExpression('기본');
+    },
+  });
 
   // ── 인트로 ──
   const INTRO = 5.4;
@@ -234,6 +283,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { setView('station'); await lesson(); if (!done) brief(); return; }
+    if (a === 'free') { await sandbox.run(); if (!done) brief(); return; }
     beginPlay();
   }
 
@@ -309,12 +359,13 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
 
   function onKey(e) {
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
-    if ((e.code === 'Space' || e.key === ' ') && S.phase === 'play' && !S.pausedAt) { e.preventDefault(); press(); }
+    if ((e.code === 'Space' || e.key === ' ') && ['play', 'free'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); press(); }
   }
   function onKeyUp(e) { if (e.code === 'Space' || e.key === ' ') release(); }
   window.addEventListener('keydown', onKey, true); window.addEventListener('keyup', onKeyUp, true); window.addEventListener('blur', release);
 
   async function pause() {
+    if (S.phase === 'free') { sandbox.end(); return; }   // 자유 실험 중 일시정지 단추 = 끝내기
     if (S.pausedAt || ['result', 'land'].includes(S.phase)) return;
     const wasPlay = S.phase === 'play'; S.pausedAt = performance.now(); bgm.setDuck(1); release();
     const a = await hud.window(`<div class="hud-eye">일시정지</div><h2>잠깐 쉬어요</h2><p>드론들은 그 자리에서 기다리고 있어요.</p>
@@ -370,7 +421,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     // 빛: 2D 판처럼 부드럽게 따라간다(한 프레임에 18%)
     const want = S.forced != null ? Math.min(1, S.forced) : isDark() ? 0 : 1;
     S.light += (want - S.light) * (1 - Math.pow(0.82, Math.min(dt, 0.1) * 60));
-    scn.setLight(S.light); if (S.forced == null) { scn.setCover(isDark()); if (['play', 'count'].includes(S.phase)) body(isDark()); }
+    scn.setLight(S.light); if (S.forced == null) { scn.setCover(isDark()); if (['play', 'count', 'free'].includes(S.phase)) body(isDark()); }
     readout(dt);
     if (S.phase === 'play' && !S.ended) { if (S.mode === 1) stepReact(); else stepFly(dt); }
     scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);

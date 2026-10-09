@@ -17,6 +17,7 @@ import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
 import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
+import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
 
 const PINS = [4, 5];
@@ -60,7 +61,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   const el = root.querySelector('.shd'), host = root.querySelector('#shd-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#shd-skip'), padsEl = $('#shd-pads'), clockEl = $('#shd-clock'), readEl = $('#shd-read');
 
-  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null, sandbox = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, hwTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -68,7 +69,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(hwTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__shieldGame?.el === el) delete window.__shieldGame;
   }
@@ -108,13 +109,14 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   // ── 입력: 화면 단추 · 키 · 진짜 버튼(누르는 순간) ──
   function press(i) {
     const b = padsEl.children[i]; b?.classList.add('down'); later(110, () => b?.classList.remove('down'));
+    if (S.phase === 'free') { if (!S.pausedAt) freeBonk(i); return; }
     if (S.phase !== 'play' || S.ended || S.pausedAt) return;
     if (S.mode === 1) bonk(i); else toggle(i);
   }
   [...padsEl.children].forEach((b, i) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); press(i); }));
   function onKey(e) {
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
-    if (e.repeat || S.phase !== 'play') return;
+    if (e.repeat || !['play', 'free'].includes(S.phase)) return;
     const i = { Digit1: 0, Numpad1: 0, ArrowLeft: 0, Digit2: 1, Numpad2: 1, ArrowRight: 1 }[e.code];
     if (i != null) { e.preventDefault(); press(i); }
   }
@@ -225,6 +227,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
+    if (a === 'free') { await sandbox.run(); if (!done) brief(); return; }
     beginPlay();
   }
   function setFlags() {   // 깃발 = 내 방어막 상태(오른손 = 화면 왼쪽 = 파랑)
@@ -254,6 +257,37 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
     const at = scn.genTop(i); actor.pose('cover').look(at); actor.hop(golden ? 3.2 : 2.2); if (golden) actor.spin();   // 몸은 화면을 본 채로 — 방패 면이 보이게
     clearTimeout(blockT); blockT = later(420, () => actor.pose(null));
   }
+  // 자유 실험: 점수 · 시간 없이 버튼을 눌러 방어막을 올려 보고, 천천히 떨어지는 운석을 막아 보기(놓쳐도 벌 없음)
+  function freeSpawn(f) { const i = Math.random() < 0.5 ? 0 : 1; Object.assign(f, { side: i, k: 0, gold: Math.random() < 0.2, dur: 2.6 + Math.random() * 1.2 }); scn.meteor(i, 0, f.gold, true); }
+  function freeBonk(i) {
+    const f = S.fr; if (!f) return;
+    scn.flash(i); f.note = `shieldOn(${i ? 'RIGHT' : 'LEFT'})`; f.noteT = 0.9;
+    if (f.side === i) {
+      const at = scn.meteorAt(i).add(new THREE.Vector3(0, 0.4, 0)); scn.zap(i, f.gold); f.n++;
+      sfx.note(620 + (f.gold ? 220 : 0), 150); later(70, () => sfx.note(820 + (f.gold ? 240 : 0), 90));
+      popAt(at, f.gold ? '금빛 운석 막았다! ✨' : '막았다! 🛡️', f.gold ? '#ffd25a' : SIDE_CSS[i]); block(i, f.gold); juice.kick(f.gold ? 0.05 : 0.03); bot.setExpression(f.gold ? '하트' : '웃음');
+      f.side = null; f.wait = 0.8;
+    } else sfx.click?.();
+  }
+  sandbox = createSandbox({ stage, hud, tip: '화면 단추 · 1 2 키 · 보드 버튼 D4 D5 를 눌러요. 운석이 오는 쪽 방어막을 올리면 막아요',
+    enter: () => {
+      S.fr = { prev: S.phase, pads: padsEl.hidden, side: null, k: 0, gold: false, dur: 3, wait: 0.6, n: 0, note: '', noteT: 0 }; S.phase = 'free';
+      scn.show('catch'); actor.arms(null, null).pose(null).look(null); padsEl.hidden = false; [...padsEl.children].forEach((b) => b.classList.remove('on')); bot.play('대기'); bot.setExpression('웃음');
+    },
+    frame: (dt) => {
+      const f = S.fr;
+      if (!S.pausedAt) {
+        if (f.side == null) { if ((f.wait -= dt) <= 0) freeSpawn(f); }
+        else { f.k += dt / f.dur; scn.meteor(f.side, Math.min(1, f.k), f.gold); if (f.k >= 1) { scn.fizzle(f.side); f.side = null; f.wait = 0.9; bot.setExpression('놀람'); later(500, () => { if (S.phase === 'free') bot.setExpression('웃음'); }); } }
+        actor.look(f.side != null ? scn.meteorAt(f.side) : null, 0.9);
+        f.noteT = Math.max(0, f.noteT - dt);
+      }
+      for (let i = 0; i < 2; i++) scn.setShield(i, S.hw[i]);   // 진짜 버튼은 누르고 있는 동안 방어막이 계속 올라 있다
+      const hi = [0, 1].map((i) => (S.hw[i] || padsEl.children[i].classList.contains('down') ? 'HIGH' : 'LOW'));
+      return `<span class="f">digitalRead</span>(4) → <b>${hi[0]}</b> · <span class="f">digitalRead</span>(5) → <b>${hi[1]}</b> · ${f.noteT > 0 ? `<span class="f">if</span> (HIGH) → <i>${f.note}</i>` : `막은 운석 <i>${f.n}</i>`}`;
+    },
+    exit: () => { S.phase = S.fr.prev; padsEl.hidden = S.fr.pads; S.fr = null; scn.hideMeteor(0); scn.hideMeteor(1); scn.setShield(0, false); scn.setShield(1, false); actor.pose(null).look(null); bot.setExpression('기본'); },
+  });
   function progressGoal() { const game = GAMES[S.mode - 1]; hud.goal(S.mode === 1 ? `막은 점수 ${S.score} / ${game.target}` : `명령 ${S.score}점 / 목표 ${game.target} · 남은 ${game.count - S.idx}`, Math.min(1, S.score / game.target)); }
 
   // 1단계: 2D 두더지와 같은 흐름 — 구멍 = 왼쪽 · 오른쪽, 두더지 = 운석
@@ -387,7 +421,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
     cam.lookAt(camT);
   });
 
-  window.__shieldGame = { el, S, scn, stage, hud, press, actor };   // 자동 점검용
+  window.__shieldGame = { el, S, scn, stage, hud, press, actor, sandbox };   // 자동 점검용
   scn.show('all'); { const c = camGoal(); cam.position.copy(S.mode === 2 ? c.p : introFrom.p); camT.copy(S.mode === 2 ? c.t : introFrom.t); }
   await stage.warm(); if (done) return;   // 두 무대(명령 화면 · 깃발 포함)를 가림막 뒤에서 함께 컴파일
   scn.show(S.mode === 2 ? 'command' : 'catch');

@@ -10,7 +10,7 @@ const CSS = `.sbx{position:absolute;left:50%;top:max(14px,env(safe-area-inset-to
 .sbx-read{padding:7px 14px;border-radius:14px;background:rgba(10,14,40,.66);color:#dfe5ff;font:600 13px/1.5 ui-monospace,"SFMono-Regular",Menlo,monospace;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .sbx-read:empty{display:none}.sbx-read .f{color:#ffd25a}.sbx-read b{color:#8ff7ee}.sbx-read i{font-style:normal;color:#5ff0a0}
 .sbx-tip{font:600 12px "Pretendard Variable",sans-serif;color:rgba(255,255,255,.75);text-shadow:0 1px 2px rgba(0,0,0,.6)}
-body:has(.sbx) .hud-obj{opacity:.0;pointer-events:none}
+body:has(.sbx) .hud-obj,body:has(.sbx) .hud-pause{opacity:0;pointer-events:none}
 @media (max-width:640px){.sbx{width:calc(100% - 96px);left:calc(50% - 30px)}.sbx-bar span{display:none}.sbx-bar{justify-content:space-between;width:100%;box-sizing:border-box}.sbx-read{font-size:11px}.sbx-tip{font-size:11px;text-align:center}}`;
 
 /**

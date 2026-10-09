@@ -17,6 +17,7 @@ import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
 import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
+import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
 
 const PIN = 5, LEAD = 1600, W_PERFECT = 110, W_GOOD = 200, PASS_ACC = 0.85;
@@ -57,7 +58,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
       <div class="bcn-pads" id="bcn-pads" hidden>${[0, 1, 2].map((i) => `<button class="bcn-pad" type="button" data-lane="${i}" style="--c:${LANE_CSS[i]}" aria-label="${['낮은', '중간', '높은'][i]} 음 신호"><i>${i + 1}</i><em>${'DFJ'[i]}</em><b>${['낮은 음', '중간 음', '높은 음'][i]}</b></button>`).join('')}</div></section>`;
   const el = root.querySelector('.bcn'), host = root.querySelector('#bcn-stage'), skipBtn = root.querySelector('#bcn-skip'), padsEl = root.querySelector('#bcn-pads');
 
-  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null, sandbox = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -65,7 +66,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.noTone?.(PIN)?.catch?.(() => {});
     if (window.__beaconGame?.el === el) delete window.__beaconGame;
@@ -119,6 +120,49 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     tail.scale.set(4.2, 1, 1); tail.position.x = 0.32; gN.add(ball, tail); scn.root.add(gN); return { g: gN, ball, tail };
   });
   const playNow = () => (S.pausedAt || performance.now()) - S.t0;
+
+  // 자유 실험: 점수 없이 1·2·3(D·F·J) 으로 부저를 울려 보고 ↑↓ 로 옥타브(주파수 ×2 · ÷2)를 바꾼다. 위성이 청하는 작은별 세 음씩을 보내면 교신이 차오른다
+  const FREE_NOTE = [C4, E4, G4], OCT = ['÷2', '×1', '×2'];
+  const freePhrase = (f) => { f.req = EASY.slice(f.pos, f.pos + 3).map((freq) => ({ freq, lane: laneOf(freq), x: FROM_X + 0.6, fly: 0 })); f.pos = (f.pos + 3) % EASY.length; f.k = 0; };
+  sandbox = createSandbox({ stage, hud, tip: '1·2·3(D·F·J) 이나 아래 단추로 소리를 내요. ↑↓ 는 한 옥타브 위 · 아래. 빛 공 순서대로 울리면 위성이 대답해요',
+    enter: () => {
+      S.fr = { prev: S.phase, pads: padsEl.hidden, play: padsEl.classList.contains('on-play'), oct: 0, hz: 0, at: -9, pos: 0, k: 0, req: [], busy: false, link: 0 };
+      freePhrase(S.fr); S.phase = 'free'; padsEl.hidden = false; padsEl.classList.add('on-play'); scn.setLink(0); bgm.setDuck(0);
+      bot.setExpression('웃음'); actor.look(() => scn.sat.position, 0.6);
+    },
+    frame: (dt) => {
+      const f = S.fr;
+      f.req.forEach((r, j) => {   // 위성이 청한 음 — 신호선 위에 줄 서 있다가, 맞게 울리면 수신 고리로 빨려 든다
+        const n = notes[j]; if (r.fly >= 1) { n.g.visible = false; return; }
+        if (r.fly > 0) r.fly = Math.min(1, r.fly + dt * 5);
+        const slot = r.fly > 0 ? HIT_X : HIT_X + 1.3 + (j - f.k) * 1.15, next = j === f.k && !f.busy;
+        r.x += (slot - r.x) * Math.min(1, dt * (r.fly > 0 ? 14 : 5));
+        n.g.visible = true; n.g.position.set(r.x, WIRE_Y[r.lane], WIRE_Z); n.g.scale.setScalar(next ? 1.15 + Math.sin(S.t * 7) * 0.12 : 0.85);
+        n.ball.material.color.setHex(next ? 0xffffff : LANE_HEX[r.lane]).multiplyScalar(next ? 2.2 : 1.7); n.ball.material.opacity = 1;
+        n.tail.material.color.setHex(LANE_HEX[r.lane]).multiplyScalar(1.5); n.tail.material.opacity = next ? 0.45 : 0.25;
+      });
+      const req = f.req.map((r, j) => `<span style="color:${j < f.k ? '#5a6080' : LANE_CSS[r.lane]}">${r.lane + 1}</span>`).join(' ');
+      const code = !f.hz || S.t - f.at > 0.3 ? `<span class="f">noTone</span>(5)` : `<span class="f">tone</span>(5, <b>${f.hz}</b>)`;
+      return `${code} · 옥타브 <b>${OCT[f.oct + 1]}</b> · 위성 요청 ${req} · <i>교신 ${Math.round(f.link * 100)}%</i>`;
+    },
+    exit: () => {
+      const f = S.fr; S.phase = f.prev; padsEl.hidden = f.pads; padsEl.classList.toggle('on-play', f.play); notes.forEach((n) => { n.g.visible = false; });
+      scn.setLink(S.beats.length ? S.hits / (S.beats.length * PASS_ACC) : 0); bgm.setDuck(1); if (board.connected) board.noTone?.(PIN)?.catch?.(() => {});
+      actor.conduct(null).look(() => scn.sat.position, 0.6); bot.setExpression('기본'); S.fr = null;
+    },
+  });
+  function freeTap(lane) {   // 자유 실험: lane 줄 소리 — 위성이 청한 음이면 그 음 그대로, 아니면 도 · 미 · 솔
+    const f = S.fr; if (S.phase !== 'free' || !f || S.pausedAt) return;
+    const r = f.busy ? null : f.req[f.k], hit = r && r.lane === lane, hz = Math.round((hit ? r.freq : FREE_NOTE[lane]) * 2 ** f.oct);
+    pressPad(lane); tone(hz, 280); scn.pulse(lane); conduct(lane, hit); f.hz = hz; f.at = S.t;
+    if (!hit) return;
+    r.fly = 0.001; f.k++;
+    if (f.k < f.req.length) return;
+    f.busy = true; f.link = Math.min(1, f.link + 0.25); scn.setLink(f.link); later(220, () => sfx.perfect()); juice.kick(0.03);
+    const full = f.link >= 1; lanePop(1, full ? '교신 성공! 🛰️' : '위성 응답! 📡', '#5ff0a0'); bot.setExpression('하트');
+    if (full) { bot.play('환호', { once: true }); actor.hop(3.2); }
+    later(full ? 2200 : 1000, () => { if (S.phase !== 'free' || S.fr !== f) return; if (full) { f.link = 0; scn.setLink(0); } freePhrase(f); f.busy = false; bot.setExpression('웃음'); });
+  }
 
   // ── 인트로 ──
   const INTRO = 5.2;
@@ -210,6 +254,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
+    if (a === 'free') { await sandbox.run(); if (!done) brief(); return; }
     beginPlay();
   }
 
@@ -247,11 +292,17 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
 
   function onKey(e) {
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
+    if (S.phase === 'free') {   // 자유 실험: 줄 키 · ↑↓ 옥타브(Esc 는 sandbox 가 받는다)
+      if (e.repeat) return; const oct = { ArrowUp: 1, ArrowDown: -1 }[e.code];
+      if (oct) { e.preventDefault(); S.fr.oct = Math.max(-1, Math.min(1, S.fr.oct + oct)); sfx.click?.(); return; }
+      const ln = KEYS.findIndex((k) => k.includes(e.code)); if (ln >= 0) { e.preventDefault(); freeTap(ln); }
+      return;
+    }
     if (S.phase !== 'play' || e.repeat) return;
     const lane = KEYS.findIndex((k) => k.includes(e.code)); if (lane >= 0) { e.preventDefault(); press(lane); }
   }
   window.addEventListener('keydown', onKey, true);
-  [...padsEl.children].forEach((b, i) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); press(i); }));
+  [...padsEl.children].forEach((b, i) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); if (S.phase === 'free') freeTap(i); else press(i); }));
 
   async function pause() {
     if (S.pausedAt || ['result', 'land'].includes(S.phase)) return;
@@ -328,7 +379,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     }
   });
 
-  window.__beaconGame = { el, S, scn, stage, hud, press, actor };   // 자동 점검용
+  window.__beaconGame = { el, S, scn, stage, hud, press, freeTap, sandbox, actor };   // 자동 점검용
   if (S.mode === 2) { cam.position.copy(fitCam()); camT.copy(camDef().t); }
   else { cam.position.copy(introFrom.p); camT.copy(introFrom.t); }
   await stage.warm(); if (done) return;

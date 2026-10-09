@@ -18,6 +18,7 @@ import { createBarks } from '../gfx3d/barks.js';
 import { createJuice } from '../gfx3d/juice.js';
 import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
+import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
 
 const NEO = 6, PASS_ACC = 0.85, MAXD = Math.sqrt(3 * 255 * 255);
@@ -79,7 +80,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   const skipBtn = $('#eng-skip'), ctl = $('#eng-ctl'), goBtn = $('#eng-go'), resoEl = $('#eng-reso');
   const sliders = [...root.querySelectorAll('.eng-sl')].map((l) => ({ l, input: l.querySelector('input'), out: l.querySelector('b') }));
 
-  let stopAmb = null, juice = null, explore = null, photo = null;   // 환경음 · 손맛 끄기(cleanup 짝)
+  let stopAmb = null, juice = null, explore = null, photo = null, sandbox = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -87,7 +88,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.neoFill(NEO, 0, 0, 0).catch(() => {});
     window.removeEventListener('eduino:comfort', onComfort);
@@ -149,7 +150,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   function onComfort() { cvdHint(); }   // 함수 선언 — 불러오는 중에 나가도(cleanup) 이름이 살아 있게
   window.addEventListener('eduino:comfort', onComfort);   // 일시정지 창에서 켜고 끄면 바로
   function cvdHint() {
-    const tg = cur()?.c, on = comfort.cvd && tg && ['play', 'count'].includes(S.phase); sliders.forEach((sl, i) => { const d = on ? tg[i] - S.mix[i] : 0; sl.out.dataset.h = on ? (d > 24 ? '▲' : d < -24 ? '▼' : '✓') : ''; });
+    const tg = S.phase === 'free' ? S.fr?.tg?.c : cur()?.c, on = comfort.cvd && tg && ['play', 'count', 'free'].includes(S.phase); sliders.forEach((sl, i) => { const d = on ? tg[i] - S.mix[i] : 0; sl.out.dataset.h = on ? (d > 24 ? '▲' : d < -24 ? '▼' : '✓') : ''; });
   }
   function checkReso() {
     if (S.phase !== 'play' || S.busy || !S.placed) { scn.setResonance(0); resoEl.classList.remove('on'); return; }
@@ -161,11 +162,42 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   const cur = () => TARGETS[S.mode - 1][S.round];
   function select(i) { S.sel = i; sliders.forEach((s, k) => s.l.classList.toggle('sel', k === i)); }
   sliders.forEach((s, i) => {
-    s.input.addEventListener('input', () => { const m = S.mix.slice(); m[i] = +s.input.value; setMix(m, { from: s.input }); if (S.phase === 'play') pointTower(i); });
+    s.input.addEventListener('input', () => { const m = S.mix.slice(); m[i] = +s.input.value; setMix(m, { from: s.input }); if (['play', 'free'].includes(S.phase)) pointTower(i); });
     s.input.addEventListener('pointerdown', () => select(i));
     s.input.addEventListener('focus', () => select(i));
   });
   goBtn.addEventListener('click', () => submit());
+
+  // 자유 실험: 점수 없이 세 빛을 마음껏 섞어 셀 빛을 보고, 견본 구슬 색(섞어야 나오는 색)을 만들면 셀이 공명한다
+  const FREE = [{ c: [250, 225, 30], name: '노랑', hint: '빨강 + 초록' }, { c: [235, 40, 215], name: '자홍', hint: '빨강 + 파랑' }, { c: [40, 210, 250], name: '하늘', hint: '초록 + 파랑' },
+    { c: [255, 255, 255], name: '흰색', hint: '셋 다 가장 밝게' }, { c: [255, 120, 170], name: '분홍', hint: '빨강 가득 + 초록 · 파랑 조금' }, { c: [170, 240, 40], name: '연두', hint: '초록 가득 + 빨강 조금' }];
+  const freePick = (prev) => { let t; do t = FREE[Math.floor(Math.random() * FREE.length)]; while (t === prev); return t; };
+  function freeTarget(t) { Object.assign(S.fr, { tg: t, holdT: 0, tryT: 0 }); scn.setTarget(t.c); $('#eng-tg').style.background = css(t.c); $('#eng-tg').style.setProperty('--g', css(t.c)); cvdHint(); }
+  sandbox = createSandbox({ stage, hud, tip: '슬라이더를 끌거나 1·2·3 으로 빛 고르고 ←→ · 견본 구슬과 같은 색을 만들면 셀이 공명해요',
+    enter: () => {
+      const tg = $('#eng-tg');
+      S.fr = { prev: S.phase, ctl: ctl.hidden, go: goBtn.disabled, tg0: [tg.style.background, tg.style.getPropertyValue('--g')], tg: null, holdT: 0, tryT: 0, busy: false, made: 0 };
+      S.phase = 'free'; ctl.hidden = false; goBtn.disabled = true; select(0); freeTarget(freePick(null)); scn.nextCell(0);
+      actor.drop(); actor.pose(null).point(null); bot.object.position.copy(SP.home); bot.play('대기'); bot.setExpression('웃음'); actor.face(watchDir).look(() => scn.cellTop(), 0.8);
+    },
+    frame: (dt) => {
+      const f = S.fr, acc = accOf(f.tg.c, S.mix), near = acc >= 0.9; f.tryT += dt;
+      if (!f.busy) {
+        f.holdT = near ? f.holdT + dt : Math.max(0, f.holdT - dt * 2);
+        if (f.holdT >= 0.7) {
+          f.busy = true; f.made++; sfx.perfect(); juice.flash(css(f.tg.c)); juice.kick(0.03); bot.setExpression('하트'); actor.hop(2.6);
+          const p = toScreen(scn.cellTop()); hud.pop(`${f.tg.name} 완성! ✨`, f.tg.c[0] + f.tg.c[1] + f.tg.c[2] > 600 ? '#ffd25a' : css(f.tg.c), p.x, p.y);
+          later(1600, () => { if (S.phase !== 'free') return; f.busy = false; bot.setExpression('웃음'); freeTarget(freePick(f.tg)); sfx.holo?.(); });
+        }
+      }
+      scn.setResonance(f.busy ? 1 : near ? 0.5 + Math.min(1, f.holdT / 0.7) * 0.5 : Math.max(0, (acc - 0.75) / 0.15) * 0.4); resoEl.classList.toggle('on', near || f.busy);
+      return `<span class="f">led.setPixelColor</span>(0, <b>${S.mix[0]}</b>, <b>${S.mix[1]}</b>, <b>${S.mix[2]}</b>) · 목표 <b>${f.tg.name}</b> · 닮음 <i>${Math.round(acc * 100)}%</i>${f.tryT > 8 && !f.busy ? ` · 힌트 <i>${f.tg.hint}</i>` : ''}${f.made ? ` · 만든 색 <b>${f.made}</b>` : ''}`;
+    },
+    exit: () => {
+      const f = S.fr, tg = $('#eng-tg'); S.phase = f.prev; ctl.hidden = f.ctl; goBtn.disabled = f.go; tg.style.background = f.tg0[0]; tg.style.setProperty('--g', f.tg0[1]); S.fr = null;
+      clearTimeout(pointT); scn.setResonance(0); resoEl.classList.remove('on'); actor.point(null).pose(null).face(null).look(null); bot.setExpression('기본'); cvdHint();
+    },
+  });
 
   // ── 인트로 ──
   const INTRO = 5.4;
@@ -257,6 +289,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
+    if (a === 'free') { await sandbox.run(); if (!done) brief(); return; }
     beginPlay();
   }
 
@@ -315,7 +348,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
 
   function onKey(e) {
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
-    if (S.phase !== 'play' || S.pausedAt || ctl.hidden) return;
+    if (!['play', 'free'].includes(S.phase) || S.pausedAt || ctl.hidden) return;
     const n = ['Digit1', 'Digit2', 'Digit3', 'Numpad1', 'Numpad2', 'Numpad3'].indexOf(e.code);
     if (n >= 0) { e.preventDefault(); select(n % 3); sfx.click?.(); return; }
     if (e.code === 'Space' || e.code === 'Enter') { if (!e.repeat) { e.preventDefault(); submit(); } return; }
@@ -328,6 +361,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   window.addEventListener('keydown', onKey, true);
 
   async function pause() {
+    if (S.phase === 'free') { sandbox.end(); return; }   // 자유 실험 중 일시정지 단추 = 끝내기
     if (S.pausedAt || ['result', 'land'].includes(S.phase)) return;
     S.pausedAt = performance.now(); bgm.setDuck(1);
     const a = await hud.window(`<div class="hud-eye">일시정지</div><h2>잠깐 쉬어요</h2><p>셀은 그대로 기다리고 있어요. 시간 제한은 없어요.</p>
