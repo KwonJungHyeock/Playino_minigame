@@ -60,3 +60,52 @@ export function createParticles({ max = 96, additive = false, tier = 'mid' } = {
     setScale(px) { mat.uniforms.uScale.value = px * 0.5; },
   };
 }
+
+/**
+ * 색종이(폴가이즈 결승선처럼 팔랑이며 떨어지는 납작한 종이 조각). 인스턴스 메시 하나 = 그리기 1회.
+ * burst(n, at, { colors, up, spread }) 로 뿌린다. 떨어질 땐 빙글 돌며 좌우로 흔들리고, 끝에서 작아지며 사라진다.
+ * @returns {{mesh:THREE.InstancedMesh, burst:Function, update:Function, clear:Function, dispose:Function}}
+ */
+export function createConfetti({ max = 160, tier = 'mid' } = {}) {
+  const n = tier === 'low' ? Math.max(16, max >> 1) : max;
+  const geo = new THREE.PlaneGeometry(0.12, 0.07), mat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+  const mesh = new THREE.InstancedMesh(geo, mat, n); mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mesh.frustumCulled = false; mesh.userData.noAO = true; mesh.renderOrder = 4;
+  const pos = new Float32Array(n * 3), vel = new Float32Array(n * 3), rot = new Float32Array(n * 3), spin = new Float32Array(n * 3), age = new Float32Array(n).fill(1), life = new Float32Array(n), seed = new Float32Array(n);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s = new THREE.Vector3(), c = new THREE.Color();
+  const zero = new THREE.Matrix4().makeScale(0, 0, 0);
+  for (let i = 0; i < n; i++) { mesh.setMatrixAt(i, zero); mesh.setColorAt(i, c.setHex(0xffffff)); }
+  let head = 0;
+  function burst(count, at, { colors = [0xff6fb5, 0x8f72ff, 0x4fc8ff, 0xffd84a, 0x7ee86a], up = 6, spread = 3, life: L = 2.2 } = {}) {
+    const k = Math.max(1, Math.round(count * (tier === 'low' ? 0.5 : 1)));
+    for (let j = 0; j < k; j++) {
+      const i = head; head = (head + 1) % n; const a = Math.random() * Math.PI * 2, r = Math.random();
+      pos[i * 3] = at.x; pos[i * 3 + 1] = at.y; pos[i * 3 + 2] = at.z;
+      vel[i * 3] = Math.cos(a) * spread * r; vel[i * 3 + 1] = up * (0.6 + Math.random() * 0.6); vel[i * 3 + 2] = Math.sin(a) * spread * r;
+      for (let d = 0; d < 3; d++) { rot[i * 3 + d] = Math.random() * 6.3; spin[i * 3 + d] = (Math.random() - 0.5) * 16; }
+      age[i] = 0; life[i] = L * (0.7 + Math.random() * 0.5); seed[i] = Math.random() * 6.3;
+      mesh.setColorAt(i, c.setHex(colors[j % colors.length]));
+    }
+    mesh.instanceColor.needsUpdate = true;
+  }
+  function update(dt) {
+    for (let i = 0; i < n; i++) {
+      if (age[i] >= 1) continue;
+      age[i] = Math.min(1, age[i] + dt / life[i]);
+      const k = Math.exp(-2.4 * dt);
+      vel[i * 3] *= k; vel[i * 3 + 2] *= k; vel[i * 3 + 1] = Math.max(-1.5, vel[i * 3 + 1] - 9 * dt);   // 종이라 천천히 떨어진다
+      const sway = Math.sin(age[i] * life[i] * 7 + seed[i]) * 0.9 * dt;
+      pos[i * 3] += vel[i * 3] * dt + sway; pos[i * 3 + 1] += vel[i * 3 + 1] * dt; pos[i * 3 + 2] += vel[i * 3 + 2] * dt + sway * 0.6;
+      for (let d = 0; d < 3; d++) rot[i * 3 + d] += spin[i * 3 + d] * dt;
+      const u = age[i], sc = u >= 1 ? 0 : u > 0.8 ? (1 - u) / 0.2 : 1;
+      m4.compose(v.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]), q.setFromEuler(e.set(rot[i * 3], rot[i * 3 + 1], rot[i * 3 + 2])), s.setScalar(sc));
+      mesh.setMatrixAt(i, m4);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+  return {
+    mesh, burst, update,
+    clear() { age.fill(1); for (let i = 0; i < n; i++) mesh.setMatrixAt(i, zero); mesh.instanceMatrix.needsUpdate = true; },
+    dispose() { mesh.removeFromParent(); mesh.dispose(); geo.dispose(); mat.dispose(); },
+  };
+}

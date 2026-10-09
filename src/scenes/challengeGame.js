@@ -1,6 +1,7 @@
 // challengeGame.js — v4 도전 챌린지 '운석 폭풍 런'. 센서 없이 바이저봇을 직접 조작하는 폴가이즈식 장애물 달리기.
 // 조작: 이동(WASD · 방향키 · 왼쪽 조이스틱) · 점프(스페이스 · 점프 단추) · 다이브(Shift · K · 다이브 단추: 공중에서 앞으로 몸 날리기).
 // 손맛: 코요테 타임(발판 끝을 막 벗어나도 0.12초 동안 점프됨) · 점프 미리 누르기(착지 0.14초 전 입력도 받음) · 착지 스쿼시 · 넉백 경직.
+// 통통한 몸짓: 달리면 콩콩 튀고 뒤뚱 · 점프는 늘어나고 착지는 젤리처럼 출렁 · 부딪히면 데굴 구르고 털썩 · 다이브는 배 미끄럼 · 서 있으면 숨쉬듯 말랑.
 // 떨어지면 마지막 체크포인트에서 다시. 끝까지 가면 보너스 부품 '부스터 날개'(app/bonus.js) — 마지막 탈출(발사 쇼)에서 실수 1번을 막아 준다.
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
@@ -53,7 +54,7 @@ export async function showChallengeGame(root, { onExit } = {}) {
   const el = root.querySelector('.chl'), host = root.querySelector('#chl-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#chl-skip'), clockEl = $('#chl-clock'), padEl = $('#chl-pad'), hintEl = $('#chl-hint'), fadeEl = $('#chl-fade');
 
-  let stage = null, crs = null, hud = null, offTick = null, done = false, dust = null, sparks = null;
+  let stage = null, crs = null, hud = null, offTick = null, done = false, dust = null, sparks = null, confetti = null;
   const timers = new Set(), listeners = [];
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
   const wait = (ms) => new Promise((r) => later(ms, r));
@@ -61,13 +62,13 @@ export async function showChallengeGame(root, { onExit } = {}) {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); listeners.forEach((f) => f()); bgm.setDuck(1);
-    offTick?.(); hud?.dispose(); crs?.dispose(); stage?.dispose();
+    offTick?.(); hud?.dispose(); confetti?.dispose(); crs?.dispose(); stage?.dispose();
     if (window.__challenge?.el === el) delete window.__challenge;
   }
   const exit = () => { cleanup(); onExit?.(); };
 
   stage = g.createStage(host, { fov: 50, far: 260, hold: true, coverText: '시험 트랙을 켜는 중…' });
-  const [{ createCourse, KILL_Y, START }, { addPost }, { createHud }, { createParticles }, { fontsReady }] = await Promise.all([
+  const [{ createCourse, KILL_Y, START }, { addPost }, { createHud }, { createParticles, createConfetti }, { fontsReady }] = await Promise.all([
     import('../gfx3d/scenes/course.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/fx.js'), import('../gfx3d/type.js')]);
   if (done) return;
   await fontsReady(); if (done) return;
@@ -76,14 +77,24 @@ export async function showChallengeGame(root, { onExit } = {}) {
   addPost(stage, { bloom: 0.42, bloomRadius: 0.7, threshold: 1.05, ao: false });   // 넓은 하늘 코스라 AO 대신 프레임을 아낀다
   hud = createHud(el, { mission: { icon: '⚡', eyebrow: 'CHALLENGE · 자유 도전', title: '운석 폭풍 런' }, onPause: () => pause() });
   dust = createParticles({ max: 64, tier: stage.tier }); sparks = createParticles({ max: 120, additive: true, tier: stage.tier });
-  crs.root.add(dust.points, sparks.points);
-  const THREE = stage.THREE, cam = stage.camera, bot = crs.bot, body = bot.object;
-  body.rotation.order = 'YXZ';
+  confetti = createConfetti({ max: 180, tier: stage.tier });
+  crs.root.add(dust.points, sparks.points, confetti.mesh);
+  const THREE = stage.THREE, cam = stage.camera, bot = crs.bot;
+  // 몸(body: 물리 위치 · 바라보는 방향) → 말랑 마디(jig: 콩콩 · 찌그러짐 · 구르기 · 배 미끄럼) → 바이저봇 모델.
+  // 물리는 body 만 움직이고 보이는 손맛은 jig 에서만 낸다 — 몸짓을 아무리 키워도 판정은 그대로다.
+  const vis = bot.object, body = new THREE.Group(), jig = new THREE.Group();
+  const size = new THREE.Box3().setFromObject(vis).getSize(new THREE.Vector3());
+  const HC = Number.isFinite(size.y) && size.y > 0.3 && size.y < 3 ? size.y * 0.45 : 0.5;   // 몸 가운데 높이(구르기 중심)
+  const LIE = HC * 0.52;   // 엎드렸을 때 가운데 높이(배가 바닥에 닿게 — 망토 · 등짐 두께는 빼고)
+  body.position.copy(vis.position); vis.position.set(0, -HC, 0); vis.rotation.set(0, 0, 0);
+  vis.parent.add(body); body.add(jig); jig.add(vis); jig.position.y = HC;
+  const qTum = new THREE.Quaternion(), eJig = new THREE.Euler(0, 0, 0, 'YXZ'), axTum = new THREE.Vector3();
 
   // ── 상태 ──
   const S = {
     phase: 'intro', t: 0, run: 0, cp: 0, falls: 0,
-    vel: new THREE.Vector3(), onGround: null, coyote: 0, buffer: 0, dived: false, stun: 0, sq: 0, sqV: 0, pitch: 0, roll: 0, lastSp: 0, respawning: false, finished: false, best: bonus.get('booster')?.best || null,
+    vel: new THREE.Vector3(), onGround: null, coyote: 0, buffer: 0, dived: false, stun: 0, sq: 0, sqV: 0, pitch: 0, roll: 0, lastSp: 0,
+    slide: 0, step: 0, stepN: 0, tum: 0, tumDur: 1, tumAng: 0, falling: false, groundY: 0, pop: 1, respawning: false, finished: false, best: bonus.get('booster')?.best || null,
   };
   const keys = new Set(), joy = { x: 0, y: 0, on: false };
   const KEYMAP = { ArrowUp: [0, -1], KeyW: [0, -1], ArrowDown: [0, 1], KeyS: [0, 1], ArrowLeft: [-1, 0], KeyA: [-1, 0], ArrowRight: [1, 0], KeyD: [1, 0] };
@@ -93,7 +104,7 @@ export async function showChallengeGame(root, { onExit } = {}) {
   function divePress() {
     if (!canMove() || S.onGround || S.dived || S.stun > 0) return;
     const yaw = body.rotation.y; S.vel.x = Math.sin(yaw) * DIVE_H; S.vel.z = Math.cos(yaw) * DIVE_H; S.vel.y = Math.max(S.vel.y, DIVE_V);
-    S.dived = true; sfx.pop(); burst(sparks, 10, body.position, 0x8ff7ee, 1.8);
+    S.dived = true; S.sq = -0.25; sfx.pop(); sfx.whee(); burst(sparks, 10, body.position, 0x8ff7ee, 1.8);
   }
 
   on(window, 'keydown', (e) => {
@@ -137,21 +148,23 @@ export async function showChallengeGame(root, { onExit } = {}) {
 
   // ── 물리 한 걸음 ──
   function physics(dt) {
-    const p = body.position, d = inputDir(), ctrl = S.stun > 0 ? 0.15 : 1;
-    S.stun = Math.max(0, S.stun - dt); S.coyote = Math.max(0, S.coyote - dt); S.buffer = Math.max(0, S.buffer - dt);
+    const p = body.position, d = inputDir(), ctrl = S.stun > 0 || S.slide > 0 ? 0.15 : 1;
+    S.stun = Math.max(0, S.stun - dt); if (S.slide > 0 && (S.slide -= dt) <= 0) { S.slide = 0; S.sq = -0.28; sfx.boing(1.3); }   // 배 미끄럼 끝 → 퐁 일어남 S.coyote = Math.max(0, S.coyote - dt); S.buffer = Math.max(0, S.buffer - dt);
     // 수평: 땅에선 빠르게 붙고 손을 떼면 미끄러지듯 선다, 공중에선 조금만 꺾인다. 다이브 중엔 조종이 거의 안 된다
-    const ground = !!S.onGround, acc = (ground ? ACC_G : ACC_A) * ctrl * (S.dived ? 0.25 : 1);
+    S.launch = Math.max(0, (S.launch || 0) - dt);
+    const ground = !!S.onGround, acc = (ground ? ACC_G : ACC_A) * ctrl * (S.dived ? 0.25 : 1) * (S.launch > 0 ? 0.12 : 1);   // 점프대로 날아가는 동안은 거의 그대로 날아간다
     if (d.lengthSq() > 0) {
       const tx = d.x * RUN, tz = d.z * RUN, dx = tx - S.vel.x, dz = tz - S.vel.z, L = Math.hypot(dx, dz), stp = Math.min(L, acc * dt);
       if (L > 1e-4) { S.vel.x += (dx / L) * stp; S.vel.z += (dz / L) * stp; }
       hintEl.classList.remove('on');
-    } else if (ground && S.stun <= 0) {
-      const sp = Math.hypot(S.vel.x, S.vel.z), ns = Math.max(0, sp - FRICTION * dt); if (sp > 1e-4) { S.vel.x *= ns / sp; S.vel.z *= ns / sp; }
+    }
+    if (ground && (S.slide > 0 || (d.lengthSq() === 0 && S.stun <= 0))) {   // 손을 떼면 멈춤 · 배 미끄럼은 덜 미끄럽게 쭉
+      const sp = Math.hypot(S.vel.x, S.vel.z), ns = Math.max(0, sp - (S.slide > 0 ? 9 : FRICTION) * dt); if (sp > 1e-4) { S.vel.x *= ns / sp; S.vel.z *= ns / sp; }
     }
     // 점프(코요테 + 미리 누르기)
-    if (S.buffer > 0 && (ground || S.coyote > 0) && S.stun <= 0) {
+    if (S.buffer > 0 && (ground || S.coyote > 0) && S.stun <= 0 && S.slide <= 0) {
       S.vel.y = JUMP; S.buffer = 0; S.coyote = 0; S.onGround = null;
-      bot.play('점프', { once: true, fade: 0.06 }); S.sq = -0.22; sfx.click(); puff(5, p);
+      bot.play('점프', { once: true, fade: 0.06 }); S.sq = -0.34; S.sqV = -2; sfx.boing(0.95 + Math.random() * 0.15); puff(5, p);
     }
     S.vel.y -= GRAV * dt;
     const prevY = p.y;
@@ -161,10 +174,18 @@ export async function showChallengeGame(root, { onExit } = {}) {
     const sup = S.vel.y <= 0 ? crs.ground(p, prevY) : null;
     if (sup) {
       if (sup.c.bounce) {   // 점프대
-        p.y = sup.top; S.vel.y = sup.c.bounce; S.onGround = null; S.dived = false; S.sq = -0.35; sfx.start(); burst(sparks, 18, p, 0x5ff0a0, 3); bot.play('점프', { once: true, fade: 0.06 });
+        p.y = sup.top; S.vel.y = sup.c.bounce; S.onGround = null; if (sup.c.launch) { S.vel.z = sup.c.launch; S.vel.x = (sup.c.pos.x - p.x) * 1.2; S.launch = 1.1; } S.dived = false; S.slide = 0; S.sq = -0.5; sfx.bigBoing(); burst(sparks, 18, p, 0x5ff0a0, 3); confetti.burst(24, p, { up: 5, spread: 2.4 }); bot.play('점프', { once: true, fade: 0.06 });
+        tumble(axTum.set(1, 0, 0), Math.PI * 2, 1.1);   // 점프대: 앞으로 한 바퀴 공중제비
       } else {
-        if (!S.onGround) { const hard = -S.vel.y; if (hard > 6) { S.sq = Math.min(0.3, hard * 0.025); puff(hard > 12 ? 8 : 4, p); } if (S.dived) { S.stun = 0.28; S.vel.x *= 0.5; S.vel.z *= 0.5; } S.dived = false; }
-        p.y = sup.top; S.vel.y = 0; S.onGround = sup.c; S.coyote = COYOTE;
+        S.launch = 0;
+        if (!S.onGround) {   // 착지: 세게 떨어질수록 납작하게 — 스프링이 젤리처럼 출렁여 되돌린다
+          const hard = -S.vel.y;
+          if (hard > 3.5) { S.sq = Math.min(0.42, hard * 0.032); S.sqV = 0; puff(hard > 12 ? 8 : 4, p); sfx.plop(); }
+          if (S.dived) { S.slide = 0.36; S.vel.x *= 0.85; S.vel.z *= 0.85; puff(6, p); }   // 다이브 → 배로 쭉 미끄러짐
+          else if (S.stun > 0.05) { S.sq = 0.42; S.sqV = 0; bot.setExpression('졸림'); later(500, () => bot.setExpression('기본')); }   // 넘어진 뒤 털썩
+          S.dived = false; S.falling = false;
+        }
+        p.y = sup.top; S.vel.y = 0; S.onGround = sup.c; S.coyote = COYOTE; S.groundY = p.y;
         crs.carry(sup.c, p, dt);
       }
     } else if (S.onGround && S.vel.y <= 0) {
@@ -175,34 +196,58 @@ export async function showChallengeGame(root, { onExit } = {}) {
     // 장애물
     const h = S.stun <= 0.1 ? crs.hits(p, R) : null;
     if (h) {
-      S.vel.set(h.vx, h.vy, h.vz); p.x += h.push[0]; p.z += h.push[1]; S.stun = 0.55; S.onGround = null; S.dived = false;
-      bot.setExpression('놀람'); later(700, () => bot.setExpression('기본')); sfx.no(); burst(sparks, 12, p, 0xffd25a, 3); S.shake = 1;
+      S.vel.set(h.vx, h.vy, h.vz); p.x += h.push[0]; p.z += h.push[1]; S.stun = h.bumper ? 0.3 : 0.55; S.onGround = null; S.dived = false; S.slide = 0;
+      bot.setExpression('놀람'); later(700, () => bot.setExpression('기본')); sfx.bump(); burst(sparks, 12, p, 0xffd25a, 3); S.shake = h.bumper ? 0.6 : 1;
+      // 밀린 쪽으로 데굴: 회전축 = 위 × 밀린 방향(몸 기준으로 바꿔서). 범퍼는 짧게 한 바퀴, 망치 · 막대는 길게
+      const L = Math.hypot(h.vx, h.vz) || 1, ry = -body.rotation.y, ax = h.vz / L, az = -h.vx / L;
+      tumble(axTum.set(ax * Math.cos(ry) + az * Math.sin(ry), 0, -ax * Math.sin(ry) + az * Math.cos(ry)), Math.PI * 2, h.bumper ? 0.55 : 0.8);
+      if (h.bumper) { S.sq = 0.35; S.sqV = 0; sfx.boing(0.8); }
     }
     // 방향 · 기울기 · 걷기
     const sp = Math.hypot(S.vel.x, S.vel.z);
     if (sp > 0.4 && S.stun <= 0) { const yaw = Math.atan2(S.vel.x, S.vel.z); let dy = yaw - body.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); body.rotation.y += dy * Math.min(1, dt * 14); S.roll += (-dy * 0.35 - S.roll) * Math.min(1, dt * 8); }
     else S.roll += (0 - S.roll) * Math.min(1, dt * 8);
-    const pitchT = S.dived ? 1.15 : S.stun > 0 ? -0.35 : ground ? Math.min(0.12, (sp - S.lastSp) / Math.max(dt, 1e-3) * 0.01) : -0.06;
-    S.pitch += (pitchT - S.pitch) * Math.min(1, dt * (S.dived ? 14 : 8));
-    body.rotation.x = S.pitch; body.rotation.z = S.stun > 0 ? Math.sin(S.t * 30) * 0.2 * S.stun : S.roll;
-    if (ground) bot.locomote(Math.min(1, sp / 2.4), Math.max(0.6, Math.min(1.45, sp / RUN * 1.35)));
+    const run = ground && S.slide <= 0 && S.stun <= 0 ? Math.min(1, sp / RUN) : 0;
+    const pitchT = S.slide > 0 ? 1.5 : S.dived ? 1.25 : S.stun > 0 ? -0.2 : ground ? 0.1 * run + Math.min(0.12, (sp - S.lastSp) / Math.max(dt, 1e-3) * 0.01) : -0.06;
+    S.pitch += (pitchT - S.pitch) * Math.min(1, dt * (S.dived || S.slide > 0 ? 14 : 8));
+    if (ground && S.slide <= 0) bot.locomote(Math.min(1, sp / 2.4), Math.max(0.6, Math.min(1.45, sp / RUN * 1.35)));
     S.lastSp = sp;
-    // 스쿼시(스프링)
-    S.sqV += (-S.sq * 220 - S.sqV * 18) * dt; S.sq += S.sqV * dt;
-    body.scale.set(1 + S.sq * 0.6, 1 - S.sq, 1 + S.sq * 0.6);
+    // 낙하: 발판에서 한참 떨어지면 '우와아' + 허우적
+    if (!ground && !S.falling && S.vel.y < -4 && p.y < S.groundY - 2.4) { S.falling = true; sfx.whee(); bot.setExpression('놀람'); }
+    // 콩콩 달리기: 걸음마다 살짝 튀고(bob) 좌우로 뒤뚱(waddle), 발 닿을 때 살짝 납작
+    if (run > 0.05) { S.step += dt * (4 + sp * 1.5); const n = Math.floor(S.step / Math.PI); if (n !== S.stepN) { S.stepN = n; if (sp > 2.2) { sfx.pip(); if (n % 2) puff(1, p); } } }
+    else S.step = Math.round(S.step / Math.PI) * Math.PI;
+    const st = Math.abs(Math.sin(S.step)), bob = st * 0.12 * run, waddle = Math.sin(S.step) * 0.11 * run, stepSq = (1 - st) ** 3 * 0.07 * run;
+    const breathe = ground && sp < 0.3 && S.stun <= 0 ? Math.sin(S.t * 3.4) * 0.03 : 0;      // 가만히 서 있으면 숨 쉬듯 말랑
+    const airSq = ground ? 0 : -Math.min(0.14, Math.abs(S.vel.y) * 0.011);                   // 공중에선 위아래로 쭉
+    // 젤리 스프링(덜 감쇠 → 착지 뒤 두세 번 출렁)
+    S.sqV += (-S.sq * 260 - S.sqV * 11) * dt; S.sq += S.sqV * dt;
+    S.pop += (1 - S.pop) * Math.min(1, dt * 9);
+    const q = S.sq + stepSq + airSq - breathe, sy = (1 - q) * S.pop, sxz = (1 + q * 0.6) * S.pop;
+    jig.scale.set(sxz, sy, sxz);
+    // 기울기 · 구르기 · 엎드림(배 미끄럼은 가운데를 낮춰 배가 바닥에 닿게)
+    const flail = S.falling ? Math.sin(S.t * 19) * 0.3 : S.stun > 0 ? Math.sin(S.t * 30) * 0.25 * S.stun : 0;
+    eJig.set(S.pitch, 0, S.roll + waddle + flail); jig.quaternion.setFromEuler(eJig);
+    if (S.tum > 0) { S.tum = Math.min(1, S.tum + dt / S.tumDur); const u = 1 - (1 - S.tum) ** 3; jig.quaternion.premultiply(qTum.setFromAxisAngle(axTum, S.tumAng * u)); if (S.tum >= 1) S.tum = 0; }
+    const lie = Math.max(0, Math.min(1, S.pitch / 1.5));
+    jig.position.y = (HC * sy) * (1 - lie) + LIE * S.pop * lie + bob;
     // 체크포인트 · 골 · 낙하
     const cpNow = crs.passed(p.z);
-    if (cpNow > S.cp && S.onGround) { S.cp = cpNow; const cp = crs.checkpoints[cpNow]; if (cp.gate) { cp.gate.userData.barMat.emissive.setHex(0x5ff0a0); cp.gate.userData.barMat.emissiveIntensity = 2.6; } sfx.ok(); hud.toast(`${cp.name}!`, 'ok'); burst(sparks, 22, p, 0x5ff0a0, 3.2); updateClock(true); }
+    if (cpNow > S.cp && S.onGround) { S.cp = cpNow; const cp = crs.checkpoints[cpNow]; if (cp.gate) { cp.gate.userData.barMat.emissive.setHex(0x5ff0a0); cp.gate.userData.barMat.emissiveIntensity = 2.6; for (const sx of [-2.6, 2.6]) confetti.burst(36, tmp.copy(cp.gate.position).add(new THREE.Vector3(sx, 5.4, 0)), { up: 4, spread: 2.2 }); } sfx.fanfare(); hud.toast(`${cp.name}!`, 'ok'); burst(sparks, 22, p, 0x5ff0a0, 3.2); updateClock(true); }
     if (!S.finished && p.z < crs.GOAL_Z && S.onGround && p.y > crs.goalY - 0.1) finish();
     if (p.y < KILL_Y) respawn(true);
   }
 
+  /** 몸만 빙글(보이는 것만 — 판정은 그대로). axis 는 몸 기준 */
+  function tumble(axis, ang, dur) { if (axis !== axTum) axTum.copy(axis); axTum.normalize(); S.tum = 1e-4; S.tumAng = ang; S.tumDur = dur; }
+
   async function respawn(fell) {
     if (S.respawning) return; S.respawning = true;
-    if (fell) { S.falls++; sfx.no(); }
+    if (fell) S.falls++;
     fadeEl.classList.add('on'); await wait(240); if (done) return;
     const cp = crs.checkpoints[S.cp];
-    body.position.copy(cp.at); S.vel.set(0, 0, 0); S.onGround = null; S.dived = false; S.stun = 0; body.rotation.set(0, Math.PI, 0); body.scale.setScalar(1);
+    body.position.copy(cp.at); S.vel.set(0, 0, 0); S.onGround = null; S.dived = false; S.stun = 0; S.slide = 0; S.tum = 0; S.falling = false; S.groundY = cp.at.y; body.rotation.set(0, Math.PI, 0);
+    S.pop = 0.25; S.sq = -0.4; S.sqV = 0; S.pitch = 0; bot.setExpression('기본'); sfx.pop();   // 퐁! 하고 다시 나타남
     if (S.cp >= 2) crs.resetHexes();
     camSnap = true; updateClock(true);
     await wait(120); if (done) return;
@@ -262,7 +307,7 @@ export async function showChallengeGame(root, { onExit } = {}) {
   }
   on(skipBtn, 'click', start);
   async function go() {
-    Object.assign(S, { phase: 'count', run: 0, cp: 0, falls: 0, finished: false, dived: false, stun: 0, goalCut: false });
+    Object.assign(S, { phase: 'count', run: 0, cp: 0, falls: 0, finished: false, dived: false, stun: 0, slide: 0, tum: 0, falling: false, groundY: START.y, goalCut: false });
     S.vel.set(0, 0, 0); body.position.copy(START); body.rotation.set(0, Math.PI, 0); crs.resetHexes(); camSnap = true;
     crs.checkpoints.forEach((cp) => { if (cp.gate) { cp.gate.userData.barMat.emissive.setHex(0x8ff7ee); cp.gate.userData.barMat.emissiveIntensity = 0.6; } });
     hud.hideGoal(); clockEl.classList.add('on'); padEl.classList.add('on'); hintEl.classList.add('on'); updateClock(true);
@@ -288,8 +333,8 @@ export async function showChallengeGame(root, { onExit } = {}) {
   async function finish() {
     S.finished = true; S.phase = 'goal'; keys.clear(); padEl.classList.remove('on');
     const time = S.run, r = bonus.record('booster', { time, falls: S.falls }), grade = (GRADE.find(([, s]) => time <= s) || ['C'])[0];
-    bot.play('환호', { once: true }); bot.setExpression('웃음'); sfx.perfect(); S.vel.set(0, 0, 0); clockEl.classList.remove('on');
-    for (let i = 0; i < 4; i++) later(i * 220, () => burst(sparks, 26, body.position, [0xffd25a, 0x8ff7ee, 0xff8a7a, 0x5ff0a0][i], 4.5));
+    bot.play('환호', { once: true }); bot.setExpression('웃음'); sfx.fanfare(); later(450, () => sfx.perfect()); S.vel.set(0, 0, 0); clockEl.classList.remove('on'); S.sq = -0.45;
+    for (let i = 0; i < 4; i++) later(i * 220, () => { burst(sparks, 26, body.position, [0xffd25a, 0x8ff7ee, 0xff8a7a, 0x5ff0a0][i], 4.5); confetti.burst(50, tmp.copy(body.position).setY(body.position.y + 3.2), { up: 3, spread: 3.4, life: 2.8 }); });
     await hud.banner('도전 성공!', 'GOAL', { ms: 1900 }); if (done) return;
     if (r.first) {
       // 보너스 부품이 바이저봇에게 날아와 붙는다
@@ -326,14 +371,14 @@ export async function showChallengeGame(root, { onExit } = {}) {
     // 보너스 부품: 처음 깨면 바이저봇에게 날아와 등에 붙는다(사라짐)
     const B = crs.booster; if (B.userData.fly) { B.userData.fly = Math.min(1, B.userData.fly + dt * 0.9); const k = B.userData.fly, e = k * k; B.position.lerp(tmp.copy(body.position).setY(body.position.y + 0.8), e * 0.25); B.scale.setScalar(1 - e * 0.85); if (k >= 1) { B.visible = false; B.userData.fly = 0; burst(sparks, 30, body.position, 0xffd25a, 3.5); } }
     stage.renderer.getDrawingBufferSize(bufSize); dust.setScale(bufSize.y); sparks.setScale(bufSize.y);
-    dust.update(dt); sparks.update(dt);
+    dust.update(dt); sparks.update(dt); confetti.update(dt);
   }
   // S.manual 이면 실시간 루프는 쉬고 점검 스크립트가 frame(dt) 로 한 걸음씩 돌린다(그리기 없이 판정만)
   offTick = stage.onTick((dt) => { if (!el.isConnected) { cleanup(); return; } if (!S.manual) frame(dt); });
   const bufSize = new THREE.Vector2();
   if (bonus.has('booster')) crs.booster.visible = false;   // 이미 받았으면 골 섬엔 빈 받침만
 
-  window.__challenge = { el, S, crs, stage, hud, jumpPress, divePress, keys, start, respawn, frame, body };   // 자동 점검용
+  window.__challenge = { el, S, crs, stage, hud, jumpPress, divePress, keys, start, respawn, frame, body, jig, confetti, tumble };   // 자동 점검용
   cam.position.copy(introPath[0]); cam.lookAt(introLook[0]);
   await stage.warm(); if (done) return;
   stage.reveal();

@@ -50,4 +50,12 @@ export const sfx = {
   launch() { sweep(260, 1400, 320, 'triangle', 0.12); setTimeout(() => blip(1760, 120, 'sine', 0.07), 240); },
   deny() { blip(392, 90, 'triangle', 0.09); setTimeout(() => blip(330, 140, 'triangle', 0.08), 100); },
   land() { blip(140, 70, 'sine', 0.06); },
+  // v4 도전 챌린지 — 말랑한 장난감 소리(폴가이즈 느낌)
+  boing(k = 1) { sweep(220 * k, 640 * k, 170, 'sine', 0.11); setTimeout(() => sweep(640 * k, 520 * k, 90, 'sine', 0.05), 150); },
+  bigBoing() { sweep(160, 900, 300, 'triangle', 0.13); setTimeout(() => sweep(900, 700, 160, 'sine', 0.06), 280); },
+  bump() { sweep(380, 140, 140, 'triangle', 0.12); blip(90, 120, 'sine', 0.1); },
+  plop() { sweep(260, 120, 110, 'sine', 0.09); },
+  whee() { sweep(900, 180, 900, 'sine', 0.07); },
+  pip() { blip(1200 + Math.random() * 500, 40, 'sine', 0.04); },
+  fanfare() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, i === 3 ? 260 : 110, 'triangle', 0.13), i * 105)); },
 };
