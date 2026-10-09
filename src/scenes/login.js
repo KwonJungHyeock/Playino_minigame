@@ -1,6 +1,7 @@
 // login.js — 플레이어 입장(접속 코드). 구매 시 이메일로 받은 6자리 코드를 입력해 입장.
 // 데모: 아무 코드나(또는 빈칸) 입장 가능. 메인과 동일 완성도(배지·사운드·말풍선·인터랙션).
 import { mountEddieRig } from '../app/eddieRig.js';
+import { PORTRAIT } from '../gfx3d/portrait.js';
 import { sfx } from '../app/sfx.js';
 import { icon } from '../app/icons.js';
 import { student, confirmNewStudent } from '../app/student.js';
@@ -8,7 +9,10 @@ import { esc } from '../app/achievement.js';
 
 const LINES = ['먼저 이름을 적어줘! 기록증에 들어가 ✏️', '구매 후 받은 6자리 접속 코드를 입력해줘!', '코드를 모르면 고객센터로 문의해줘 📞', '천국에서 만나자! 🎮'];
 
-export function showLogin(root, { onDone } = {}) {
+const LINES_V4 = ['먼저 이름을 적어줘! 탐사 보고서에 들어가 ✏️', '접속 코드 6자리를 넣으면 출발 준비 끝!', '다음엔 나를 꾸미러 가자 🎨', '붉은 행성에서 기다릴게! 🚀'];
+
+/** v4: true 면 '바이저봇 탈출기' 흐름 — 옆 캐릭터가 바이저봇 얼굴로 바뀐다 */
+export function showLogin(root, { onDone, v4 = false } = {}) {
   const saved = student.get();
   root.innerHTML = `
     <div class="lg scene-fade">
@@ -46,12 +50,15 @@ export function showLogin(root, { onDone } = {}) {
   bgProbe.onload = () => { const b = root.querySelector('#lg-bg'); b.style.backgroundImage = `url(${bgProbe.src})`; b.classList.add('has-img'); };
   bgProbe.src = '/brand/login-bg.webp';
 
-  const rig = mountEddieRig(root.querySelector('#lg-hero'));
+  const heroEl = root.querySelector('#lg-hero');
+  const rig = v4 ? Object.assign(document.createElement('div'), { className: 'lg-hero-fallback', innerHTML: PORTRAIT('웃음') }) : mountEddieRig(heroEl);
+  if (v4) heroEl.appendChild(rig);
+  const lines = v4 ? LINES_V4 : LINES;
 
   // EDDIE 말풍선 순환 + 클릭 반응
   const say = root.querySelector('#lg-speech');
   let li = 0, sayTimer = null;
-  const show = (n) => { say.textContent = LINES[n % LINES.length]; say.hidden = false; say.classList.remove('pop'); void say.offsetWidth; say.classList.add('pop'); };
+  const show = (n) => { say.textContent = lines[n % lines.length]; say.hidden = false; say.classList.remove('pop'); void say.offsetWidth; say.classList.add('pop'); };
   setTimeout(() => { show(0); sayTimer = setInterval(() => show(++li), 4200); }, 700);
   rig.addEventListener('click', () => { sfx.pop(); show(++li); });
 

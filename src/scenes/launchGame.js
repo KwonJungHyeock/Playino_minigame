@@ -5,6 +5,7 @@
 // 판정(2D 판 finaleShow.js 와 같다): 1막 5라운드 · 0.75초 버티기 · 허용 26° · 7초 제한(다이얼 → 색상 0~320°) / 2막 따라 치기 길이 5 · 실수 2번까지
 //   / 3막 큐 8번 · 1.5초에 한 바퀴 · 0.78~0.96 구간 — 3D 판은 큐를 넣는 순간 다이얼 압력도 띠(±13%) 안이어야 한다(두 손 종합). 통과 80%(엄격 등급). 보너스 '부스터 날개'가 있으면 2 · 3막 실수 한 번을 막아 준다.
 // 조작: 1막 다이얼(끌기 · ←→ · 가변저항) / 2막 음표 단추 7개(1~7 키) / 3막 큐 단추(스페이스 · 보드 버튼 D4).
+import { profile, josa } from '../app/profile.js';
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
 import { board } from '../app/board.js';
@@ -419,7 +420,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     S.phase = 'result'; const last = n === 3;
     const choice = hud.result({
       title: escaped ? '행성 탈출 성공!' : pass ? (n === 1 ? '조명 점검 성공!' : n === 2 ? '교신 성공!' : '시험 점화 성공!') : '조금만 더!',
-      sub: escaped ? `${student.label() ? `${student.label()} 메이커, ` : ''}바이저봇과 함께 붉은 행성을 떠났어요 — 진짜 메이커가 됐어요!` : pass ? (last ? '앞의 막도 통과하면 진짜로 발사해요.' : `${n + 1}막으로 가요.`) : `80% 이상이면 통과예요.${last ? '' : ' 다음 막으로 넘어가도 괜찮아요.'}`,
+      sub: escaped ? `${student.label() ? `${student.label()} 메이커, ` : ''}${josa(profile.name(), '과', '와')} 함께 붉은 행성을 떠났어요 — 진짜 메이커가 됐어요!` : pass ? (last ? '앞의 막도 통과하면 진짜로 발사해요.' : `${n + 1}막으로 가요.`) : `80% 이상이면 통과예요.${last ? '' : ' 다음 막으로 넘어가도 괜찮아요.'}`,
       grade, stats: [[n === 1 ? '점검' : n === 2 ? '교신 길이' : '큐', `${S.hits}/${S.total}`], ['정확도', `${pct}%`], ['최고 콤보', `${S.maxCombo}`]], primary: last ? '기지로' : `${n + 1}막으로`, secondary: '다시 하기',
     });
     hud.lightStars(starsOf(grade));

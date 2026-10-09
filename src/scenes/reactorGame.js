@@ -6,6 +6,7 @@
 // 판정(2D 판 bombGame.js 바탕): 1막 6라운드 · 0.8초 버티기 · 구간 ±10% → ±5% · 6초 제한 / 2막(3D: 숨은 띠) 6라운드 · 0.9초 · ±8% → ±4.5% · 7초
 //   / 3막 24초 동안 18번 판정 · 허용 ±10% → ±7%. 다이얼은 한 프레임 30% 씩 따라온다. 통과 80%(엄격 등급). 기록 이름은 2D 판 단계 이름(STORY.bomb.stages).
 // 조작: 다이얼 끌어 돌리기 · ←→(↑↓) 로 조금씩 · 보드의 가변저항(A0)을 진짜로 돌려도 된다. 보드 LED(D13)도 같이 깜빡인다.
+import { profile, josa } from '../app/profile.js';
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
 import { board } from '../app/board.js';
@@ -323,7 +324,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   async function pause() {
     if (S.pausedAt || ['result', 'land'].includes(S.phase)) return;
     const wasPlay = S.phase === 'play'; S.pausedAt = performance.now(); bgm.setDuck(1);
-    const a = await hud.window(`<div class="hud-eye">일시정지</div><h2>잠깐 쉬어요</h2><p>원자로는 바이저봇이 핸들을 꼭 잡고 지키고 있어요.</p>
+    const a = await hud.window(`<div class="hud-eye">일시정지</div><h2>잠깐 쉬어요</h2><p>원자로는 ${josa(profile.name(), '이', '가')} 핸들을 꼭 잡고 지키고 있어요.</p>
       <div class="hud-row"><button class="hud-btn" data-act="exit" type="button">나가기</button><button class="hud-btn" data-act="restart" type="button">처음부터</button><span class="hud-sp"></span>
       <button class="hud-btn main" data-act="resume" type="button"><span class="hud-key wide">스페이스</span>계속</button></div>`, { keys: { Space: 'resume', Escape: 'resume' } });
     if (done) return;

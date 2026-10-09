@@ -5,6 +5,7 @@
 // 판정(2D 판과 같다): 1단계 = 두더지 들판(40초 · 18점 · 등장 0.62~1.04초 · 간격 0.44~0.8초 · 금빛 16% = 3점 · 3콤보부터 +1 · 목표 달성 즉시 통과),
 //   2단계 = 청기백기(명령 16번 · 12점 · 1.05초 안에 · 함정 36% = 이미 그 상태면 가만히 · 3콤보부터 +1). 기록 이름은 2D 판(STORY.button.stages).
 // 조작: 화면 왼쪽 · 오른쪽 단추 · 키 1 · 2(← →도) · 보드의 버튼 D4 · D5(누르는 순간을 잡는다 — 2D 판과 같은 방식).
+import { profile, josa } from '../app/profile.js';
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
 import { board } from '../app/board.js';
@@ -221,7 +222,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
     const a = await hud.window(`<div class="hud-eye">${n} / 2 단계</div><h2>${n === 1 ? '운석 막기 · 재빨리!' : '방어막 명령 · 잘 듣고!'}</h2>
       ${n === 1 ? `<p>운석이 떨어지는 쪽 버튼을 눌러 방어막을 번쩍! <b style="color:#ffd25a">금빛 운석</b>은 3점, 연속으로 막으면 보너스.</p>
         <p><b>${game.time}초</b> 안에 <b>${game.target}점</b>을 모으면 통과 — 운석이 없는데 누르면 콤보가 끊겨요.</p>`
-      : `<p>관제 화면 명령대로 방어막을 켜고 꺼요. 버튼 = 그쪽 방어막 <b>켜기/끄기</b>. 바이저봇이 깃발로 따라 해요.</p>
+      : `<p>관제 화면 명령대로 방어막을 켜고 꺼요. 버튼 = 그쪽 방어막 <b>켜기/끄기</b>. ${josa(profile.name(), '이', '가')} 깃발로 따라 해요.</p>
         <p><b>함정!</b> 이미 켜져 있는데 '올려!'면 <b>가만히</b>. 명령 ${game.count}번 중 <b>${game.target}점</b>이면 통과.</p>`}
       <p>조작: 화면 단추 · <span class="hud-key">1</span><span class="hud-key">2</span> 키 · 보드 버튼 D4 · D5.</p>
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });

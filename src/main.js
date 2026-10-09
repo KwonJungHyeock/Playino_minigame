@@ -1,5 +1,6 @@
 // main.js — Eduino AI : 미니게임천국
-// 플로우: 인트로 → 모드선택 → 메인 → 로그인 → 보드연결 → 허브 → 스테이지 → 미니게임.
+// 플로우: 인트로 → 모드선택 → 메인 → 타이틀(v4 '바이저봇 탈출기') → 로그인 → 캐릭터 만들기 → 보드연결 → 3D 기지 → 미션.
+//        타이틀의 '클래식 2D 판' → 로그인 → 보드연결 → 허브(2D) → 스테이지 → 미니게임(예전 흐름 그대로).
 // 보드 연결을 마친 기기는 다음 세션부터 허브(학생 정보 없으면 로그인)에서 바로 시작한다 — boot() 참고.
 import { showPlatformIntro } from './scenes/platformIntro.js';
 import { showModeSelect } from './scenes/modeSelect.js';
@@ -13,7 +14,9 @@ import { progress } from './app/progress.js';
 import { bgm } from './app/bgm.js';
 import { nav } from './app/nav.js';
 import { DEV_TOOLS } from './app/flags.js';
-import { student, studentChip, askSameStudent } from './app/student.js';
+import { student, studentChip } from './app/student.js';
+import { profile } from './app/profile.js';
+import { showTitle } from './scenes/title.js';
 import { mountFullscreen } from './app/fullscreen.js';
 
 // 게임 씬 동적 import (허브 진입 시 프리패치)
@@ -66,15 +69,36 @@ function prefetchGames() {
 // 모든 전환은 nav 를 통과 → 기기/브라우저 뒤로·ESC·통일 버튼이 한 단계씩 되돌아감.
 function scenePlatformIntro() { showPlatformIntro(app(), { onDone: () => nav.push(sceneModeSelect) }); }     // ① 플랫폼 스튜디오 인트로(로고)
 function sceneModeSelect() { showModeSelect(app(), { onDone: () => nav.push(sceneProductMain) }); }   // ①-b 기기 모드 선택
-function sceneProductMain() { showProductMain(app(), { onDone: () => nav.push(sceneLogin) }); }                // ② 상품 메인페이지 → 바로 입장
-// 로그인 뒤: 보드 연결을 이미 마친 기기(새 학생으로 바꾼 경우 등)는 연결 화면을 건너뛴다.
-function sceneLogin() {
+function sceneProductMain() { showProductMain(app(), { onDone: () => nav.push(sceneTitle) }); }                // ② 상품 메인페이지 → 타이틀
+
+// ③ 타이틀 '바이저봇 탈출기' — 이어하기 · 새로 시작(로그인 → 캐릭터 만들기) · 클래식 2D 판
+function sceneTitle() {
   recordsEntry.hide(); studentChip.hide();
-  showLogin(app(), { onDone: () => (progress.isCleared('setup') ? nav.push(sceneHub, { name: 'hub' }) : nav.push(sceneSetup)) });
+  showTitle(app(), {
+    onContinue: () => enterV4(),
+    onNew: () => (student.get() ? nav.push(sceneCreator) : nav.push(() => sceneLogin({ v4: true }))),
+    onClassic: () => (!student.get() ? nav.push(sceneLogin) : progress.isCleared('setup') ? nav.push(sceneHub, { name: 'hub' }) : nav.push(sceneSetup)),
+  });
+}
+// 캐릭터 만들기(바이저봇 이름 + 모습) — 이미 만든 학생은 건너뛴다(다시 꾸미기는 기지의 '🎨 꾸미기')
+function sceneCreator() {
+  recordsEntry.hide(); studentChip.hide(); darkHold();
+  import('./scenes/creator.js').then((m) => m.showCreator(app(), { step: '캐릭터 만들기', onDone: () => enterV4(), onBack: () => nav.back() }));
+}
+// v4 로 들어가기: 보드 연결을 아직 안 한 기기는 연결부터 → 3D 기지. 기지는 '타이틀 위 한 칸'으로 다시 세운다(뒤로 = 타이틀)
+function enterV4() {
+  if (!profile.created()) { nav.push(sceneCreator); return; }
+  if (!progress.isCleared('setup')) { nav.push(() => sceneSetup({ next: enterV4 })); return; }
+  nav.restore([{ fn: sceneTitle }, { fn: () => sceneHub3d(), route: { name: 'hub3d' } }]);
+}
+// 로그인 뒤: 보드 연결을 이미 마친 기기(새 학생으로 바꾼 경우 등)는 연결 화면을 건너뛴다.
+function sceneLogin({ v4 = false } = {}) {
+  recordsEntry.hide(); studentChip.hide();
+  showLogin(app(), { v4, onDone: () => (v4 ? enterV4() : progress.isCleared('setup') ? nav.push(sceneHub, { name: 'hub' }) : nav.push(sceneSetup)) });
 }
 // 학생 바꾸기 → 기록을 비웠으니 이름부터 다시 받는다(인트로·모드·상품 소개는 기기 단위라 생략).
 const restartAsNewStudent = () => nav.start(sceneLogin);
-function sceneSetup() { recordsEntry.hide(); studentChip.hide(); showSetup(app(), { onDone: () => { progress.mark('setup'); nav.push(sceneHub, { name: 'hub' }); } }); }   // CH1 클리어
+function sceneSetup({ next } = {}) { recordsEntry.hide(); studentChip.hide(); showSetup(app(), { onDone: () => { progress.mark('setup'); if (next) next(); else nav.push(sceneHub, { name: 'hub' }); } }); }   // CH1 클리어 · next: v4 는 3D 기지로
 
 // 기록실 — 지금까지의 등급·세부기록 보관함. 카드의 '다시 도전'은 그 방으로 바로 들어간다.
 function sceneRecords() {
@@ -129,7 +153,7 @@ function sceneHub3d(opts) {
   import('./scenes/hub3d.js').then((m) => m.showHub3d(app(), {
     ...opts,
     onRoom: (id, { mode, stage }) => (mode === '3d' ? nav.push(() => sceneMission3d(id, stage)) : pushRoom(id)),
-    onExit: () => { location.search = ''; },
+    onExit: () => { if (nav.canBack()) nav.back(); else location.search = ''; },   // 본 흐름: 타이틀로 · 미리보기(?v4=hub): 주소 비우기
     fallback: () => sceneHub(),   // WebGL2 가 없는 기기는 기존 허브
   }));
 }
@@ -168,6 +192,7 @@ if (DEV_TOOLS) {
 const ROUTE_KEY = 'eduino.route.v1';
 const ROUTES = {
   hub: () => sceneHub(),
+  hub3d: () => sceneHub3d(),
   records: () => sceneRecords(),
   chapter: (p) => enterChapter(p.id),
   room: (p) => enterRoom(p.id),
@@ -180,7 +205,7 @@ nav.onChange((trail) => {
 function readTrail() {
   try {
     const v = JSON.parse(sessionStorage.getItem(ROUTE_KEY) || '[]');
-    return Array.isArray(v) && v[0]?.name === 'hub' ? v : [];   // 허브에서 시작한 기록만 되살린다
+    return Array.isArray(v) && (v[0]?.name === 'hub' || v[0]?.name === 'hub3d') ? v : [];   // 허브(2D · 3D 기지)에서 시작한 기록만 되살린다
   } catch { return []; }
 }
 
@@ -208,11 +233,9 @@ function boot() {
   const trail = ready ? readTrail() : [];
   if (!trail.length) {
     if (!ready) { nav.start(scenePlatformIntro); return; }
-    // 새 세션(브라우저를 닫았다 연 경우)인데 이 기기는 이미 준비됐다 — 매 차시 온보딩 5화면을 다시 겪지 않게 한다.
-    // 학생 정보가 없으면 이름부터, 있으면 허브에서 시작하고 '이 학생 맞나요?' 를 한 번 묻는다(공용 PC 대비).
-    if (!student.get()) { nav.start(sceneLogin); return; }
-    nav.restore([{ fn: sceneSetup }, { fn: sceneHub, route: { name: 'hub' } }]);
-    askSameStudent({ onNew: restartAsNewStudent });
+    // 새 세션(브라우저를 닫았다 연 경우)인데 이 기기는 이미 준비됐다 — 매 차시 온보딩 5화면을 다시 겪지 않게 타이틀부터.
+    // 타이틀이 '○○ 이어하기 / 새로 시작' 을 크게 보여 주므로 공용 PC 에서도 누구 기록인지 바로 보인다.
+    nav.start(sceneTitle);
     return;
   }
 
@@ -220,8 +243,8 @@ function boot() {
   lastChapter = trail.find((r) => r.name === 'chapter')?.params?.id ?? null;
   lastRoom = trail.find((r) => r.name === 'room')?.params?.id ?? null;
 
-  // 스택 맨 밑에 '보드 연결' 한 칸만 깐다 — 허브를 루트로 세우면 뒤로 버튼만 사라진다.
-  const entries = [{ fn: sceneSetup }];     // route 없음 = 복원 대상 아님(nav.trail 이 걸러낸다)
+  // 스택 맨 밑에 한 칸만 깐다(2D: 보드 연결 · 3D 기지: 타이틀) — 허브를 루트로 세우면 뒤로 버튼만 사라진다.
+  const entries = [{ fn: trail[0].name === 'hub3d' ? sceneTitle : sceneSetup }];     // route 없음 = 복원 대상 아님(nav.trail 이 걸러낸다)
   for (const r of trail) {
     const make = ROUTES[r.name];
     if (!make) break;                       // 모르는 이름(옛 버전 등)이 나오면 거기까지만

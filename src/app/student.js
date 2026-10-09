@@ -39,7 +39,7 @@ export function resetForNewStudent() {
   results.reset();
   if (deviceReady) progress.mark('setup');
   try { localStorage.removeItem(KEY); } catch (_) {}
-  try { localStorage.removeItem('eduino.v4.stars.v1'); localStorage.removeItem('eduino.v4.style.v1'); } catch (_) {}   // v4 별 조각 · 바이저봇 꾸미기도 학생 것
+  try { localStorage.removeItem('eduino.v4.stars.v1'); localStorage.removeItem('eduino.v4.style.v1'); localStorage.removeItem('eduino.v4.profile.v1'); } catch (_) {}   // v4 별 조각 · 바이저봇 이름 · 꾸미기도 학생 것
   try { sessionStorage.removeItem(ROUTE_KEY); } catch (_) {}
 }
 

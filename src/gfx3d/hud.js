@@ -1,6 +1,7 @@
 // hud.js — v4 3D 게임 공통 화면 표시(콘솔 게임식). 모든 미션이 같은 진행창 · 대화 · 배너 · 결과창을 쓴다.
 // 원칙(docs/V4-UI.md): 늘 떠 있는 건 최소(미션 목표 1줄 + 일시정지), 판정 · 콤보는 장면 안 그 자리에서 짧게,
 // 대화는 화자 · 얼굴 · 한 글자씩 · 넘김 표시, 버튼에는 조작 표시(스페이스 / 탭), 결과는 한 가지 결론 + 다음 행동 하나.
+import { profile } from '../app/profile.js';
 import { PORTRAIT } from './portrait.js';
 import { injectType } from './type.js';
 import { comfort } from './comfort.js';
@@ -148,7 +149,7 @@ export function createHud(host, o) {
     },
     hideGoal() { $('#hud-obj').classList.add('off'); },
     /** 대화 한 마디. 넘기면 resolve. mood: 표정(portrait.js) */
-    say(line, { name = '바이저봇', mood = '기본', cps = 32 } = {}) {
+    say(line, { name = profile.name(), mood = '기본', cps = 32 } = {}) {
       return new Promise((res) => {
         if (talkDone) { const d = talkDone; talkDone = null; d(); }
         $('#hud-name').textContent = name; $('#hud-face').innerHTML = PORTRAIT(mood);

@@ -13,6 +13,8 @@ import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curricu
 import { STORY, ACTS, PART_ROOMS } from '../content/v4story.js';
 import { bonus, BONUS } from '../app/bonus.js';
 import { stars, STAR_ROOMS } from '../app/stars.js';
+import { PARTS, profile } from '../app/profile.js';
+import { student } from '../app/student.js';
 
 const THREE_D = new Set(['led', 'buzzer', 'rgb', 'cds', 'pot', 'button', 'lamp', 'bomb', 'final', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
 const PLANET_R = 11;   // 작은 행성 반지름(m) — 걸으면 지평선 너머에서 스팟이 솟는다(gfx3d/curve.js)
@@ -141,7 +143,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   <section class="hub3" aria-label="에듀이노 기지"><div class="hub3-stage" id="hub3-stage"></div>
     <div class="hub3-scrim" id="hub3-scrim"></div>
     <div class="hub3-visor" id="hub3-visor" aria-hidden="true"><i class="vb tl"></i><i class="vb tr"></i><i class="vb bl"></i><i class="vb br"></i><div class="vs-scan"></div><dl class="vs-info" id="hub3-info"></dl></div>
-    <div class="hub3-say" id="hub3-say" aria-live="polite"><b>바이저봇</b><span></span></div>
+    <div class="hub3-say" id="hub3-say" aria-live="polite"><b></b><span></span></div>
     <div class="hub3-go" id="hub3-go"><button class="hub3-hold" id="hub3-hold" type="button" aria-label="꾹 눌러 출발"><svg class="rg" viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="46"/><circle class="arc" cx="50" cy="50" r="46" pathLength="100"/></svg><span class="cap"></span></button>
       <div class="hub3-go-t"><b id="hub3-go-b">꾹 눌러 출발</b><span class="h3-kb"><span class="hud-key wide">스페이스</span>꾹 누르기</span><span class="h3-kb h3-pick" id="hub3-pick-k"></span><span class="h3-tp" id="hub3-pick-t"></span></div></div>
     <div class="hub3-hint off" id="hub3-hint"><span class="k"><span class="hud-key">←↑↓→</span> 또는 <span class="hud-key">WASD</span> 걷기 · 문 위에서 <span class="hud-key">스페이스</span> 꾹</span><span class="t">가고 싶은 곳을 누르면 걸어가요</span></div>
@@ -151,6 +153,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   const el = root.querySelector('.hub3'), host = root.querySelector('#hub3-stage'), hint = root.querySelector('#hub3-hint'), skipBtn = root.querySelector('#hub3-skip');
   const $ = (s) => root.querySelector(s);
   const visorEl = $('#hub3-visor'), infoEl = $('#hub3-info'), sayEl = $('#hub3-say'), scrimEl = $('#hub3-scrim'), goEl = $('#hub3-go'), holdBtn = $('#hub3-hold'), irisEl = $('#hub3-iris');
+  sayEl.querySelector('b').textContent = profile.name();   // 화자 이름 = 캐릭터 만들기에서 지은 이름
   const brackets = [...visorEl.querySelectorAll('.vb')], scanEl = visorEl.querySelector('.vs-scan');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -539,9 +542,9 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     const have = stars.total(), cur = style.get();
     const row = (part) => `<div class="sty-row" role="group">${STYLE[part].map((o) => { const ok = have >= o.need; return `<button type="button" data-part="${part}" data-id="${o.id}" style="--c:#${o.hex.toString(16).padStart(6, '0')}" aria-pressed="${cur[part] === o.id}" ${ok ? '' : 'disabled'}><i></i>${o.name}${ok ? '' : `<small>⭐ ${o.need}</small>`}</button>`; }).join('')}</div>`;
     const grid = STAR_ROOMS.map((id) => `<span title="${STORY[id]?.name || id}">${STORY[id]?.icon || ''}${stars.get(id).map((x) => `<i${x ? ' class="on"' : ''}>★</i>`).join('')}</span>`).join('');
-    const win = hud.window(`<div class="hud-eye">바이저봇 꾸미기</div><h2>별 조각 ⭐ ${have} / ${stars.max()}</h2>
+    const win = hud.window(`<div class="hud-eye">${profile.name()} 꾸미기</div><h2>별 조각 ⭐ ${have} / ${stars.max()}</h2>
       <p>미션마다 <b>🔭 둘러보기</b>에서 숨은 별 2개, <b>S등급</b>으로 1개. 모을수록 새 색이 열려요.</p>
-      <div class="sty-h">바이저 빛</div>${row('led')}<div class="sty-h">망토</div>${row('cape')}
+      ${PARTS.map(([part, label]) => `<div class="sty-h">${label}</div>${row(part)}`).join('')}
       <div class="sty-stars">${grid}</div>
       <div class="hud-row"><span class="hud-sp"></span><button class="hud-btn main" data-act="ok" type="button"><span class="hud-key wide">스페이스</span>다 했어요</button></div>`, { keys: { Space: 'ok', Escape: 'ok', Enter: 'ok' } });
     hud.lastWindow?.querySelectorAll('[data-part]').forEach((b) => b.addEventListener('click', () => {
@@ -652,6 +655,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     S.shot = null; await wait(900); if (skip) return;
     await hud.dialogue([
       { text: '으… 여기가 어디지? 시스템 다시 켜는 중…', mood: '졸림' },
+      { text: `나는 ${profile.name()}! ${student.get()?.name ? `${student.get().name}, 반가워.` : '반가워.'} 우리 같이 여기서 탈출하자!`, mood: '웃음' },
     ].map((l) => ({ ...l, abort: skipOk }))); if (skip) return;
     bot.setExpression('놀람'); S.shot = rocketShot; await wait(700); if (skip) return;
     await hud.dialogue([

@@ -3,6 +3,8 @@
 //       결과가 3D 장면(과 연결된 보드)에서 바로 일어난다. 읽기만 하지 않고 해 보고 넘어간다.
 // 퀴즈: 3문항 · 3지선다. 맞히면 장면에서 그 코드가 실행되고, 틀리면 탓하지 않는 힌트 후 다시. 메달 조건과는 무관.
 // 화면은 상자 · 모달 없이 바이저 판독기 언어(왼쪽 빛줄 + 사라지는 짙은 유리)로. 키보드 1·2·3 · 스페이스, 터치 모두.
+import { profile } from '../app/profile.js';
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const CSS = `
 .lsn{position:absolute;inset:0;z-index:7;pointer-events:none;font-family:"Pretendard Variable","Noto Sans KR",system-ui,sans-serif;color:#fff;--led:#8ff7ee;--gold:#ffd25a;--good:#5ff0a0;--bad:#ff8a7a}
@@ -81,7 +83,7 @@ export function runLesson(host, o) {
   root.innerHTML = `<style>${CSS}</style>
     <div class="lsn-wrap"><div class="lsn-eye"><span id="lsn-eye"></span><i id="lsn-dots"></i></div><div class="lsn-title" id="lsn-title"></div>
       <div class="lsn-code" id="lsn-code"></div><div class="lsn-acts" id="lsn-acts"></div></div>
-    <div class="lsn-say" id="lsn-say"><b>바이저봇</b><span></span></div>
+    <div class="lsn-say" id="lsn-say"><b>${esc(profile.name())}</b><span></span></div>
     <button class="lsn-next" id="lsn-next" type="button" disabled><span class="hud-key">스페이스</span><b>다음</b></button>
     ${o.skippable ? '<button class="lsn-skip" id="lsn-skip" type="button">강의 건너뛰기 ⏭</button>' : ''}`;
   host.appendChild(root);
