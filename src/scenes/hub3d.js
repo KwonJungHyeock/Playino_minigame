@@ -13,7 +13,7 @@ import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curricu
 import { STORY, ACTS, PART_ROOMS } from '../content/v4story.js';
 import { bonus, BONUS } from '../app/bonus.js';
 
-const THREE_D = new Set(['led', 'buzzer', 'rgb', 'cds', 'pot', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
+const THREE_D = new Set(['led', 'buzzer', 'rgb', 'cds', 'pot', 'button', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
 const PLANET_R = 11;   // 작은 행성 반지름(m) — 걸으면 지평선 너머에서 스팟이 솟는다(gfx3d/curve.js)
 const SPEED = 3.1, BOT_R = 0.32;
 const HOLD_T = 0.8;              // 꾹 누르는 시간(초) — 실수로 들어가지 않을 만큼, 기다림이 느껴지지 않을 만큼

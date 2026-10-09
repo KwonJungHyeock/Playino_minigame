@@ -11,7 +11,7 @@ export const STORY = {
   rgb:    { no: 'MISSION 03', name: '에너지 셀 색 맞추기', icon: '🔋', line: '셀마다 맞는 빛 색을 섞어 넣어야 충전돼.', reward: '에너지 셀', part: 'cells', stages: ['쉬운 색', '어려운 색'] },
   cds:    { no: 'MISSION 04', name: '태양광 충전소', icon: '☀️', line: '빛을 가리고 비추며 태양광 판의 반응을 맞춰 보자.', reward: '태양광 날개', part: 'wings', stages: ['반딧불 신호', '반딧불이 비행'] },
   pot:    { no: 'MISSION 05', name: '로버 추력 조절', icon: '🛞', line: '다이얼로 힘을 딱 맞게 조절해서 로버를 움직이자.', reward: '추력 지느러미', part: 'fins', stages: ['볼륨 맞추기', '페이더 쇼'], stageTitles: ['협곡 점프', '언덕 질주'] },
-  button: { no: 'MISSION 06', name: '운석 방어막', icon: '🛡️', line: '날아오는 운석을 버튼 두 개로 막아 내자.', reward: '방어막 노즈콘', part: 'nose' },
+  button: { no: 'MISSION 06', name: '운석 방어막', icon: '🛡️', line: '날아오는 운석을 버튼 두 개로 막아 내자.', reward: '방어막 노즈콘', part: 'nose', stages: ['두더지 들판', '청기백기'], stageTitles: ['운석 막기', '방어막 명령'] },
   lamp:   { no: 'MISSION 07', name: '어둠 동굴 탐사', icon: '🔦', line: '깜깜한 동굴 속 연료 수정을 빛 색으로 찾아내자.', reward: '연료 수정', part: 'fuel' },
   bomb:   { no: 'MISSION 08', name: '원자로 진정', icon: '⚛️', line: '들끓는 원자로를 다이얼로 살살 달래 동력을 얻자.', reward: '동력 코어', part: 'core' },
   // 자유 도전(센서 없음 · 캐릭터 조작) — 커리큘럼 방이 아니다. 깨면 보너스 부품(app/bonus.js), 마지막 탈출에서 이점

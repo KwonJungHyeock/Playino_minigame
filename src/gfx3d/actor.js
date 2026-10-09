@@ -93,6 +93,8 @@ export function createActor(bot) {
     face(t) { S.faceTo = t; return actor; },
     /** 손짓 포즈: 'carry' · 'cover' · 'up' · 'fly' · 'wide' · null */
     pose(name) { const p = name ? POSES[name] : null; S.RT = p?.R || null; S.LT = p?.L || null; S.pose = name; if (!name) { S.point = null; S.conduct = null; } return actor; },
+    /** 두 팔을 따로: [x, z] 또는 null(클립대로). 깃발 들기처럼 한쪽씩 올리고 내릴 때 */
+    arms(R, L) { S.point = null; S.conduct = null; S.RT = R; S.LT = L; S.pose = 'arms'; return actor; },
     /** 오른팔로 가리키기(Vector3 · 함수 · null) */
     point(t) { S.point = t; if (t) { S.conduct = null; } return actor; },
     /** 지휘: 오른팔 높이(수평 기준 위 각도, 라디안) · null */
