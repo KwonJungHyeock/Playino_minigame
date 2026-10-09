@@ -57,11 +57,12 @@ export function createStage(host, o = {}) {
   }
   const ro = new ResizeObserver(size);
 
+  let slowT = 0, slowK = 1;
   function draw() { if (composer) composer.render(); else R.render(scene, camera); }
   function frame() {
     if (!alive || document.hidden || held) { clock.getDelta(); last = performance.now(); return; }
     const now = performance.now(); governor.sample(now - last); last = now;
-    const dt = Math.min(clock.getDelta(), 0.05);
+    const raw = Math.min(clock.getDelta(), 0.05), dt = slowT > 0 ? raw * slowK : raw; slowT -= raw;   // 히트스톱: 잠깐 세상이 느려진다
     ticks.forEach((fn) => fn(dt));
     if (composer) composer.render(dt); else R.render(scene, camera);
   }
@@ -74,6 +75,8 @@ export function createStage(host, o = {}) {
     THREE, scene, camera, renderer: R, tier, governor,
     /** 후처리 합성기를 쓴다(post.js). null 이면 바로 그리기. */
     setComposer(c) { composer?.dispose(); composer = c; size(); },
+    /** 히트스톱: ms 동안 시간이 k 배로 흐른다(맞는 순간의 멈칫). 박자 게임은 쓰지 않는다 */
+    hitstop(ms = 70, k = 0.12) { slowT = Math.max(slowT, ms / 1000); slowK = k; },
     /** 매 프레임 호출(dt 초). 반환값을 부르면 해제. */
     onTick(fn) { ticks.add(fn); return () => ticks.delete(fn); },
     /**

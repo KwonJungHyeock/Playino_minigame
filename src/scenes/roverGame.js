@@ -16,6 +16,7 @@ import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
 import { createAssist } from '../gfx3d/assist.js';
 import { createBarks } from '../gfx3d/barks.js';
+import { createJuice } from '../gfx3d/juice.js';
 
 const ADC = 0, PASS_ACC = 0.8, LAG = 0.12;   // 3D 판 관성(난이도 측정 뒤 0.2 → 0.12초)
 const GAMES = [   // 2D 판과 같다
@@ -57,7 +58,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   const el = root.querySelector('.rov'), host = root.querySelector('#rov-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#rov-skip'), readEl = $('#rov-read'), dialEl = $('#rov-dial'), knobEl = dialEl.querySelector('.knob');
 
-  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
+  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -65,7 +66,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.();
+    stopAmb?.(); juice?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__roverGame?.el === el) delete window.__roverGame;
   }
@@ -116,6 +117,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   }
   const toScreen = (v) => { const p = v.clone().project(cam), rr = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * rr.width, y: (-p.y * 0.5 + 0.5) * rr.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
+  juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
   function setView(v) { S.view = v; scn.show(v === 'ride' ? 'ride' : 'jump'); const c = camGoal(); cam.position.copy(c.p); camT.copy(c.t); }
   const popAt = (text, color) => { const p = toScreen(scn.roverTop()); hud.pop(text, color, p.x, p.y); };
 
@@ -331,7 +333,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
+    S.t += dt; barks.watch(S); juice.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
     // 다이얼(2D 판처럼 한 프레임 32%) → 로버 추력(관성 0.3초)
     S.knob += (want() - S.knob) * (1 - Math.pow(0.68, step * 60));
     const lag = S.mode === 2 && assist.on(2) ? 0 : LAG; S.thrust += (S.knob - S.thrust) * (lag > 0 ? 1 - Math.exp(-step / lag) : 1);   // 도우미: 2단계 관성 끔

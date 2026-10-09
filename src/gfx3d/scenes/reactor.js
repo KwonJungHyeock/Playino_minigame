@@ -12,6 +12,7 @@ import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { comfort } from '../comfort.js';
 import { partShowcase } from '../rocket.js';
+import { bounce, trail } from '../juice.js';
 
 const V = THREE.Vector3;
 export const R_AT = new V(0.9, 0, -1.3);
@@ -214,7 +215,7 @@ export async function createReactorScene(stage) {
   function mood(m, ms = 1200) { moodOv = m; moodT = m ? ms / 1000 : 0; }
   function show(m) { mode = m; rods.forEach((r) => { r.visible = m === 'arm' || m === 'all'; }); tanks.forEach((x, k) => { x.visible = pipes[k].visible = m === 'tune' || m === 'all'; }); segs.forEach((s) => { s.visible = m === 'live' || m === 'all'; }); }
   function resetRods() { rods.forEach((r) => { Object.assign(r.userData, { k: 0, goal: 0, bad: 0 }); r.userData.tipMat.color.setHex(0xff8a3a); }); }
-  function rod(i, ok) { const r = rods[i]; if (!r) return; if (ok) { r.userData.goal = 1; r.userData.tipMat.color.copy(CALM); burst(r.getWorldPosition(new V()).add(new V(0, 0.6, 0)), 0x8ff7ee, 22); } else { r.userData.bad = 1; steam(r.getWorldPosition(new V()).add(new V(0, 0.9, 0)), 26); } }
+  function rod(i, ok) { const r = rods[i]; if (!r) return; bounce(r, ok ? 0.3 : 0.12); if (ok) bounce(R, 0.05); if (ok) { r.userData.goal = 1; r.userData.tipMat.color.copy(CALM); burst(r.getWorldPosition(new V()).add(new V(0, 0.6, 0)), 0x8ff7ee, 22); } else { r.userData.bad = 1; steam(r.getWorldPosition(new V()).add(new V(0, 0.9, 0)), 26); } }
   function resetValves() { tanks.forEach((x) => { Object.assign(x.userData, { fixed: false, spin: 0, puff: 0 }); x.userData.barMat.color.setHex(0xff4d4d); }); }
   function valve(i, ok) { const x = tanks[i]; if (!x) return; if (ok) { x.userData.fixed = true; x.userData.spin = 1; x.userData.barMat.color.setHex(0x5ff0a0); burst(tankTop(i), 0x5ff0a0, 18); } else { x.userData.puff = 1; steam(tankTop(i), 30); } }
   function resetSegs() { segs.forEach((s) => s.userData.mat.color.setHex(SEG_OFF)); }

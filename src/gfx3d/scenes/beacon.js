@@ -11,6 +11,7 @@ import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 import { ground } from './landing.js';
 import { partShowcase } from '../rocket.js';
+import { bounce, trail } from '../juice.js';
 
 export const LANE_HEX = [0x2ee86a, 0x5ac9ff, 0xffc84a];         // 2D 판 레인색(초록 · 하늘 · 노랑)과 같은 계열
 export const LANE_CSS = ['#2ee86a', '#5ac9ff', '#ffc84a'];
@@ -127,7 +128,7 @@ export async function createBeaconScene(stage) {
   const lanePos = (i) => new THREE.Vector3(HIT_X, WIRE_Y[i], WIRE_Z);
   /** 맞힘: 수신 고리가 번쩍 · 소리 물결 · 중계탑 등 · 위성 쪽 빛줄기 */
   function pulse(i) {
-    const u = recv[i].userData; u.flash = 1;
+    const u = recv[i].userData; u.flash = 1; bounce(recv[i], 0.16);
     const w = u.waves.find((x) => x.t >= 1) || u.waves[0]; w.t = 0; w.m.visible = true;
     relay.userData.tips[i].material.emissiveIntensity = 3.2; beamMat.opacity = Math.min(0.85, beamMat.opacity + 0.55);
   }

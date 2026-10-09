@@ -15,6 +15,7 @@ import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
 import { comfort } from '../gfx3d/comfort.js';
 import { createBarks } from '../gfx3d/barks.js';
+import { createJuice } from '../gfx3d/juice.js';
 
 const NEO = 6, PASS_ACC = 0.85, MAXD = Math.sqrt(3 * 255 * 255);
 const TARGETS = [   // 2D 판과 같은 목표 색
@@ -75,7 +76,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   const skipBtn = $('#eng-skip'), ctl = $('#eng-ctl'), goBtn = $('#eng-go'), resoEl = $('#eng-reso');
   const sliders = [...root.querySelectorAll('.eng-sl')].map((l) => ({ l, input: l.querySelector('input'), out: l.querySelector('b') }));
 
-  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
+  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -83,7 +84,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.();
+    stopAmb?.(); juice?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.neoFill(NEO, 0, 0, 0).catch(() => {});
     window.removeEventListener('eduino:comfort', onComfort);
@@ -123,6 +124,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
+  juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
 
   // ── 빛 섞기(장면 · 조종판 · 보드를 한 번에) ──
   const css = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
@@ -269,7 +271,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     setMix([128, 128, 128]); sfx.holo?.();
     S.placed = false; S.busy = false;   // 바이저봇이 셀을 가져오는 동안에도 미리 섞을 수 있다 — 충전은 꽂힌 뒤에
     const ok = await fetchCell(S.round); if (!ok || done || S.phase !== 'play') return;
-    S.placed = true; goBtn.disabled = false; checkReso();
+    S.placed = true; goBtn.disabled = false; checkReso(); actor.routine('push', 0.7);   // 셀을 받침대에 쑥 밀어 넣는다
     if (S.round === 0 && S.mode === 1) hud.toast('주문 고리와 같은 색이 되게 빛을 섞어 봐요', '');
   }
   /** 바이저봇이 빈 셀 선반에서 셀을 안고 와 받침에 꽂는다. 판이 바뀌면(다시 시작 · 나가기) 그만둔다 */
@@ -369,7 +371,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);
+    S.t += dt; barks.watch(S); juice.watch(S); scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);
     if (S.phase === 'intro') { S.introT += dt; const k = ease(Math.min(1, S.introT / INTRO)); cam.position.lerpVectors(introFrom.p, fitCam(), k); camT.lerpVectors(introFrom.t, camDef().t, k); }
     else { const k = 1 - Math.exp(-dt * 3.2); cam.position.lerp(fitCam(), k); camT.lerp(camDef().t, k); }
     cam.position.y += Math.sin(S.t * 0.6) * 0.002; cam.lookAt(camT);

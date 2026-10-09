@@ -11,6 +11,7 @@ import { placeKit } from '../kits.js';
 import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { partShowcase } from '../rocket.js';
+import { bounce, trail } from '../juice.js';
 
 const V = THREE.Vector3;
 export const HUE_MAX = 320;
@@ -121,6 +122,7 @@ export async function createCaveScene(stage) {
   const sealMats = [], seals = [];
   for (let k = 0; k < 5; k++) { const a = Math.PI * (0.18 + k * 0.16); const m = new THREE.MeshPhysicalMaterial({ color: 0x222233, emissive: 0xffffff, emissiveIntensity: 0.3, roughness: 0.15, clearcoat: 1, flatShading: true }); const gem = mesh(new THREE.OctahedronGeometry(0.11, 0), m, { cast: false }); gem.position.set(Math.cos(a) * 0.58, 0.42 + Math.sin(a) * 0.36, 0.38); boss.add(gem); sealMats.push(m); seals.push(gem); }
   const wisps = Array.from({ length: 7 }, () => { const g = new THREE.Group(); const c = mesh(new THREE.SphereGeometry(0.07, 14, 10), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), { cast: false }); g.add(c, glow(0.8, 0xffffff)); g.visible = false; root.add(g); return g; });
+  wisps.slice(0, 3).forEach((w) => trail(w, 0xfff2c8, 0.07));   // 빛 무리 꼬리
   const wallC = Array.from({ length: 18 }, (_, k) => { const a = Math.PI * (1.12 + (k / 17) * 0.76); const c = crystalCluster(0.75); c.position.set(Math.cos(a) * 5.0, 0, -0.8 - Math.sin(a) * -3.6 - 3.0); c.rotation.y = -a; c.visible = false; root.add(c); return c; });
   wallC.forEach((c, k) => { const a = Math.PI * (0.1 + (k / 17) * 0.8); c.position.set(-Math.cos(a) * 4.8, 0, -1.2 - Math.sin(a) * 2.6); });
 
@@ -143,7 +145,7 @@ export async function createCaveScene(stage) {
   /** 2막: 빛 무리(지금 약점 색) — 동굴 안을 빙빙 돌며 도망 */
   function swarm(tt, hue) { hueColor(hue, lc); wisps.forEach((w, k) => { const a = tt * 0.0011 + k * 0.9, r = 1.6 + Math.sin(tt * 0.0007 + k) * 0.5; w.position.set(0.8 + Math.cos(a) * r, 1.2 + Math.sin(tt * 0.002 + k * 1.7) * 0.5, -1.2 + Math.sin(a) * r * 0.5); w.children[0].material.color.copy(lc); w.children[1].material.color.copy(lc); }); }
   const swarmAt = () => wisps[0].position;
-  function wallCrystal(i, ok, hue) { const c = wallC[i]; if (!c) return; const u = c.userData; if (ok) { hueColor(hue, u.mat.emissive); u.mat.emissiveIntensity = 2.2; u.halo.material.color.copy(u.mat.emissive); u.halo.material.opacity = 0.6; burst(c.position.clone().setY(0.5), u.mat.emissive.getHex(), 14); } else { u.mat.emissive.setHex(0x553344); u.mat.emissiveIntensity = 0.4; } }
+  function wallCrystal(i, ok, hue) { const c = wallC[i]; if (!c) return; if (ok) bounce(c, 0.3); const u = c.userData; if (ok) { hueColor(hue, u.mat.emissive); u.mat.emissiveIntensity = 2.2; u.halo.material.color.copy(u.mat.emissive); u.halo.material.opacity = 0.6; burst(c.position.clone().setY(0.5), u.mat.emissive.getHex(), 14); } else { u.mat.emissive.setHex(0x553344); u.mat.emissiveIntensity = 0.4; } }
   function resetWall() { wallC.forEach((c) => { c.userData.mat.emissiveIntensity = 0.05; c.userData.halo.material.opacity = 0; }); }
   /** 3막: 봉인 색들 · 지금 풀 차례 · 버틴 정도 */
   // 3막(3D 판): 봉인 색은 숨어 있다 — 등불 색이 가까워질수록 지금 봉인이 밝게 반짝인다(밝기 단서라 색약도 찾을 수 있다)

@@ -18,6 +18,7 @@ import { comfort } from '../gfx3d/comfort.js';
 import { student } from '../app/student.js';
 import { createAssist } from '../gfx3d/assist.js';
 import { createBarks } from '../gfx3d/barks.js';
+import { createJuice } from '../gfx3d/juice.js';
 
 const ADC = 0, NEO = 6, BUZZ = 5, BTN = 4, PASS = 0.8, HUE_MAX = 320;
 const NOTES = [['도', 262], ['레', 294], ['미', 330], ['파', 349], ['솔', 392], ['라', 440], ['시', 494]];
@@ -79,7 +80,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   const skipBtn = $('#lch-skip'), readEl = $('#lch-read'), dialEl = $('#lch-dial'), knobEl = dialEl.querySelector('.knob'), padsEl = $('#lch-pads'), pads = [...padsEl.querySelectorAll('.lch-pad')], cueEl = $('#lch-cue');
   const c1 = $('#lch-c1'), c2 = $('#lch-c2'), stEl = $('#lch-st');
 
-  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
+  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null, btnTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -87,7 +88,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); clearInterval(btnTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.();
+    stopAmb?.(); juice?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     neoOff();
     if (window.__launchGame?.el === el) delete window.__launchGame;
@@ -155,6 +156,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
+  juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
   let shake = 0;
   const MODE = ['color', 'melody', 'cue'];
@@ -240,7 +242,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   let condT = 0;
   function conduct(i) { actor.conduct(-0.5 + (i / 6) * 1.05).look(scn.noteAt(i)); actor.hop(1.6); clearTimeout(condT); condT = later(420, () => actor.conduct(null).look(() => scn.rocketFace(), 0.6)); }
   let pressT = 0;
-  function pressPose() { actor.arms([-1.0, 0.25], null); actor.hop(1.2); clearTimeout(pressT); pressT = later(220, () => actor.pose(null)); }
+  function pressPose() { actor.routine('tap', 0.35); actor.hop(1.2); }   // 조종대 단추를 톡
 
   // ── 막 설명 ──
   async function brief() {
@@ -421,7 +423,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1), ms = step * 1000;
+    S.t += dt; barks.watch(S); juice.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1), ms = step * 1000;
     S.knob += (want() - S.knob) * (1 - Math.pow(0.7, step * 60));   // 2D 판처럼 한 프레임 30%
     const hue = S.knob * HUE_MAX; scn.setFlood(hue);
     if (S.mode === 1 || S.mode === 3 || S.lessonDemo) { const css = S.mode === 3 ? '#ffd25a' : hueCss(hue), v = Math.round(S.knob * 1023); dialEl.style.setProperty('--cv', css); knobEl.style.setProperty('--a', `${-135 + S.knob * 270}deg`); dialEl.setAttribute('aria-valuenow', v);

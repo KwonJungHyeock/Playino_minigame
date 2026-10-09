@@ -14,6 +14,7 @@ import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
 import { createAssist } from '../gfx3d/assist.js';
 import { createBarks } from '../gfx3d/barks.js';
+import { createJuice } from '../gfx3d/juice.js';
 
 const PIN = 5, LEAD = 1600, W_PERFECT = 110, W_GOOD = 200, PASS_ACC = 0.85;
 const C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392, A4 = 440, C5 = 523.25;
@@ -53,7 +54,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
       <div class="bcn-pads" id="bcn-pads" hidden>${[0, 1, 2].map((i) => `<button class="bcn-pad" type="button" data-lane="${i}" style="--c:${LANE_CSS[i]}" aria-label="${['낮은', '중간', '높은'][i]} 음 신호"><i>${i + 1}</i><em>${'DFJ'[i]}</em><b>${['낮은 음', '중간 음', '높은 음'][i]}</b></button>`).join('')}</div></section>`;
   const el = root.querySelector('.bcn'), host = root.querySelector('#bcn-stage'), skipBtn = root.querySelector('#bcn-skip'), padsEl = root.querySelector('#bcn-pads');
 
-  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
+  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -61,7 +62,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.();
+    stopAmb?.(); juice?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.noTone?.(PIN)?.catch?.(() => {});
     if (window.__beaconGame?.el === el) delete window.__beaconGame;
@@ -102,6 +103,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
+  juice = createJuice({ stage, hud, rhythm: true });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
   const COMBO_AT = new THREE.Vector3(HIT_X - 0.95, 2.6, WIRE_Z);
 
   // 신호 알갱이(빛 공 + 꼬리)
@@ -297,7 +299,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   const ease = (t) => t * t * (3 - 2 * t);
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); scn.update(dt);
+    S.t += dt; barks.watch(S); juice.watch(S); scn.update(dt);
     if (S.phase === 'intro') { S.introT += dt; const k = ease(Math.min(1, S.introT / INTRO)); cam.position.lerpVectors(introFrom.p, fitCam(), k); camT.lerpVectors(introFrom.t, camDef().t, k); }
     else { const k = 1 - Math.exp(-dt * 3.2); cam.position.lerp(fitCam(), k); camT.lerp(camDef().t, k); }
     cam.position.y += Math.sin(S.t * 0.6) * 0.002; cam.lookAt(camT);

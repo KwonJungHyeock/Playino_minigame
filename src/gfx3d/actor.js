@@ -65,6 +65,9 @@ export function createActor(bot) {
       else if (r.kind === 'cheer') { RT = [-1.45, -1.15]; LT = [-1.45, 1.15]; if (r.t < dt * 1.5) { S.hopV = 4.2; S.spin = 1; } }   // 만세 + 뛰며 한 바퀴
       else if (r.kind === 'flex') { RT = [-0.35, -1.45]; LT = [-0.35, 1.45]; if (n.Spine) { save(n.Spine, 'x'); n.Spine.rotation.x -= 0.18 * w; } }   // 가슴 펴고 두 팔 쫙
       else if (r.kind === 'dizzy') { if (n.Head) { save(n.Head, 'z'); n.Head.rotation.z += Math.sin(r.t * 11) * 0.32 * (1 - u); } if (n.Spine) { save(n.Spine, 'z'); n.Spine.rotation.z += Math.sin(r.t * 7) * 0.12 * (1 - u); } RT = [-0.25, -0.5]; LT = [-0.25, 0.5]; }   // 빙글빙글 어지러움
+      else if (r.kind === 'push') { const k = u < 0.4 ? u / 0.4 : 1 - (u - 0.4) / 0.6; RT = [-1.2 - k * 0.5, -0.15]; LT = [-1.2 - k * 0.5, 0.15]; if (n.Spine) { save(n.Spine, 'x'); n.Spine.rotation.x += 0.22 * k; } }   // 두 손으로 밀어 넣기
+      else if (r.kind === 'tap') { const k = Math.abs(Math.sin(u * Math.PI * 2)); RT = [-1.0 - k * 0.45, -0.25]; if (n.Spine) { save(n.Spine, 'x'); n.Spine.rotation.x += 0.1 * k; } }   // 오른손으로 톡톡(단추 · 계기판)
+      else if (r.kind === 'pull') { const k = u < 0.35 ? u / 0.35 : 1 - (u - 0.35) / 0.65; RT = [-1.5 + k * 0.6, -0.1]; LT = [-1.5 + k * 0.6, 0.1]; if (n.Spine) { save(n.Spine, 'x'); n.Spine.rotation.x -= 0.25 * k; } }   // 두 손으로 영차 당기기
       else if (r.kind === 'phew') { RT = [-0.6, -0.15]; LT = [-0.6, 0.15]; if (n.Spine) { save(n.Spine, 'x'); n.Spine.rotation.x += 0.3 * w; } if (r.t < dt * 1.5) S.sq = 0.22; }   // 털썩 · 휴
     }
     // 포즈가 있으면 그 값으로 섞어 들어가고, 없어지면 마지막 값에서 클립으로 섞여 나온다
@@ -114,7 +117,7 @@ export function createActor(bot) {
     flinch() { S.flinch = 1; return actor; },
     spin() { S.spin = 1; return actor; },
     squash(a = 0.2) { S.sq = a; S.sqV = 0; return actor; },
-    /** 짧은 몸짓 묶음: 'wave' 손 흔들기 · 'dance' 춤 · 'cheer' 만세 점프 · 'flex' 짠 · 'dizzy' 어지러움 · 'phew' 털썩 */
+    /** 짧은 몸짓 묶음: 'wave' 손 흔들기 · 'dance' 춤 · 'cheer' 만세 점프 · 'flex' 짠 · 'dizzy' 어지러움 · 'phew' 털썩 · 일하기 'push' 밀기 · 'tap' 톡톡 · 'pull' 당기기 */
     routine(kind, dur = 1.6) { S.rt = { kind, t: 0, dur }; return actor; },
     /** 걸어가기 — 다 오면 풀린다. speed m/초 */
     walkTo(to, { speed = 2.2 } = {}) { return new Promise((res) => { if (S.walk) S.walk.res(); S.walk = { to: to.clone(), speed, res }; }); },

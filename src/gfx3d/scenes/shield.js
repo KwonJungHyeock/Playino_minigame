@@ -14,6 +14,7 @@ import { createParticles } from '../fx.js';
 import { ground } from './landing.js';
 import { FONT } from '../type.js';
 import { partShowcase } from '../rocket.js';
+import { bounce, trail } from '../juice.js';
 
 const V = THREE.Vector3;
 export const SIDE_HEX = [0x4d8dff, 0xeef3ff], SIDE_CSS = ['#4d8dff', '#eef3ff'], SIDE_NAME = ['파랑', '하양'];
@@ -149,6 +150,7 @@ export async function createShieldScene(stage) {
 
   // 운석 풀 · 반짝이
   const meteors = [0, 1].map(() => { const m = meteorModel(); root.add(m); return m; });
+  meteors.forEach((m) => trail(m, 0xffb07a, 0.16));   // 운석 꼬리(손맛 · juice.js)
   const sparks = createParticles({ max: 140, additive: true, tier: stage.tier }), dust = createParticles({ max: 60, tier: stage.tier });
   root.add(sparks.points, dust.points);
   const part = nosePart(); part.visible = false; root.add(part);
@@ -172,7 +174,7 @@ export async function createShieldScene(stage) {
   const hideMeteor = (side) => { meteors[side].visible = false; };
   /** 막음: 방어막 번쩍 + 발생기 → 운석 빛줄 + 폭발 */
   function zap(side, golden = false) {
-    const m = meteors[side], at = m.position.clone(); flash(side);
+    const m = meteors[side], at = m.position.clone(); flash(side); bounce(gens[side], golden ? 0.3 : 0.2);
     sparks.burst(golden ? 40 : 26, (k, n) => { const a = (k / n) * Math.PI * 2, e = (Math.random() - 0.3) * 1.2; return [[at.x, at.y, at.z], [Math.cos(a) * 2.6, Math.sin(e) * 2.2 + 0.6, Math.sin(a) * 2.6], { life: 0.7, size: 0.09, grow: 0.5, color: golden ? 0xffd25a : k % 2 ? 0xff9a5a : SIDE_HEX[side], alpha: 1, gravity: -3, damp: 1.6 }]; });
     hideMeteor(side);
   }

@@ -16,6 +16,7 @@ import { STORY } from '../content/v4story.js';
 import { comfort } from '../gfx3d/comfort.js';
 import { createAssist } from '../gfx3d/assist.js';
 import { createBarks } from '../gfx3d/barks.js';
+import { createJuice } from '../gfx3d/juice.js';
 
 const ADC = 0, NEO = 6, HUE_MAX = 320, PASS = 0.8;
 const ACTS = [   // 2D 판과 같다
@@ -63,7 +64,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   const el = root.querySelector('.cav'), host = root.querySelector('#cav-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#cav-skip'), ctl = $('#cav-ctl'), sl = $('#cav-sl'), holdEl = $('#cav-hold');
 
-  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
+  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null, neoTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -71,7 +72,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); clearInterval(neoTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.();
+    stopAmb?.(); juice?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.neoFill(NEO, 0, 0, 0).catch(() => {});
     if (window.__caveGame?.el === el) delete window.__caveGame;
@@ -123,6 +124,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
+  juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
   const showMode = (n) => scn.show(n === 1 ? 'match' : n === 2 ? 'track' : 'spell');
 
@@ -275,7 +277,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
     if (inZone) sp.holdT += ms; else sp.holdT = Math.max(0, sp.holdT - ms * 0.8);
     const near = clamp(1 - hueDiff(S.hue, tgt) / 110, 0, 1); scn.bossTick(sp.idx, clamp(sp.holdT / act.holdNeed, 0, 1), near); hint(inZone, tgt, ms, true);
     if (!inZone && near > 0.6 && !sp.warm) { sp.warm = true; sfx.pip?.(); } else if (near < 0.4) sp.warm = false;   // 가까워지면 '삐' — 찾는 맛
-    if (sp.holdT >= act.holdNeed) { const i = sp.idx; good(scn.sealAt(i), `봉인 ${i + 1} 해제!`, hueCss(tgt)); scn.sealDone(i); sp.idx++; sp.holdT = 0; S.hintT = 0; S.hinted = false; if (sp.idx >= act.len) { endPlay(); return inZone; } }
+    if (sp.holdT >= act.holdNeed) { const i = sp.idx; actor.routine('push', 0.6); good(scn.sealAt(i), `봉인 ${i + 1} 해제!`, hueCss(tgt)); scn.sealDone(i); sp.idx++; sp.holdT = 0; S.hintT = 0; S.hinted = false; if (sp.idx >= act.len) { endPlay(); return inZone; } }
     if (sp.t >= act.time) endPlay();
     return inZone;
   }
@@ -344,7 +346,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
+    S.t += dt; barks.watch(S); juice.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
     S.cover += (want() - S.cover) * (1 - Math.pow(0.7, step * 60));   // 2D 판처럼 한 프레임 30%
     S.hue = S.cover * HUE_MAX; scn.setLantern(S.hue);
     const css = hueCss(S.hue); ctl.style.setProperty('--cv', css); $('#cav-sw').style.setProperty('--cv', css); $('#cav-h').textContent = Math.round(S.hue);

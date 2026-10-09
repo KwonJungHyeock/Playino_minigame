@@ -15,6 +15,7 @@ import { progress as medals } from '../app/progress.js';   // 이 파일 안의 
 import { roomCleared } from '../content/curriculum.js';
 import { createAssist } from '../gfx3d/assist.js';
 import { createBarks } from '../gfx3d/barks.js';
+import { createJuice } from '../gfx3d/juice.js';
 
 const W_PERFECT = 90, W_GOOD = 170, LEAD = 1450, PASS_ACC = 0.85;
 const PINS = [2, 3, 4];                 // 초록 · 노랑 · 빨강
@@ -72,7 +73,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
       <div class="lnd-pads" id="lnd-pads" hidden>${[0, 1, 2].map((i) => `<button class="lnd-pad" type="button" data-lane="${i}" style="--c:${LANE_CSS[i]}" aria-label="${LANE_NAME[i]} 유도등 (${i + 1})"><i>${i + 1}</i><b>${['낮은 음', '중간 음', '높은 음'][i]}</b></button>`).join('')}</div></section>`;
   const el = root.querySelector('.lnd'), host = root.querySelector('#lnd-stage'), skipBtn = root.querySelector('#lnd-skip'), padsEl = root.querySelector('#lnd-pads');
 
-  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
+  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, land = null, hud = null, song = null, offTick = null, done = false;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -80,7 +81,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.();
+    stopAmb?.(); juice?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); song?.dispose(); land?.dispose(); stage?.dispose();
     PINS.forEach((p) => { if (board.connected) board.digital(p, false).catch(() => {}); });
   }
@@ -115,6 +116,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   };
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
+  juice = createJuice({ stage, hud, rhythm: true });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
   const RING_TOP = new THREE.Vector3(PAD.x, 0.25, PAD.z + TARGET_R), COMBO_AT = new THREE.Vector3(PAD.x + TARGET_R + 0.75, 0.6, PAD.z);
 
   // 판정 고리(가운데) + 다가오는 신호 고리
@@ -424,7 +426,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   const ease = (t) => t * t * (3 - 2 * t);
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); land.update(dt);
+    S.t += dt; barks.watch(S); juice.watch(S); land.update(dt);
     if (S.phase === 'intro') { S.introT += dt; const k = ease(Math.min(1, S.introT / INTRO)); cam.position.lerpVectors(introFrom.p, fitCam(), k); camT.lerpVectors(introFrom.t, GAME_CAM.t, k); }
     else { const k = 1 - Math.exp(-dt * 3.6); cam.position.lerp(fitCam(), k); camT.lerp(camDef().t, k); }   // 프레임 수와 관계없이 같은 빠르기
     cam.position.y += Math.sin(S.t * 0.6) * 0.002; cam.lookAt(camT);

@@ -17,6 +17,7 @@ import { STORY } from '../content/v4story.js';
 import { comfort } from '../gfx3d/comfort.js';
 import { createAssist } from '../gfx3d/assist.js';
 import { createBarks } from '../gfx3d/barks.js';
+import { createJuice } from '../gfx3d/juice.js';
 
 const ADC = 0, LED_PIN = 13, PASS = 0.8;
 const ACTS = [   // 2D 판과 같다
@@ -62,7 +63,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   const el = root.querySelector('.rea'), host = root.querySelector('#rea-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#rea-skip'), readEl = $('#rea-read'), dialEl = $('#rea-dial'), knobEl = dialEl.querySelector('.knob'), ledEl = $('#rea-led');
 
-  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
+  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -70,7 +71,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.();
+    stopAmb?.(); juice?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     ledOff();
     if (window.__reactorGame?.el === el) delete window.__reactorGame;
@@ -128,6 +129,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
+  juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
   let shake = 0;
 
@@ -261,7 +263,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
     hint(inZone, m.center, ms);
     const i = m.idx, at = S.mode === 1 ? scn.rodAt(i) : scn.tankTop(i);
     if (m.holdT >= act.holdNeed) {
-      S.busy = true; good(at, S.mode === 1 ? '제어봉 잠금!' : '밸브 잠금!'); if (S.mode === 1) scn.rod(i, true); else scn.valve(i, true);
+      S.busy = true; actor.routine(S.mode === 1 ? 'pull' : 'push', 0.7); good(at, S.mode === 1 ? '제어봉 잠금!' : '밸브 잠금!'); if (S.mode === 1) scn.rod(i, true); else scn.valve(i, true);
       scn.mood('calm', 900); sendLed(true); if (act.hidden) scn.setBand(m.center, m.half);   // 찾으면 숨은 띠를 잠깐 보여 준다
       await wait(650); if (done) return; S.busy = false; dialEl.style.setProperty('--hold', '0%'); if (S.phase === 'play' && !S.ended) nextRound();
     } else if (m.roundT > act.roundLimit) {
@@ -347,7 +349,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   let lastLed = null;
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1), ms = step * 1000;
+    S.t += dt; barks.watch(S); juice.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1), ms = step * 1000;
     S.knob += (want() - S.knob) * (1 - Math.pow(0.7, step * 60));   // 2D 판처럼 한 프레임 30%
     scn.setKnob(S.knob);
     const v = Math.round(S.knob * 1023); $('#rea-v').textContent = v; $('#rea-cap').textContent = Math.round(S.knob * 100);

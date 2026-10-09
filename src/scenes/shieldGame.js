@@ -14,6 +14,7 @@ import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
 import { createBarks } from '../gfx3d/barks.js';
+import { createJuice } from '../gfx3d/juice.js';
 
 const PINS = [4, 5];
 const GAMES = [   // 2D 판(buttonGame · flagGame)과 같다
@@ -56,7 +57,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   const el = root.querySelector('.shd'), host = root.querySelector('#shd-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#shd-skip'), padsEl = $('#shd-pads'), clockEl = $('#shd-clock'), readEl = $('#shd-read');
 
-  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
+  let stopAmb = null, juice = null;   // 환경음 · 손맛 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, hwTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -64,7 +65,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(hwTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.();
+    stopAmb?.(); juice?.dispose();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__shieldGame?.el === el) delete window.__shieldGame;
   }
@@ -96,6 +97,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
   const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
+  juice = createJuice({ stage, hud });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
 
   // ── 입력: 화면 단추 · 키 · 진짜 버튼(누르는 순간) ──
@@ -370,7 +372,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); readout();
+    S.t += dt; barks.watch(S); juice.watch(S); readout();
     if (S.phase === 'play' && !S.ended && !S.pausedAt) { if (S.mode === 1) stepCatch(Math.min(dt, 0.1)); else stepCommand(); }
     scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);
     const c = camGoal();

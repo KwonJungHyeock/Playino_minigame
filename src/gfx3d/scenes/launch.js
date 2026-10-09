@@ -11,6 +11,7 @@ import { placeKit } from '../kits.js';
 import { loadRobot } from '../robot.js';
 import { createParticles, createConfetti } from '../fx.js';
 import { createRocket } from '../rocket.js';
+import { bounce, trail } from '../juice.js';
 
 const V = THREE.Vector3;
 export const PAD = new V(0.6, 0, -1.2);
@@ -153,6 +154,7 @@ export async function createLaunchScene(stage) {
   const zoneMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd25a).multiplyScalar(1.3), toneMapped: false, side: THREE.DoubleSide });
   const zone = new THREE.Mesh(new THREE.RingGeometry(CUE_R - 0.14, CUE_R + 0.14, 32, 1, cueA(CUE_HIGH), cueA(CUE_LOW) - cueA(CUE_HIGH)), zoneMat); zone.rotation.x = Math.PI / 2; zone.position.set(PAD.x, DECK + 0.04, PAD.z); root.add(zone);
   const dot = new THREE.Group(); dot.add(mesh(new THREE.SphereGeometry(0.13, 18, 12), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), { cast: false }), glow(1.0, 0xffffff)); root.add(dot);
+  trail(dot, 0xffd25a, 0.09);   // 큐 빛 점 꼬리
   const numCv = document.createElement('canvas'); numCv.width = numCv.height = 256; const numX = numCv.getContext('2d'), numTex = new THREE.CanvasTexture(numCv); numTex.colorSpace = THREE.SRGBColorSpace;
   const num = new THREE.Sprite(new THREE.SpriteMaterial({ map: numTex, transparent: true, depthWrite: false, toneMapped: false })); num.scale.setScalar(1.6); num.position.set(PAD.x + 2.2, 3.4, PAD.z + 0.6); num.userData.noAO = true; root.add(num);
   let numLast = '';
@@ -172,12 +174,12 @@ export async function createLaunchScene(stage) {
   function setFace(h, m = faceMood) { faceHue = h; faceMood = m; }
   function show(m) { mode = m; floods.forEach((f) => { f.userData.light.intensity = m === 'color' || m === 'all' ? 10 : 0; }); notes.forEach((n) => { n.visible = m === 'melody' || m === 'all'; }); ringPath.visible = zone.visible = dot.visible = num.visible = m === 'cue' || m === 'all'; }
   function setChecks(n) { T.checks.forEach((m, k) => m.color.setHex(k < n ? 0x5ff0a0 : 0x40465e).multiplyScalar(k < n ? 1.5 : 1)); }
-  function check(i) { setChecks(i + 1); burst(tower.localToWorld(new V(-0.2, 1.2 + i * 0.47, 0.6)), 0x5ff0a0, 18); }
+  function check(i) { setChecks(i + 1); bounce(tower, 0.05); burst(tower.localToWorld(new V(-0.2, 1.2 + i * 0.47, 0.6)), 0x5ff0a0, 18); }
   function noteOn(i) { const n = notes[i]; if (!n) return; n.userData.k = 1; antFlash = 1; const tip = rocket.getObjectByName('AntTip'); if (tip) tip.material.color.setHex(NOTE_HEX[i]).multiplyScalar(1.6); burst(n.position.clone().setY(0.45), NOTE_HEX[i], 10); }
   const noteAt = (i) => (notes[i] ? notes[i].position.clone().setY(0.5) : PAD.clone());
   function setCue(u) { cueU = u; }
   function setHeat(k) { heat = k; }
-  function press() { btnPress = 1; }
+  function press() { btnPress = 1; bounce(cons, 0.12); }
   function puff(n = 30, power = 1) { smoke.burst(n, () => { const a = Math.random() * Math.PI * 2, r = 0.4 + Math.random() * 0.6; return [[rocket.position.x + Math.cos(a) * r, DECK + 0.1, rocket.position.z + Math.sin(a) * r], [Math.cos(a) * (2 + Math.random() * 3) * power, 0.3 + Math.random() * 0.8, Math.sin(a) * (2 + Math.random() * 3) * power], { life: 1.8, size: 0.5, grow: 3.6, color: 0xf3e3dc, alpha: 0.6, gravity: 0.4, damp: 1.2 }]; }); }
   function burst(at, color, n) { sparks.burst(n, (k, m) => { const a = (k / m) * Math.PI * 2, e = (Math.random() - 0.3) * 1.4; return [[at.x, at.y, at.z], [Math.cos(a) * 2, Math.sin(e) * 2 + 1, Math.sin(a) * 2], { life: 0.8, size: 0.07, grow: 0.5, color, alpha: 1, gravity: -3, damp: 1.6 }]; }); }
   /** 끝: 바이저봇 탑승(엘리베이터 → 다리 → 문) — 끝나면 resolve */

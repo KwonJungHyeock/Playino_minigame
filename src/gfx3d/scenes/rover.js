@@ -15,6 +15,7 @@ import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { partShowcase } from '../rocket.js';
 import { strataColumn, strataMaterial } from '../toyrock.js';
+import { bounce, trail } from '../juice.js';
 
 const P = PALETTE, V = THREE.Vector3;
 export const ROAD_V = 3.2;                 // 2단계: 로버가 달리는 빠르기(m/초) — 관문 간격 = 판정 간격 × 이 값
@@ -190,7 +191,7 @@ export async function createRoverScene(stage) {
       gt.userData = { barMat }; gates.push(gt);
     }
   }
-  function gate(i, ok) { const g = gates[i]; if (!g) return; g.userData.barMat.emissive.setHex(ok ? 0x5ff0a0 : 0xff6f6f); g.userData.barMat.emissiveIntensity = 2.6; }
+  function gate(i, ok) { const g = gates[i]; if (!g) return; bounce(g, ok ? 0.22 : 0.08); g.userData.barMat.emissive.setHex(ok ? 0x5ff0a0 : 0xff6f6f); g.userData.barMat.emissiveIntensity = 2.6; }
 
   // 로버 + 바이저봇(운전석)
   const rover = roverModel(); root.add(rover);

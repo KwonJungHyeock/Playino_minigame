@@ -44,6 +44,8 @@ const CSS = `
 .hud-act[hidden]{display:none}
 /* 장면 위 판정 · 콤보 */
 .hud-pop{position:absolute;transform:translate(-50%,-50%);font:700 32px/1 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.02em;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:5px #1b1f4a;text-shadow:0 3px 0 #1b1f4a,0 6px 18px rgba(10,14,40,.45);animation:hudpop .62s cubic-bezier(.2,.9,.3,1) forwards}
+.hud-ring{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:4px solid var(--rc,#fff);pointer-events:none;animation:hudring .5s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes hudring{0%{opacity:.9;transform:scale(.3)}100%{opacity:0;transform:scale(3.2);border-width:1px}}
 @keyframes hudpop{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}25%{opacity:1;transform:translate(-50%,-60%) scale(1.08)}100%{opacity:0;transform:translate(-50%,-130%) scale(1)}}
 .hud-combo{position:absolute;transform:translate(-50%,-50%);text-align:center;font:700 14px/1 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.08em;color:var(--hud-sub);transition:opacity .25s}
 .hud-combo b{display:block;font:700 38px/1 "Fredoka","Pretendard Variable",sans-serif;paint-order:stroke fill;-webkit-text-stroke:5px #1b1f4a;color:#fff;text-shadow:0 4px 16px rgba(10,14,40,.45)}
@@ -163,7 +165,8 @@ export function createHud(host, o) {
     action(label, key = '스페이스') { const b = $('#hud-act'); b.hidden = !label; if (label) b.innerHTML = `<span class="hud-key wide">${key}</span>${label}`; return b; },
     tapAction() { const b = $('#hud-act'); b.classList.add('hit'); later(110, () => b.classList.remove('hit')); },
     /** 장면 위 판정 글자(화면 좌표 px) */
-    pop(textLine, color, x, y) { const p = document.createElement('div'); p.className = 'hud-pop'; p.textContent = textLine; p.style.color = color; p.style.left = x + 'px'; p.style.top = y + 'px'; root.appendChild(p); later(650, () => p.remove()); },
+    pop(textLine, color, x, y) { const p = document.createElement('div'); p.className = 'hud-pop'; p.textContent = textLine; p.style.color = color; p.style.left = x + 'px'; p.style.top = y + 'px'; root.appendChild(p); later(650, () => p.remove());
+      const r = document.createElement('div'); r.className = 'hud-ring'; r.style.setProperty('--rc', color); r.style.left = x + 'px'; r.style.top = y + 'px'; root.appendChild(r); later(520, () => r.remove()); },   // 충격파 고리(판정 자리에서 퍼진다)
     /** 콤보 표시(화면 좌표). n 이 2 미만이면 숨김 */
     combo(n, x, y) {
       let c = root.querySelector('.hud-combo');
