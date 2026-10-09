@@ -16,7 +16,7 @@ export const STORY = {
   bomb:   { no: 'MISSION 08', name: '원자로 진정', icon: '⚛️', line: '들끓는 원자로를 다이얼로 살살 달래 동력을 얻자.', reward: '동력 코어', part: 'core', stages: ['신관 잠금해제', '회로 보정', '라이브 해체'], stageTitles: ['제어봉 내리기', '압력 맞추기', '폭주 붙잡기'] },
   // 자유 도전(센서 없음 · 캐릭터 조작) — 커리큘럼 방이 아니다. 깨면 보너스 부품(app/bonus.js), 마지막 탈출에서 이점
   challenge: { no: 'CHALLENGE', name: '운석 폭풍 런', icon: '⚡', line: '센서 없이 몸으로! 하늘 위 시험 트랙을 끝까지 달려.', reward: '부스터 날개', part: 'booster', bonus: true, concept: '몸으로 하는 자유 도전 · 센서 없음' },
-  final:  { no: 'FINAL', name: '발사 쇼', icon: '🚀', line: '모은 부품으로 로켓을 완성하고 카운트다운!', reward: '행성 탈출', part: null },
+  final:  { no: 'FINAL', name: '발사 쇼', icon: '🚀', line: '모은 부품으로 로켓을 완성하고 카운트다운!', reward: '행성 탈출', part: null, stages: ['컬러 스테이지', '멜로디 무대', '피날레 큐'], stageTitles: ['발사대 조명', '교신 멜로디', '카운트다운'] },
 };
 
 // 무대(챕터) 이야기 이름 — curriculum.js CHAPTERS 의 id 와 짝

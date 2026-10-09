@@ -143,6 +143,7 @@ const MISSION_3D = {
   button: () => import('./scenes/shieldGame.js').then((m) => m.showShieldGame),
   lamp: () => import('./scenes/caveGame.js').then((m) => m.showCaveGame),
   bomb: () => import('./scenes/reactorGame.js').then((m) => m.showReactorGame),
+  final: () => import('./scenes/launchGame.js').then((m) => m.showLaunchGame),
   challenge: () => import('./scenes/challengeGame.js').then((m) => m.showChallengeGame),   // 자유 도전(센서 없음)
 };
 function sceneMission3d(id, stage = 1) {
@@ -198,7 +199,7 @@ function boot() {
     return;
   }
   // v4 3D 게임 미리보기(?v4=led) — 착륙 유도등 단독으로(&stage=2 면 2단계 라이트 연주부터).
-  if (MISSION_3D[q.get('v4')]) {   // ?v4=led · ?v4=buzzer · ?v4=rgb · ?v4=cds · ?v4=pot · ?v4=button · ?v4=lamp · ?v4=bomb (&stage=2 · 3) · ?v4=challenge
+  if (MISSION_3D[q.get('v4')]) {   // ?v4=led · ?v4=buzzer · ?v4=rgb · ?v4=cds · ?v4=pot · ?v4=button · ?v4=lamp · ?v4=bomb · ?v4=final (&stage=2 · 3) · ?v4=challenge
     MISSION_3D[q.get('v4')]().then((show) => show(app(), { stage: Math.max(1, Math.min(3, parseInt(q.get('stage') || '1', 10) || 1)), onExit: () => { location.search = ''; } }));
     return;
   }
