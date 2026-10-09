@@ -5,7 +5,7 @@ import { sfx } from '../app/sfx.js';
 import { stars } from '../app/stars.js';
 import { student } from '../app/student.js';
 import { esc } from '../app/achievement.js';
-import { STYLE, PARTS, style, profile, DEFAULT_NAME } from '../app/profile.js';
+import { STYLE, PARTS, style, profile, DEFAULT_NAME, lockLabel } from '../app/profile.js';
 
 const NAMES = ['에디', '꼬마 에디', '에디 대장', '반짝 에디', '로켓 에디', '삐삐', '루미', '볼트', '코코', '별이', '띵동', '로로'];
 const CSS = `
@@ -27,6 +27,7 @@ const CSS = `
 .crt-h{display:flex;justify-content:space-between;align-items:baseline;font:800 13px "Pretendard Variable",sans-serif;color:#c9d0ea}.crt-h small{font-weight:600;color:rgba(255,255,255,.5)}
 .crt-row{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .crt-row button{position:relative;display:grid;justify-items:center;gap:2px;min-width:0;padding:6px 0 5px;border-radius:14px;border:2px solid transparent;background:rgba(255,255,255,.07);color:#fff;font:700 12px "Pretendard Variable",sans-serif;cursor:pointer}
+.crt-row button i.ic{background:none;box-shadow:none;display:grid;place-items:center;font-size:20px;font-style:normal;line-height:1}.crt-row button:disabled i.ic{filter:grayscale(1) opacity(.5)}
 .crt-row button i{width:26px;height:26px;border-radius:50%;background:var(--c);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 0 12px var(--c)}
 .crt-row button[aria-pressed=true]{border-color:#ffd25a;background:rgba(255,210,90,.14)}
 .crt-row button:disabled{cursor:not-allowed;opacity:.5}.crt-row button:disabled i{filter:grayscale(.85) brightness(.6);box-shadow:none}.crt-row button small{color:#ffd25a;font-weight:800}
@@ -54,7 +55,7 @@ export async function showCreator(root, { onDone, onBack, step = '캐릭터 만�
       <p>${who ? `${esc(who)} 메이커, ` : ''}에듀이노 친구 <b>에디</b>와 함께 붉은 행성을 탈출해요. 모습을 골라 나만의 에디를 꾸며요 — 별 조각을 모으면 색이 더 열려요(지금 ⭐ ${stars.total()}).</p>
       <div class="crt-h">이름 <small>그대로 '에디' 또는 별명(8글자)</small></div>
       <div class="crt-name"><input id="crt-name" maxlength="8" placeholder="${DEFAULT_NAME}" autocomplete="off" value="${esc(name)}" aria-label="에디 이름"/><button id="crt-dice" type="button" aria-label="이름 추천">🎲</button></div>
-      ${PARTS.map(([part, label]) => `<div class="crt-h">${label}</div><div class="crt-row" role="group" aria-label="${label}">${STYLE[part].map((o) => { const ok = style.unlocked(part, o.id); return `<button type="button" data-part="${part}" data-id="${o.id}" style="--c:#${o.hex.toString(16).padStart(6, '0')}" aria-pressed="${style.get()[part] === o.id}" ${ok ? '' : 'disabled'}><i></i>${o.name}${ok ? '' : `<small>⭐ ${o.need}</small>`}</button>`; }).join('')}</div>`).join('')}
+      ${PARTS.map(([part, label]) => `<div class="crt-h">${label}</div><div class="crt-row" role="group" aria-label="${label}">${STYLE[part].map((o) => { const ok = style.unlocked(part, o.id); return `<button type="button" data-part="${part}" data-id="${o.id}" ${o.icon ? '' : `style="--c:#${o.hex.toString(16).padStart(6, '0')}"`} aria-pressed="${style.get()[part] === o.id}" ${ok ? '' : 'disabled'}>${o.icon ? `<i class="ic">${o.icon}</i>` : '<i></i>'}${o.name}${ok ? '' : `<small>${lockLabel(o)}</small>`}</button>`; }).join('')}</div>`).join('')}
       <button class="crt-go" id="crt-go" type="button">이 모습으로 출발 ▶</button>
     </div></section>`;
   const $ = (s) => root.querySelector(s), el = $('.crt'), host = $('#crt-stage'), sayEl = $('#crt-say'), nameIn = $('#crt-name');
@@ -70,10 +71,10 @@ export async function showCreator(root, { onDone, onBack, step = '캐릭터 만�
   greet();
   // 모습 바꾸기: 저장 → 3D(또는 얼굴 그림)에 바로 입히고 한마디
   function react(part) {
-    if (bot) { applyStyle(bot.object); bot.play(part === 'cape' ? '환호' : '인사', { once: true }); bot.setExpression(part === 'led' ? '하트' : '웃음'); later(1600, () => bot.setExpression('기본')); }
+    if (bot) { applyStyle(bot.object, { name: shownName() }); bot.play(part === 'cape' ? '환호' : '인사', { once: true }); bot.setExpression(part === 'led' ? '하트' : '웃음'); later(1600, () => bot.setExpression('기본')); }
     else faceFallback?.();
     const o = STYLE[part].find((x) => x.id === style.get()[part]);
-    say(part === 'led' ? `바이저가 ${o.name}빛이 됐어!` : part === 'cape' ? `${o.name} 망토, 멋지다!` : part === 'helmet' ? `${o.name} 헬멧 마음에 들어!` : `귀 장식이 ${o.name}${o.name.endsWith('색') ? '' : '색'}으로 반짝!`);
+    say(part === 'led' ? `바이저가 ${o.name}빛이 됐어!` : part === 'cape' ? `${o.name} 망토, 멋지다!` : part === 'helmet' ? `${o.name} 헬멧 마음에 들어!` : part === 'hat' ? (o.id === 'none' ? '머리가 시원해!' : `${o.name} 어때? 멋지지!`) : part === 'plate' ? (o.id === 'name' ? `가슴에 '${shownName()}'!` : 'Eduino 명패로!') : `귀 장식이 ${o.name}${o.name.endsWith('색') ? '' : '색'}으로 반짝!`);
   }
   root.querySelectorAll('[data-part]').forEach((b) => on(b, 'click', () => {
     if (!style.set(b.dataset.part, b.dataset.id)) return;

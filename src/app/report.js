@@ -61,7 +61,7 @@ export function buildReport() {
   const avg = graded.length ? Math.round(graded.reduce((a, b) => a + b, 0) / graded.length) : null;
   return {
     student: { name: who?.name || '', no: who?.no || '', label: student.label() },
-    bot: { name: profile.name(), at: profile.get().at || null, look: PARTS.map(([p, label]) => { const o = STYLE[p].find((x) => x.id === look[p]); return { part: p, label, name: o?.name || '', hex: `#${(o?.hex ?? 0).toString(16).padStart(6, '0')}` }; }) },
+    bot: { name: profile.name(), at: profile.get().at || null, look: PARTS.map(([p, label]) => { const o = STYLE[p].find((x) => x.id === look[p]); return { part: p, label, name: o?.name || '', icon: o?.icon || '', hex: `#${(o?.hex ?? 0).toString(16).padStart(6, '0')}` }; }) },
     period: { first: sum.first || profile.get().at || null, last: sum.last, days: sum.days, firstText: fmtDate(sum.first || profile.get().at), lastText: fmtDate(sum.last) },
     playMs: sum.play, freeMs: sum.free, playText: fmtMs(sum.play), freeText: fmtMs(sum.free),
     cleared: missions.filter((m) => m.cleared).length, total: missions.length,

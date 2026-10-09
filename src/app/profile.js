@@ -12,9 +12,15 @@ export const STYLE = {
   cape: [{ id: 'red', hex: 0xd23f36, need: 0, name: '빨강' }, { id: 'blue', hex: 0x3d6bd6, need: 0, name: '파랑' }, { id: 'gold', hex: 0xe0a72c, need: 0, name: '금빛' }, { id: 'mint', hex: 0x3fbf96, need: 6, name: '민트' }, { id: 'purple', hex: 0x7a4fd0, need: 14, name: '보라' }, { id: 'black', hex: 0x2a2c33, need: 22, name: '까망' }],
   helmet: [{ id: 'white', hex: 0xf8f9f6, need: 0, name: '하양' }, { id: 'mint', hex: 0x8fe3c9, need: 0, name: '민트' }, { id: 'lavender', hex: 0xc4b4f2, need: 0, name: '라벤더' }, { id: 'peach', hex: 0xffbf9c, need: 8, name: '복숭아' }, { id: 'sky', hex: 0xa9d2ff, need: 16, name: '하늘' }, { id: 'night', hex: 0x3a4266, need: 25, name: '밤하늘' }],
   ear: [{ id: 'gold', hex: 0xe8b632, need: 0, name: '금' }, { id: 'silver', hex: 0xc9ced8, need: 0, name: '은' }, { id: 'rose', hex: 0xe8a08a, need: 4, name: '로즈골드' }, { id: 'sky', hex: 0x6fb6ff, need: 10, name: '하늘' }, { id: 'coral', hex: 0xff6f61, need: 18, name: '산호' }],
+  // 머리 장식(gfx3d/accessories.js) · 가슴 명패 — 색 대신 그림(icon). req: 'final' = 발사 쇼로 행성 탈출
+  hat: [{ id: 'none', icon: '⭕', need: 0, name: '없음' }, { id: 'beanie', icon: '🧶', need: 3, name: '비니' }, { id: 'goggles', icon: '🥽', need: 7, name: '고글' }, { id: 'star', icon: '⭐', need: 11, name: '별 안테나' }, { id: 'headset', icon: '🎧', need: 16, name: '헤드셋' }, { id: 'crown', icon: '👑', need: 0, req: 'final', name: '왕관' }],
+  plate: [{ id: 'eduino', icon: '🏷️', need: 0, name: 'Eduino' }, { id: 'name', icon: '✏️', need: 0, name: '내 이름' }],
 };
-export const PARTS = [['led', '바이저 빛'], ['cape', '망토'], ['helmet', '헬멧'], ['ear', '귀 장식']];
-const DEF = { led: 'cyan', cape: 'red', helmet: 'white', ear: 'gold' };
+export const PARTS = [['led', '바이저 빛'], ['cape', '망토'], ['helmet', '헬멧'], ['ear', '귀 장식'], ['hat', '머리 장식'], ['plate', '가슴 명패']];
+const DEF = { led: 'cyan', cape: 'red', helmet: 'white', ear: 'gold', hat: 'none', plate: 'eduino' };
+const reqOk = (o) => !o.req || (() => { try { return JSON.parse(localStorage.getItem('eduino.progress.v1') || '[]').includes(o.req); } catch { return false; } })();
+/** 잠긴 칸의 안내 글(⭐ 7 · 🚀 탈출) */
+export const lockLabel = (o) => (o.req === 'final' ? '🚀 탈출' : `⭐ ${o.need}`);
 
 const read = (k) => { try { const v = JSON.parse(localStorage.getItem(k) || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } };
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -22,9 +28,9 @@ const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } ca
 /** 에디 모습(부위별 고른 칸 id) */
 export const style = {
   get() { const v = read(LOOK_KEY), o = {}; for (const [p] of PARTS) o[p] = STYLE[p].some((x) => x.id === v[p]) ? v[p] : DEF[p]; return o; },
-  set(part, id) { const opt = STYLE[part]?.find((o) => o.id === id); if (!opt || stars.total() < opt.need) return false; write(LOOK_KEY, { ...read(LOOK_KEY), [part]: id }); return true; },
-  unlocked: (part, id) => { const o = STYLE[part]?.find((x) => x.id === id); return !!o && stars.total() >= o.need; },
-  hex: (part) => { const id = style.get()[part]; return STYLE[part].find((o) => o.id === id)?.hex ?? STYLE[part][0].hex; },
+  set(part, id) { const opt = STYLE[part]?.find((o) => o.id === id); if (!opt || stars.total() < opt.need || !reqOk(opt)) return false; write(LOOK_KEY, { ...read(LOOK_KEY), [part]: id }); return true; },
+  unlocked: (part, id) => { const o = STYLE[part]?.find((x) => x.id === id); return !!o && stars.total() >= o.need && reqOk(o); },
+  hex: (part) => { const id = style.get()[part]; return STYLE[part].find((o) => o.id === id)?.hex ?? STYLE[part][0].hex ?? 0xffffff; },
   css: (part) => `#${style.hex(part).toString(16).padStart(6, '0')}`,
 };
 

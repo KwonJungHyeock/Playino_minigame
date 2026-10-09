@@ -79,7 +79,7 @@ function pages(R, face) {
     <div class="rp-id"><div class="face"><img src="${face}" alt=""></div><dl>
       <div><dt>탐사 대원</dt><dd>${esc(R.student.label || '이름 없음')}</dd></div>
       <div><dt>함께한 친구</dt><dd>${esc(R.bot.name)}</dd></div>
-      <div><dt>꾸민 모습</dt><dd class="looks">${R.bot.look.map((l) => `<span><i style="background:${l.hex}"></i>${l.label} · ${esc(l.name)}</span>`).join('')}</dd></div>
+      <div><dt>꾸민 모습</dt><dd class="looks">${R.bot.look.filter((l) => !(l.part === 'hat' && l.name === '없음')).map((l) => `<span>${l.icon ? `<b style="font-size:13px">${l.icon}</b>` : `<i style="background:${l.hex}"></i>`}${l.label} · ${esc(l.name)}</span>`).join('')}</dd></div>
       <div class="rp-stamp${R.escaped ? '' : ' ing'}">${R.escaped ? '🚀 행성 탈출 성공!' : '🔭 탐사 중'}</div>
     </dl></div>
     <div class="rp-stats"><div class="rp-stat"><small>통과한 미션</small><b>${R.cleared}/${R.total}</b></div><div class="rp-stat"><small>로켓 부품</small><b>${R.parts}/${R.partsTotal}</b></div><div class="rp-stat"><small>별 조각</small><b>${R.stars}/${R.starsMax}</b></div><div class="rp-stat"><small>종합 등급</small><b>${R.overall ? `${R.overall} <span style="font-size:15px;color:#5a607e">${R.avg}%</span>` : '–'}</b></div></div>

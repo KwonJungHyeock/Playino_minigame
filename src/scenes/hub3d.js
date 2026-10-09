@@ -13,7 +13,7 @@ import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curricu
 import { STORY, ACTS, PART_ROOMS, GAME } from '../content/v4story.js';
 import { bonus, BONUS } from '../app/bonus.js';
 import { stars, STAR_ROOMS } from '../app/stars.js';
-import { PARTS, profile } from '../app/profile.js';
+import { PARTS, profile, lockLabel } from '../app/profile.js';
 import { student } from '../app/student.js';
 import { buildReport, reflect, QUESTIONS } from '../app/report.js';
 
@@ -58,6 +58,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .hub3-tools button:focus-visible{outline:3px solid var(--led);outline-offset:3px}.hub3-tools b{color:var(--gold);font:800 14px "Pretendard Variable",sans-serif}
     .hub3-tools.off{display:none}
     .sty-row{display:flex;flex-wrap:wrap;gap:8px;margin:5px 0 10px}.sty-row button{position:relative;display:grid;justify-items:center;gap:3px;width:60px;padding:6px 0 5px;border-radius:14px;border:2px solid transparent;background:rgba(255,255,255,.07);color:#fff;font:700 12px "Pretendard Variable",sans-serif;cursor:pointer}
+    .sty-row button i.ic{background:none;box-shadow:none;display:grid;place-items:center;font-size:19px;font-style:normal;line-height:1}.sty-row button:disabled i.ic{filter:grayscale(1) opacity(.5)}
     .sty-row button i{width:26px;height:26px;border-radius:50%;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 0 12px var(--c);background:var(--c)}
     .sty-row button[aria-pressed=true]{border-color:var(--gold);background:rgba(255,210,90,.12)}
     .sty-row button:disabled{cursor:not-allowed;opacity:.55}.sty-row button:disabled i{filter:grayscale(.85) brightness(.6);box-shadow:none}
@@ -550,7 +551,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   async function styleWin() {
     if (S.busy) return; holdEnd(); S.busy = true; keys.clear();
     const have = stars.total(), cur = style.get();
-    const row = (part) => `<div class="sty-row" role="group">${STYLE[part].map((o) => { const ok = have >= o.need; return `<button type="button" data-part="${part}" data-id="${o.id}" style="--c:#${o.hex.toString(16).padStart(6, '0')}" aria-pressed="${cur[part] === o.id}" ${ok ? '' : 'disabled'}><i></i>${o.name}${ok ? '' : `<small>⭐ ${o.need}</small>`}</button>`; }).join('')}</div>`;
+    const row = (part) => `<div class="sty-row" role="group">${STYLE[part].map((o) => { const ok = style.unlocked(part, o.id); return `<button type="button" data-part="${part}" data-id="${o.id}" ${o.icon ? '' : `style="--c:#${o.hex.toString(16).padStart(6, '0')}"`} aria-pressed="${cur[part] === o.id}" ${ok ? '' : 'disabled'}>${o.icon ? `<i class="ic">${o.icon}</i>` : '<i></i>'}${o.name}${ok ? '' : `<small>${lockLabel(o)}</small>`}</button>`; }).join('')}</div>`;
     const grid = STAR_ROOMS.map((id) => `<span title="${STORY[id]?.name || id}">${STORY[id]?.icon || ''}${stars.get(id).map((x) => `<i${x ? ' class="on"' : ''}>★</i>`).join('')}</span>`).join('');
     const win = hud.window(`<div class="hud-eye">${profile.name()} 꾸미기</div><h2>별 조각 ⭐ ${have} / ${stars.max()}</h2>
       <p>미션마다 <b>🔭 둘러보기</b>에서 숨은 별 2개, <b>S등급</b>으로 1개. 모을수록 새 색이 열려요.</p>
@@ -560,7 +561,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     hud.lastWindow?.querySelectorAll('[data-part]').forEach((b) => b.addEventListener('click', () => {
       if (!style.set(b.dataset.part, b.dataset.id)) return;
       hud.lastWindow.querySelectorAll(`[data-part="${b.dataset.part}"]`).forEach((x) => x.setAttribute('aria-pressed', x === b));
-      applyStyle(botObj); bot.play('인사', { once: true }); bot.setExpression('웃음'); sfx.pop?.();
+      applyStyle(botObj); curve.curveTree(botObj); bot.play('인사', { once: true }); bot.setExpression('웃음'); sfx.pop?.();
     }));
     await win; if (done) return; S.busy = false; S.near = null;
   }
