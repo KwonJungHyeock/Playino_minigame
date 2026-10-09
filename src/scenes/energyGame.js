@@ -88,8 +88,8 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
 
   // ── 3D ──
   stage = g.createStage(host, { fov: 36, far: 120, hold: true, coverText: '충전소에 불을 켜는 중…' });
-  const [{ createEnergyScene }, { addPost }, { createHud }, { runLesson }, { fontsReady }] = await Promise.all([
-    import('../gfx3d/scenes/energy.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/lesson.js'), import('../gfx3d/type.js')]);
+  const [{ createEnergyScene }, { addPost }, { createHud }, { runLesson }, { fontsReady }, { createActor }] = await Promise.all([
+    import('../gfx3d/scenes/energy.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/lesson.js'), import('../gfx3d/type.js'), import('../gfx3d/actor.js')]);
   if (done) return;
   await fontsReady(); if (done) return;
   scn = await createEnergyScene(stage);
@@ -97,6 +97,11 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   addPost(stage, { bloom: 0.5, bloomRadius: 0.7, threshold: 1.05 });
   hud = createHud(el, { mission: { icon: '🔋', eyebrow: 'MISSION 03 · 기지 복구', title: '에너지 셀 색 맞추기' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
+  // 바이저봇은 충전소 일꾼: 빈 셀을 안아 받침에 꽂고, 고르는 빛 탑을 가리키고, 충전 땐 만세 — 섞는 동안엔 셀을 지켜본다
+  const actor = createActor(bot), SP = scn.SPOTS, camPos = () => cam.position;
+  const watchV = new THREE.Vector3(), watchDir = () => watchV.copy(cam.position).lerp(scn.cellTop(), 0.55);   // 몸은 화면과 셀 사이 · 고개로 셀을 본다
+  let pointT = null;
+  function pointTower(i) { actor.point(scn.towerTop(i)).look(scn.towerTop(i)); clearTimeout(pointT); pointT = later(1100, () => { actor.point(null).pose(null).look(() => scn.cellTop(), 0.8); }); }
 
   // 카메라: 광원 탑 셋 · 프리즘 · 셀 · 양쪽 선반이 한눈에. 조종판이 아래를 가리니 장면을 조금 위로
   const GAME_CAM = { p: new THREE.Vector3(0.15, 3.1, 8.3), t: new THREE.Vector3(0, 0.95, -1.2) };
@@ -128,16 +133,16 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     scn.setMix(S.mix); sendBoard(); checkReso();
   }
   function checkReso() {
-    if (S.phase !== 'play' || S.busy) { scn.setResonance(0); resoEl.classList.remove('on'); return; }
+    if (S.phase !== 'play' || S.busy || !S.placed) { scn.setResonance(0); resoEl.classList.remove('on'); return; }
     const acc = accOf(cur().c, S.mix), k = Math.max(0, Math.min(1, (acc - PASS_ACC) / (1 - PASS_ACC) * 1.4 + 0.15)), on = acc >= PASS_ACC;
     scn.setResonance(on ? k : 0); resoEl.classList.toggle('on', on);
-    if (on && !S.reso) { sfx.pip?.(); sfx.pip?.(); bot.setExpression('웃음'); } else if (!on && S.reso) bot.setExpression('기본');
+    if (on && !S.reso) { sfx.pip?.(); sfx.pip?.(); bot.setExpression('웃음'); actor.hop(2.4); } else if (!on && S.reso) bot.setExpression('기본');
     S.reso = on;
   }
   const cur = () => TARGETS[S.mode - 1][S.round];
   function select(i) { S.sel = i; sliders.forEach((s, k) => s.l.classList.toggle('sel', k === i)); }
   sliders.forEach((s, i) => {
-    s.input.addEventListener('input', () => { const m = S.mix.slice(); m[i] = +s.input.value; setMix(m, { from: s.input }); });
+    s.input.addEventListener('input', () => { const m = S.mix.slice(); m[i] = +s.input.value; setMix(m, { from: s.input }); if (S.phase === 'play') pointTower(i); });
     s.input.addEventListener('pointerdown', () => select(i));
     s.input.addEventListener('focus', () => select(i));
   });
@@ -151,6 +156,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     await wait(1200); if (introSkipped) return;
     await hud.banner('에너지 셀 색 맞추기', 'MISSION 03', { ms: 2000 }); if (introSkipped) return;
     bot.play('인사', { once: true }); bot.setExpression('웃음');
+    actor.look(camPos);   // 말할 땐 화면(플레이어)을 본다
     await hud.dialogue([
       { text: '로켓을 움직이려면 에너지 셀이 꽉 차야 해.', mood: '기본' },
       { text: '셀마다 원하는 빛 색이 달라. 빨강 · 초록 · 파랑 빛을 섞어서 맞춰 보자!', mood: '웃음' },
@@ -158,7 +164,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     ].map((l) => ({ ...l, abort: () => introSkipped })));
     if (!introSkipped) endIntro();
   }
-  function endIntro() { if (S.phase !== 'intro') return; introSkipped = true; S.phase = 'prep'; S.introT = INTRO; skipBtn.hidden = true; hud.hush(); bot.setExpression('기본'); prep(); }
+  function endIntro() { if (S.phase !== 'intro') return; introSkipped = true; actor.look(null); S.phase = 'prep'; S.introT = INTRO; skipBtn.hidden = true; hud.hush(); bot.setExpression('기본'); prep(); }
   skipBtn.onclick = endIntro;
 
   // ── 결선 준비 ──
@@ -184,7 +190,8 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   // ── 바이저 강의 + 확인 퀴즈 — 빛의 삼원색 · 0~255 · 섞기 ──
   function lessonSeen() { try { return !!JSON.parse(localStorage.getItem(LESSON_KEY) || '{}').rgb; } catch { return false; } }
   function markLesson(r) { try { const v = JSON.parse(localStorage.getItem(LESSON_KEY) || '{}'); v.rgb = { at: Date.now(), right: r.right, firstTry: r.firstTry }; localStorage.setItem(LESSON_KEY, JSON.stringify(v)); } catch {} }
-  const show = (c) => { setMix(c); sfx.pip?.(); };
+  // 강의: 켠 빛이 하나면 그 탑을, 섞었으면 프리즘을 가리킨다
+  const show = (c) => { setMix(c); sfx.pip?.(); const on = c.map((v, i) => (v > 0 ? i : -1)).filter((i) => i >= 0); const at = on.length === 1 ? scn.towerTop(on[0]) : on.length ? scn.prismAt() : scn.cellTop(); actor.point(at).look(at); actor.hop(1.6); };
   async function lesson() {
     S.lesson = true; const prev = S.phase; S.phase = 'lesson';
     hud.goal('바이저 강의 · 빛 섞기의 원리'); bot.setExpression('웃음');
@@ -236,8 +243,8 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
 
   // ── 플레이 ──
   async function beginPlay() {
-    Object.assign(S, { phase: 'count', round: 0, accs: [], ended: false, pass: false, busy: true, pausedAt: 0, reso: false });
-    scn.resetRack(3); bot.play('대기'); bot.setExpression('기본'); bgm.setDuck(0.4); progressGoal();
+    Object.assign(S, { phase: 'count', round: 0, accs: [], ended: false, pass: false, busy: true, pausedAt: 0, reso: false, placed: false, trip: (S.trip || 0) + 1 });
+    actor.drop(); actor.pose(null).point(null); bot.object.position.copy(SP.home); scn.resetRack(3); bot.play('대기'); bot.setExpression('기본'); bgm.setDuck(0.4); progressGoal();
     await hud.banner(STAGE_NAME[S.mode - 1], 'MISSION START', { ms: 1400 });
     if (done || S.phase !== 'count') return;
     S.phase = 'play'; ctl.hidden = false; select(0);
@@ -248,21 +255,39 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     S.busy = true; goBtn.disabled = true;
     const t = cur(); scn.setTarget(t.c); $('#eng-tg').style.background = css(t.c); $('#eng-tg').style.setProperty('--g', css(t.c));
     setMix([128, 128, 128]); sfx.holo?.();
-    await scn.nextCell(S.round); if (done || S.phase !== 'play') return;
-    S.busy = false; goBtn.disabled = false; checkReso();
+    S.placed = false; S.busy = false;   // 바이저봇이 셀을 가져오는 동안에도 미리 섞을 수 있다 — 충전은 꽂힌 뒤에
+    const ok = await fetchCell(S.round); if (!ok || done || S.phase !== 'play') return;
+    S.placed = true; goBtn.disabled = false; checkReso();
     if (S.round === 0 && S.mode === 1) hud.toast('주문 고리와 같은 색이 되게 빛을 섞어 봐요', '');
   }
+  /** 바이저봇이 빈 셀 선반에서 셀을 안고 와 받침에 꽂는다. 판이 바뀌면(다시 시작 · 나가기) 그만둔다 */
+  async function fetchCell(i) {
+    const trip = S.trip, alive = () => !done && S.trip === trip && S.phase === 'play', c = scn.cells[i]; if (!c) return false;
+    actor.pose(null).point(null).look(c.position);
+    await actor.walkTo(SP.via, { speed: 2.6 }); if (!alive()) return false;
+    await actor.walkTo(SP.rack(i), { speed: 2.4 }); if (!alive()) return false;
+    actor.face(c.position); bot.setExpression('웃음'); await wait(160); if (!alive()) return false;
+    c.scale.setScalar(0.5); actor.hold(c).hop(1.8); sfx.pop?.(); actor.face(null).look(() => scn.cellTop(), 0.7);
+    await actor.walkTo(SP.via, { speed: 2.4 }); if (!alive()) return false;
+    await actor.walkTo(SP.socket, { speed: 2.4 }); if (!alive()) return false;
+    actor.face(scn.socketAt()); actor.drop(); await scn.nextCell(i, { fromHand: true }); if (!alive()) return false;
+    sfx.click?.(); bot.setExpression('기본'); actor.walkTo(SP.home, { speed: 2 }).then(() => { if (alive()) actor.face(watchDir); });
+    actor.look(() => scn.cellTop(), 0.8);
+    return true;
+  }
   async function submit() {
-    if (S.phase !== 'play' || S.busy || S.pausedAt) return;
+    if (S.phase !== 'play' || S.busy || S.pausedAt || !S.placed) return;
     S.busy = true; goBtn.disabled = true; goBtn.classList.add('down'); later(120, () => goBtn.classList.remove('down'));
     const t = cur(), acc = accOf(t.c, S.mix), good = acc >= PASS_ACC, pct = Math.round(acc * 100);
-    S.accs.push(acc); scn.setResonance(0); resoEl.classList.remove('on'); S.reso = false;
-    sfx.launch?.();
+    S.accs.push(acc); scn.setResonance(0); resoEl.classList.remove('on'); S.reso = false; S.placed = false;
+    sfx.launch?.(); clearTimeout(pointT); actor.point(null).pose('up').look(() => scn.cellTop()); actor.face(watchDir);   // 충전! 두 팔 번쩍
     const p = toScreen(scn.cellTop());
     later(350, () => { hud.pop(`${pct}%`, good ? '#5ff0a0' : acc >= 0.7 ? '#ffd25a' : '#ff8a7a', p.x, p.y); good ? sfx.ok() : sfx.no(); });
     later(500, () => hud.toast(`${good ? '충전 완료!' : '조금 달라요'} 정답은 ${t.name} rgb(${t.c.join(', ')})`, good ? 'ok' : ''));
-    bot.setExpression(good ? '하트' : '놀람'); if (good) bot.play('인사', { once: true });
+    later(380, () => { actor.pose(null); bot.setExpression(good ? '하트' : '놀람'); actor.react(!good ? 'bad' : acc >= 0.95 ? 'great' : 'good'); });
+    const ci = S.round; later(1000, () => actor.point(() => scn.cells[ci]?.position).look(() => scn.cells[ci]?.position));   // 선반으로 날아가는 셀을 눈으로 좇는다
     await scn.charge(acc, good); if (done) return;
+    actor.point(null);
     bot.setExpression('기본'); progressGoal();
     S.round++;
     if (S.round >= TARGETS[S.mode - 1].length) { endPlay(); return; }
@@ -303,13 +328,14 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     if (roomCleared('rgb') && !medals.isCleared('rgb')) medals.mark('rgb');
     const medal = medals.isCleared('rgb');
     S.pass = pass; bgm.setDuck(1); scn.setTarget([255, 255, 255]);
+    actor.point(null).pose(null).face(camPos).look(camPos);
     if (pass) {
       if (stageNo === 2) { scn.revealPart(); sfx.ok(); }
-      await wait(600); bot.play('환호', { once: true }); bot.setExpression('웃음');
+      await wait(600); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
       await hud.banner(stageNo === 1 ? '셀 충전!' : '에너지 가득!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(stageNo === 1 ? '빛 하나로 셀을 채웠어! 이제 빛을 섞어야 하는 셀이야.' : medal ? '에너지 셀 획득! 기지 로켓에 달러 가자 🔋' : '에너지 가득! 1단계도 통과하면 에너지 셀을 받아.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림');
+      bot.setExpression('졸림'); actor.squash(0.18);
       await hud.banner('셀이 덜 찼어', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say('견본 구슬과 셀 빛을 나란히 보면서 다시 해 볼까? 셀이 공명하면 거의 다 온 거야.', { mood: '졸림' });
     }
@@ -337,7 +363,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     cam.position.y += Math.sin(S.t * 0.6) * 0.002; cam.lookAt(camT);
   });
 
-  window.__energyGame = { el, S, scn, stage, hud, setMix, submit, select };   // 자동 점검용
+  window.__energyGame = { el, S, scn, stage, hud, setMix, submit, select, actor };   // 자동 점검용
   setMix([128, 128, 128]);
   if (S.mode === 2) { cam.position.copy(fitCam()); camT.copy(camDef().t); }
   else { cam.position.copy(introFrom.p); camT.copy(introFrom.t); }

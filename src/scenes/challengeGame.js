@@ -149,7 +149,8 @@ export async function showChallengeGame(root, { onExit } = {}) {
   // ── 물리 한 걸음 ──
   function physics(dt) {
     const p = body.position, d = inputDir(), ctrl = S.stun > 0 || S.slide > 0 ? 0.15 : 1;
-    S.stun = Math.max(0, S.stun - dt); if (S.slide > 0 && (S.slide -= dt) <= 0) { S.slide = 0; S.sq = -0.28; sfx.boing(1.3); }   // 배 미끄럼 끝 → 퐁 일어남 S.coyote = Math.max(0, S.coyote - dt); S.buffer = Math.max(0, S.buffer - dt);
+    S.stun = Math.max(0, S.stun - dt); S.coyote = Math.max(0, S.coyote - dt); S.buffer = Math.max(0, S.buffer - dt);
+    if (S.slide > 0 && (S.slide -= dt) <= 0) { S.slide = 0; S.sq = -0.28; sfx.boing(1.3); }   // 배 미끄럼 끝 → 퐁 일어남
     // 수평: 땅에선 빠르게 붙고 손을 떼면 미끄러지듯 선다, 공중에선 조금만 꺾인다. 다이브 중엔 조종이 거의 안 된다
     S.launch = Math.max(0, (S.launch || 0) - dt);
     const ground = !!S.onGround, acc = (ground ? ACC_G : ACC_A) * ctrl * (S.dived ? 0.25 : 1) * (S.launch > 0 ? 0.12 : 1);   // 점프대로 날아가는 동안은 거의 그대로 날아간다

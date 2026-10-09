@@ -75,6 +75,11 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   addPost(stage, { bloom: 0.45, bloomRadius: 0.7, threshold: 1.05 });
   hud = createHud(el, { mission: { icon: '📡', eyebrow: 'MISSION 02 · 기지 복구', title: '구조 신호 비콘' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
+  // 바이저봇은 신호 지휘자: 맞힌 음 높이만큼 팔을 든다(낮은 음 낮게 · 높은 음 높게) — 소리 높이 = 줄 높이를 몸으로
+  const { createActor } = await import('../gfx3d/actor.js'); if (done) return;
+  const actor = createActor(bot), camPos = () => cam.position, CONDUCT = [-0.55, 0, 0.55];   // 낮은 음 · 중간 음 · 높은 음 팔 높이
+  let condT = null;
+  function conduct(lane, hop = false) { actor.conduct(CONDUCT[lane]).look(scn.lanePos(lane)); if (hop) actor.hop(2.2); clearTimeout(condT); condT = later(380, () => actor.conduct(null).look(() => scn.sat.position, 0.6)); }
 
   // 카메라: 신호선 3줄 · 접시 · 중계탑이 한눈에. 세로 화면은 물러선다
   const GAME_CAM = { p: new THREE.Vector3(1.25, 2.75, 9.4), t: new THREE.Vector3(1.25, 1.6, -0.9) };   // 바이저봇 · 접시 · 신호선 3줄 · 중계탑이 한 화면에
@@ -110,6 +115,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     await wait(1300); if (introSkipped) return;
     await hud.banner('구조 신호 비콘', 'MISSION 02', { ms: 2000 }); if (introSkipped) return;
     bot.play('인사', { once: true }); bot.setExpression('웃음');
+    actor.look(camPos);   // 말할 땐 화면(플레이어)을 본다
     await hud.dialogue([
       { text: '저기 위성 보여? 궤도에서 통신이 끊겼어.', mood: '기본' },
       { text: '접시 안테나로 멜로디 신호를 보내 보자!', mood: '웃음' },
@@ -117,7 +123,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     ].map((l) => ({ ...l, abort: () => introSkipped })));
     if (!introSkipped) endIntro();
   }
-  function endIntro() { if (S.phase !== 'intro') return; introSkipped = true; S.phase = 'prep'; S.introT = INTRO; skipBtn.hidden = true; hud.hush(); bot.setExpression('기본'); prep(); }
+  function endIntro() { if (S.phase !== 'intro') return; introSkipped = true; actor.look(() => scn.sat.position, 0.6); S.phase = 'prep'; S.introT = INTRO; skipBtn.hidden = true; hud.hush(); bot.setExpression('기본'); prep(); }
   skipBtn.onclick = endIntro;
 
   // ── 결선 준비 ──
@@ -145,7 +151,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   const LESSON_KEY = 'eduino.v4.lesson.v1';
   function lessonSeen() { try { return !!JSON.parse(localStorage.getItem(LESSON_KEY) || '{}').buzzer; } catch { return false; } }
   function markLesson(r) { try { const v = JSON.parse(localStorage.getItem(LESSON_KEY) || '{}'); v.buzzer = { at: Date.now(), right: r.right, firstTry: r.firstTry }; localStorage.setItem(LESSON_KEY, JSON.stringify(v)); } catch {} }
-  const play = (f, ms = 360) => { tone(f, ms); scn.pulse(laneOf(Math.min(f, A4))); };
+  const play = (f, ms = 360) => { tone(f, ms); scn.pulse(laneOf(Math.min(f, A4))); conduct(laneOf(Math.min(f, A4)), true); };
   async function lesson() {
     S.lesson = true; const prev = S.phase; S.phase = 'lesson';
     hud.goal('바이저 강의 · 부저의 원리'); bot.setExpression('웃음');
@@ -219,12 +225,12 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     if (bestD <= W_GOOD) {
       const perfect = bestD <= W_PERFECT;
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo); S.score += (perfect ? 100 : 60) + S.combo * 5; S.hits++;
-      tone(best.freq, 280); scn.pulse(lane); lanePop(lane, perfect ? 'PERFECT' : 'GOOD', perfect ? '#5ff0a0' : '#ffd25a');
+      tone(best.freq, 280); scn.pulse(lane); conduct(lane, perfect); lanePop(lane, perfect ? 'PERFECT' : 'GOOD', perfect ? '#5ff0a0' : '#ffd25a');
       if (S.combo % 10 === 0) { bot.play('인사', { once: true }); bot.setExpression('하트'); later(1200, () => { if (S.phase === 'play') bot.setExpression('기본'); }); }
     } else miss(lane);
     progressGoal();
   }
-  function miss(lane) { S.combo = 0; sfx.no(); scn.bad(lane); lanePop(lane, 'MISS', '#ff6f6f'); bot.setExpression('놀람'); later(650, () => { if (S.phase === 'play') bot.setExpression('기본'); }); }
+  function miss(lane) { S.combo = 0; sfx.no(); scn.bad(lane); actor.react('bad'); lanePop(lane, 'MISS', '#ff6f6f'); bot.setExpression('놀람'); later(650, () => { if (S.phase === 'play') bot.setExpression('기본'); }); }
 
   function onKey(e) {
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
@@ -254,9 +260,10 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     if (roomCleared('buzzer') && !medals.isCleared('buzzer')) medals.mark('buzzer');
     const medal = medals.isCleared('buzzer');
     S.pass = pass; bgm.setDuck(1); hud.combo(0, 0, 0);
+    actor.conduct(null).look(camPos);
     if (pass) {
       if (stageNo === 2) { scn.revealPart(); sfx.ok(); }
-      await wait(700); bot.play('환호', { once: true }); bot.setExpression('웃음');
+      await wait(700); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
       await hud.banner(stageNo === 1 ? '신호 연결!' : '교신 성공!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(stageNo === 1 ? '위성이 대답했어! 이제 긴 신호로 통신을 완전히 잇자.' : medal ? '통신 안테나 획득! 기지 로켓에 달러 가자 📡' : '교신 성공! 1단계도 통과하면 안테나를 받아.', { mood: '웃음' });
     } else {
@@ -305,7 +312,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     }
   });
 
-  window.__beaconGame = { el, S, scn, stage, hud, press };   // 자동 점검용
+  window.__beaconGame = { el, S, scn, stage, hud, press, actor };   // 자동 점검용
   if (S.mode === 2) { cam.position.copy(fitCam()); camT.copy(camDef().t); }
   else { cam.position.copy(introFrom.p); camT.copy(introFrom.t); }
   await stage.warm(); if (done) return;

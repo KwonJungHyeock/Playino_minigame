@@ -94,6 +94,11 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   addPost(stage, { bloom: 0.42, bloomRadius: 0.7, threshold: 1.05 });
   hud = createHud(el, { mission: { icon: '🛬', eyebrow: 'MISSION 01 · 기지 복구', title: '착륙 유도등' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = land.bot, ship = land.ship;
+  // 바이저봇은 착륙 유도원: 내려오는 보급선을 올려다보고, 신호를 맞히면 두 팔을 번쩍 든다. 2단계엔 켠 유도등을 가리키며 별을 본다
+  const { createActor } = await import('../gfx3d/actor.js'); if (done) return;
+  const actor = createActor(bot), camPos = () => cam.position, shipAt = () => ship.position;
+  let gestT = null;
+  function gesture(fn, ms = 300, after = () => actor.pose(null).point(null)) { fn(); clearTimeout(gestT); gestT = later(ms, after); }
   const GAME_CAM = { p: new THREE.Vector3(2.7, 2.5, 5.9), t: new THREE.Vector3(-0.25, 1.55, -1.0) };
   const MUSIC_CAM = { p: new THREE.Vector3(0.9, 1.75, 6.6), t: new THREE.Vector3(-0.1, 2.7, -3.0) };   // 2단계: 아래엔 유도등 3기, 위로는 별자리 하늘
   const LESSON_CAM = { p: new THREE.Vector3(1.2, 1.9, 3.9), t: new THREE.Vector3(-0.85, 0.95, -3.0) };   // 강의: 유도등 3기를 화면 오른쪽 가운데에 크게(왼쪽은 코드 자리)
@@ -143,6 +148,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     await wait(1400); if (introSkipped) return;
     await hud.banner('착륙 유도등', 'MISSION 01', { ms: 2000 }); if (introSkipped) return;
     bot.play('인사', { once: true }); bot.setExpression('웃음');
+    actor.look(camPos);   // 말할 땐 화면(플레이어)을 본다
     await hud.dialogue([
       { text: '여긴 에듀이노 기지… 탈출 로켓을 고치려면 부품이 필요해.', mood: '기본' },
       { text: '마침 보급선이 엔진 부품을 싣고 내려오고 있어!', mood: '웃음' },
@@ -150,7 +156,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     ].map((l) => ({ ...l, abort: () => introSkipped })));
     if (!introSkipped) endIntro();
   }
-  function endIntro() { if (S.phase !== 'intro') return; introSkipped = true; S.phase = 'prep'; S.introT = INTRO; skipBtn.hidden = true; hud.hush(); bot.setExpression('기본'); prep(); }
+  function endIntro() { if (S.phase !== 'intro') return; introSkipped = true; actor.look(shipAt, 0.8); S.phase = 'prep'; S.introT = INTRO; skipBtn.hidden = true; hud.hush(); bot.setExpression('기본'); prep(); }
   skipBtn.onclick = endIntro;
 
   // ── 결선 준비 ──
@@ -257,19 +263,19 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     if (bestD <= W_GOOD) {
       const perfect = bestD <= W_PERFECT;
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo); S.score += (perfect ? 100 : 60) + S.combo * 5; S.hits++;
-      perfect ? sfx.perfect() : sfx.ok(); signal(perfect ? 0 : 1); judgePop(perfect ? 'PERFECT' : 'GOOD', perfect ? '#5ff0a0' : '#ffd25a');
+      perfect ? sfx.perfect() : sfx.ok(); signal(perfect ? 0 : 1); gesture(() => { actor.pose('up').look(shipAt, 0.8); if (perfect) actor.hop(2.4); }); judgePop(perfect ? 'PERFECT' : 'GOOD', perfect ? '#5ff0a0' : '#ffd25a');
       if (S.combo % 10 === 0) { bot.play('인사', { once: true }); bot.setExpression('하트'); later(1200, () => { if (S.phase === 'play') bot.setExpression('기본'); }); }
     } else miss();
     progress();
   }
-  function miss() { S.combo = 0; S.wobble = 1; sfx.no(); signal(2); judgePop('MISS', '#ff6f6f'); bot.setExpression('놀람'); later(650, () => { if (S.phase === 'play') bot.setExpression('기본'); }); }
+  function miss() { S.combo = 0; S.wobble = 1; sfx.no(); signal(2); actor.react('bad'); judgePop('MISS', '#ff6f6f'); bot.setExpression('놀람'); later(650, () => { if (S.phase === 'play') bot.setExpression('기본'); }); }
   // ── 2단계: 라이트 연주(화물칸 빛 암호) ──
   // 설명 창 대신: 카메라가 하늘로 고개를 들고, 첫 별들이 떠오르는 동안 바이저봇이 두 마디로 알려 준다
   async function brief2() {
     S.mode = 2; S.phase = 'brief'; hud.action(''); engine.visible = false; padsEl.hidden = true;
     S.beats = buildMelody(); song.reset(S.beats); song.show(true); S.preNow = -1100; S.rewind = 0;   // 설명 동안 첫 소절이 하늘에 떠 있다
     hud.goal('화물칸 빛 암호 — 하늘의 작은별을 연주해요');
-    bot.setExpression('웃음');
+    bot.setExpression('웃음'); actor.look(camPos);
     await wait(500); if (done) return;
     await hud.dialogue([
       { text: '화물칸은 빛 암호로 잠겨 있어. 암호는 하늘의 작은별 노래야!', mood: '웃음' },
@@ -305,6 +311,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
       const perfect = bestD <= W_PERFECT;
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo); S.score += (perfect ? 100 : 60) + S.combo * 5; S.hits++;
       sfx.note(best.freq, 320, 0.2); signal(i); song.hit(best.i, perfect);
+      { const bulb = land.lamps[i].userData.bulb.getWorldPosition(new THREE.Vector3()), star = song.starWorld(best.i, new THREE.Vector3()); gesture(() => { actor.point(bulb).look(star, 0.9); if (perfect) actor.hop(1.8); }, 320, () => actor.point(null)); }
       starPop(best.i, perfect ? 'PERFECT' : 'GOOD', perfect ? '#5ff0a0' : '#ffd25a');
       const at = song.starWorld(best.i, tmpV);
       sparks.burst(perfect ? 14 : 8, (k, n) => { const a = (k / n) * Math.PI * 2; return [[at.x, at.y, at.z], [Math.cos(a) * 1.6, Math.sin(a) * 1.6, 0], { life: 0.5, size: 0.12, grow: 0.3, color: k % 2 ? LANE_HEX[i] : 0xffffff, alpha: 1, gravity: -1, damp: 2.5 }]; });
@@ -313,7 +320,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     progress2();
   }
   function miss2(i, idx) {
-    S.combo = 0; sfx.no(); signal(2); song.miss(idx); starPop(idx, 'MISS', '#ff6f6f');
+    S.combo = 0; sfx.no(); signal(2); song.miss(idx); starPop(idx, 'MISS', '#ff6f6f'); actor.react('bad');
     bot.setExpression('놀람'); later(650, () => { if (S.phase === 'play') bot.setExpression('기본'); });
   }
   async function endPlay2() {
@@ -328,7 +335,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     if (pass) {
       // 화물칸이 열리고 엔진 노즐이 떠오른다
       engine.visible = true; engine.position.set(PAD.x, SHIP_REST + 0.9, PAD.z); engine.scale.setScalar(0.01); S.reveal = 0.001; sfx.ok();
-      await wait(900); bot.play('환호', { once: true }); bot.setExpression('웃음');
+      await wait(900); actor.point(null).look(camPos); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
       await hud.banner('화물칸 열림!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(medal ? '엔진 노즐 획득! 기지 로켓에 달러 가자 🚀' : '화물칸이 열렸어! 1단계도 통과하면 엔진 노즐이야.', { mood: '웃음' });
     } else {
@@ -383,7 +390,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     if (roomCleared('led') && !medals.isCleared('led')) medals.mark('led');   // 2단계를 이미 통과했다면 이번 판으로 메달
     S.pass = pass; S.landT = 0; bgm.setDuck(1); hud.combo(0, 0, 0);
     if (pass) {
-      await wait(1700); bot.play('환호', { once: true }); bot.setExpression('웃음');
+      await wait(1700); actor.look(camPos); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('up')); later(2400, () => actor.pose(null));
       await hud.banner('착륙 성공!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say('보급선이 내려왔어! 화물칸을 열어 엔진 부품을 꺼내자.', { mood: '웃음' });
     } else {
@@ -464,7 +471,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     }
   }
 
-  window.__landingGame = { S, land, stage, press, press2, hud, song };   // 자동 점검용
+  window.__landingGame = { S, land, stage, press, press2, hud, song, actor };   // 자동 점검용
   if (S.mode === 2) { ship.position.y = SHIP_REST; cam.position.copy(fitCam()); camT.copy(MUSIC_CAM.t); }
   else { cam.position.copy(introFrom.p); camT.copy(introFrom.t); }
   await stage.warm(); if (done) return;   // 셰이더 · 텍스처를 가림막 뒤에서 미리 — 첫 장면이 멈칫하지 않게

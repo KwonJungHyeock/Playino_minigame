@@ -169,7 +169,7 @@ export async function createEnergyScene(stage) {
     placeKit(root, 'barrels', { x: 4.9, z: -3.6, s: 1.0, ry: 0.4 }),
   ]);
 
-  const bot = await loadRobot(); bot.object.position.set(-1.75, 0, 0.75); bot.object.rotation.y = 0.55; root.add(bot.object);
+  const bot = await loadRobot(); bot.object.position.set(-1.55, 0, -1.0); bot.object.rotation.y = 0.9; bot.object.scale.setScalar(1.2); root.add(bot.object);   // 셀(1m)과 나란히 서도 주인공으로 보이게
 
   // 반짝이(공명 · 충전)
   const sparks = createParticles({ max: 96, additive: true, tier: stage.tier }); root.add(sparks.points);
@@ -199,9 +199,9 @@ export async function createEnergyScene(stage) {
     for (let k = 0; k < n; k++) { const c = cellModel(); c.position.copy(slotPos(RACK_L, k)); c.scale.setScalar(RACK_S); c.traverse((m) => { if (m.isMesh && m.material !== c.userData.core.material) m.castShadow = true; }); root.add(c); cells.push(c); }
   }
   /** i 번째 빈 셀을 받침으로 옮긴다 */
-  async function nextCell(i) {
+  async function nextCell(i, { fromHand = false } = {}) {   // fromHand: 바이저봇이 안고 온 셀을 받침에 꽂는다(짧게)
     const c = cells[i]; if (!c) return; cur = c; c.userData.fill(mix, 0.15);
-    await move(c, SOCKET.clone().setY(SOCKET.y), { dur: 0.75, lift: 1.1, s1: 1 });
+    await move(c, SOCKET.clone().setY(SOCKET.y), fromHand ? { dur: 0.4, lift: 0.35, s1: 1 } : { dur: 0.75, lift: 1.1, s1: 1 });
   }
   /** 충전: 빛 번쩍 → 셀이 그 색으로 가득 → 오른쪽 선반으로. 통과 못 한 셀은 흐리게 깜빡이며 간다 */
   async function charge(acc, pass) {
@@ -214,6 +214,9 @@ export async function createEnergyScene(stage) {
   }
   function revealPart() { reveal = 0.001; part.visible = true; part.scale.setScalar(0.01); }
   const towerTop = (i) => TOWER[i].clone().setY(TOWER[i].y + HEAD_Y + 0.55);
+  // 바이저봇이 걷는 자리: 집(셀 왼쪽 앞) · 빈 셀 선반 앞 · 받침 옆 · 빨강 탑을 비켜 가는 길목
+  // 집 · 받침 옆은 받침 왼쪽 뒤 — 셀을 지켜볼 때 얼굴이 카메라 쪽으로 보이게. 길목은 빨강 탑 뒤(견본 기둥 · 탑을 비켜 간다)
+  const SPOTS = { home: new V(-1.55, 0, -1.0), via: new V(-2.45, 0, -1.28), socket: new V(-1.08, 0, -1.25), rack: (k) => slotPos(RACK_L, k).setY(0).add(new V(0, 0, 0.68)) };
   const cellTop = () => SOCKET.clone().setY(SOCKET.y + CELL_H + 0.35);
 
   function update(dt) {
@@ -264,5 +267,5 @@ export async function createEnergyScene(stage) {
   }
   function setScale(px) { sparks.setScale(px); }
   setTarget([255, 255, 255]); resetRack(3);
-  return { root, bot, update, setMix, setTarget, setResonance, resetRack, nextCell, charge, revealPart, towerTop, cellTop, setScale, get cells() { return cells; }, dispose: () => bot.dispose() };
+  return { root, bot, SPOTS, prismAt: () => prismG.position.clone(), socketAt: () => SOCKET.clone(), update, setMix, setTarget, setResonance, resetRack, nextCell, charge, revealPart, towerTop, cellTop, setScale, get cells() { return cells; }, dispose: () => bot.dispose() };
 }

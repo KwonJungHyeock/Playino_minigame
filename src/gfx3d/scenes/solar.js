@@ -168,7 +168,9 @@ export async function createSolarScene(stage) {
     placeKit(station, 'rocks_smallA', { x: 3.4, z: 2.6, s: 1.2, ry: 0.9, smooth: true }),
     placeKit(station, 'rock_largeB', { x: -10, z: -3.5, s: 1.6, ry: 2.2, smooth: true }),
   ]);
-  const bot = await loadRobot(); bot.object.position.set(-2.2, 0, 0.95); bot.object.rotation.y = 0.5; station.add(bot.object);
+  // 바이저봇: 1단계엔 센서 옆에서 직접 가리고, 2단계엔 태양광 날개를 메고 직접 난다
+  const BOT_AT = new V(0.32, 0, -0.02), BOT_S = 1.15;
+  const bot = await loadRobot(); bot.object.position.copy(BOT_AT); bot.object.rotation.y = 1.0; bot.object.scale.setScalar(BOT_S); station.add(bot.object);
 
   // ══ 2단계 무대: 비행 길(옆에서 본다) ══
   const flight = new THREE.Group(); flight.name = 'Flight'; flight.visible = false; root.add(flight);
@@ -190,8 +192,18 @@ export async function createSolarScene(stage) {
     const eLo = new THREE.Mesh(new THREE.BoxGeometry(1.08, 0.06, 0.7), edgeMat()), eHi = new THREE.Mesh(new THREE.BoxGeometry(1.08, 0.06, 0.7), edgeMat()); g.add(eLo, eHi);
     return { g, lo, hi, eLo, eHi };
   });
-  const pilot = fireflyDrone(1.5); pilot.position.set(0, 2.8, FLY_Z); flight.add(pilot);
-  const pilotGlow = new THREE.Sprite(sunGlowMat.clone()); pilotGlow.scale.setScalar(1.2); flight.add(pilotGlow);
+  // 비행 몸: 바이저봇(머리가 앞 · 얼굴은 화면 쪽) + 등 위 태양광 날개 + 발끝 분사 빛
+  const pilot = new THREE.Group(); pilot.name = 'Pilot'; pilot.position.set(0, 2.8, FLY_Z); flight.add(pilot);
+  const jetMat = lamp(SUN_HEX, 2.4), jet = mesh(new THREE.SphereGeometry(0.07, 16, 12), jetMat, { cast: false }); jet.position.set(-0.26, 0, 0); jet.scale.set(1.3, 0.8, 0.8); pilot.add(jet);
+  const pWings = [];
+  for (const sd of [-1, 1]) {
+    const hinge = new THREE.Group(); hinge.position.set(-0.02, 0.09, sd * 0.02); pilot.add(hinge);
+    const w = mesh(roundedBox(0.2, 0.015, 0.26, 0.008), vinyl(P.navy, { roughness: 0.2, clearcoat: 1, sheen: 0 }), { cast: false }); w.position.z = sd * 0.15; hinge.add(w);
+    const fr = mesh(roundedBox(0.21, 0.02, 0.03, 0.008), vinyl(P.mustard), { cast: false }); fr.position.z = sd * 0.28; hinge.add(fr);
+    pWings.push({ hinge, sd });
+  }
+  pilot.userData = { tailMat: jetMat, wings: pWings };
+  const pilotGlow = new THREE.Sprite(sunGlowMat.clone()); pilotGlow.scale.setScalar(0.7); flight.add(pilotGlow);
   // 비행 길의 인공 태양(왼쪽 위): 빛을 받으면 환하고, 가리면 어두워진다 — 드론이 왜 뜨는지 그림으로
   const flySun = new THREE.Sprite(sunGlowMat.clone()); flySun.scale.setScalar(5); flySun.position.set(-3.2, 6.4, -6); flight.add(flySun);
   const flySunCore = mesh(new THREE.SphereGeometry(0.55, 32, 20), new THREE.MeshBasicMaterial({ color: new THREE.Color(SUN_HEX).multiplyScalar(1.6), toneMapped: false }), { cast: false }); flySunCore.position.copy(flySun.position); flight.add(flySunCore);
@@ -213,7 +225,11 @@ export async function createSolarScene(stage) {
   function setLight(k) { light = Math.max(0, Math.min(1, k)); }
   function setCover(on) { cover = on ? 1 : 0; }
   function show(m) { mode = m; station.visible = m === 'station' || m === 'all'; flight.visible = m === 'flight' || m === 'all';   // 'all' = 준비(warm) 때 두 무대를 함께 컴파일
-    key.shadow.camera.left = m === 'flight' ? -6 : -10; }
+    key.shadow.camera.left = m === 'flight' ? -6 : -10;
+    // 바이저봇을 무대 사이로 옮긴다: 비행 땐 작게 눕혀(머리 +x · 얼굴 +z) 날개 몸에 태운다 — 판정 크기(지름 0.26m)와 비슷하게
+    if (m === 'flight') { pilot.add(bot.object); bot.object.position.set(-0.2, -0.03, 0); bot.object.rotation.set(0, 0, -Math.PI / 2); bot.object.scale.setScalar(0.46); }
+    else if (m === 'station') { station.add(bot.object); bot.object.position.copy(BOT_AT); bot.object.rotation.set(0, 1.0, 0); bot.object.scale.setScalar(BOT_S); }
+  }
   /** 구슬 하나: x 위치 · 종류('sun'|'shade') · 판정 고리 근처면 near */
   function orb(i, x, kind, near) {
     const o = orbs[i]; if (!o) return; o.g.visible = true; o.g.position.set(x, RAIL_Y + (near ? 0.04 : 0), RAIL_Z);
@@ -262,7 +278,7 @@ export async function createSolarScene(stage) {
     ringFlash = Math.max(0, ringFlash - dt * 3); ringBad = Math.max(0, ringBad - dt * 3);
     face.scale.setScalar(1 + ringFlash * 0.3); ringGlowMat.color.setHex(ringBad > 0.05 ? 0xff6f6f : SUN_HEX).multiplyScalar(1.3); ringGlowMat.opacity = 0.45 + ringFlash * 0.5 + Math.sin(t * 5) * 0.05;
     // 비행 드론
-    pilot.userData.tailMat.emissiveIntensity = 0.4 + 3 * L; pilotGlow.position.copy(pilot.position).add(new V(-0.25, 0, 0.05)); pilotGlow.material.opacity = 0.15 + 0.5 * L; pilot.userData.wings.forEach((w) => { w.hinge.rotation.x = w.sd * (0.25 + Math.sin(t * 46) * (0.25 + 0.25 * L)); });
+    pilot.userData.tailMat.emissiveIntensity = 0.4 + 3 * L; pilotGlow.position.copy(pilot.position).add(new V(-0.32, 0, 0.05)); pilotGlow.material.opacity = 0.1 + 0.3 * L; pilot.userData.wings.forEach((w) => { w.hinge.rotation.x = w.sd * (0.25 + Math.sin(t * 46) * (0.25 + 0.25 * L)); });
     if (mode === 'flight' && Math.random() < dt * 30) trail.emit([pilot.position.x - 0.3, pilot.position.y, pilot.position.z], [-1.6, (Math.random() - 0.5) * 0.3, 0], { life: 0.5, size: 0.08, grow: 0.3, color: SUN_HEX, alpha: 0.5 + 0.5 * L, gravity: 0, damp: 1 });
     trail.update(dt); sparks.update(dt);
     if (reveal > 0) {

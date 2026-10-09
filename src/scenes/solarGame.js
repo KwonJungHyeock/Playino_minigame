@@ -69,8 +69,8 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
 
   // ── 3D ──
   stage = g.createStage(host, { fov: 36, far: 140, hold: true, coverText: '태양광 밭에 해를 띄우는 중…' });
-  const [{ createSolarScene, HIT_X, FROM_X, RAIL_Y, RAIL_Z, FLY_FLOOR, FLY_CEIL, FLY_Z }, { addPost }, { createHud }, { runLesson }, { fontsReady }] = await Promise.all([
-    import('../gfx3d/scenes/solar.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/lesson.js'), import('../gfx3d/type.js')]);
+  const [{ createSolarScene, HIT_X, FROM_X, RAIL_Y, RAIL_Z, FLY_FLOOR, FLY_CEIL, FLY_Z }, { addPost }, { createHud }, { runLesson }, { fontsReady }, { createActor }] = await Promise.all([
+    import('../gfx3d/scenes/solar.js'), import('../gfx3d/post.js'), import('../gfx3d/hud.js'), import('../gfx3d/lesson.js'), import('../gfx3d/type.js'), import('../gfx3d/actor.js')]);
   if (done) return;
   await fontsReady(); if (done) return;
   scn = await createSolarScene(stage);
@@ -78,6 +78,14 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   addPost(stage, { bloom: 0.5, bloomRadius: 0.7, threshold: 1.05 });
   hud = createHud(el, { mission: { icon: '☀️', eyebrow: 'MISSION 04 · 기지 복구', title: '태양광 충전소' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
+  // 바이저봇이 직접 한다: 1단계엔 센서 옆에서 다가오는 구슬을 눈으로 좇고 그림자 땐 팔을 뻗어 센서를 덮는다 · 2단계엔 날개를 메고 직접 난다
+  const actor = createActor(bot), camPos = () => cam.position, sensorTop = scn.sensorTop(), lookV = new THREE.Vector3();
+  let wasDark = null;
+  function body(dark) {   // 빛 상태가 바뀔 때만 몸짓을 바꾼다
+    if (dark === wasDark) return; wasDark = dark;
+    if (S.view === 'flight') { actor.point(null).pose('fly'); bot.setExpression(dark ? '기본' : '웃음'); return; }
+    if (dark) { actor.point(null).pose('cover').face(sensorTop); actor.squash(0.08); } else actor.pose(null).face(null);   // 두 손을 앞으로 뻗어 센서를 덮는다
+  }
   const K = (FLY_CEIL - FLY_FLOOR) / VH;                         // 가상 1px → m
   const wy = (y) => FLY_CEIL - y * K, wx = (x) => (x - PX) * K;   // 가상 좌표 → 월드
 
@@ -103,7 +111,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   }
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
-  function setView(v) { S.view = v; scn.show(v); const c = camGoal(); cam.position.copy(c.p); camT.copy(c.t); }
+  function setView(v) { S.view = v; scn.show(v); const c = camGoal(); cam.position.copy(c.p); camT.copy(c.t); wasDark = null; actor.face(null).point(null).pose(v === 'flight' ? 'fly' : null).look(v === 'flight' ? null : sensorTop, 0.8); }
 
   // ── 빛 상태(가리기 단추 · 스페이스 · 진짜 센서) ──
   const isDark = () => (S.forced != null ? S.forced < 0.5 : S.holding || S.sensorDark);
@@ -133,6 +141,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     await wait(1200); if (introSkipped) return;
     await hud.banner('태양광 충전소', 'MISSION 04', { ms: 2000 }); if (introSkipped) return;
     bot.play('인사', { once: true }); bot.setExpression('웃음');
+    actor.look(camPos);   // 말할 땐 화면(플레이어)을 본다
     await hud.dialogue([
       { text: '여긴 태양광 충전소야. 반딧불 드론들이 신호를 잃어버렸대.', mood: '기본' },
       { text: '조도 센서를 손으로 가렸다 떼면서 빛 신호를 보내 보자!', mood: '웃음' },
@@ -140,7 +149,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     ].map((l) => ({ ...l, abort: () => introSkipped })));
     if (!introSkipped) endIntro();
   }
-  function endIntro() { if (S.phase !== 'intro') return; introSkipped = true; S.phase = 'prep'; S.introT = INTRO; skipBtn.hidden = true; hud.hush(); bot.setExpression('기본'); prep(); }
+  function endIntro() { if (S.phase !== 'intro') return; introSkipped = true; actor.look(sensorTop, 0.8); S.phase = 'prep'; S.introT = INTRO; skipBtn.hidden = true; hud.hush(); bot.setExpression('기본'); prep(); }
   skipBtn.onclick = endIntro;
 
   // ── 결선 준비 ──
@@ -165,7 +174,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   // ── 바이저 강의 + 확인 퀴즈 — analogRead · 0~1023 · if 기준 ──
   function lessonSeen() { try { return !!JSON.parse(localStorage.getItem(LESSON_KEY) || '{}').cds; } catch { return false; } }
   function markLesson(r) { try { const v = JSON.parse(localStorage.getItem(LESSON_KEY) || '{}'); v.cds = { at: Date.now(), right: r.right, firstTry: r.firstTry }; localStorage.setItem(LESSON_KEY, JSON.stringify(v)); } catch {} }
-  const force = (k) => { S.forced = k; scn.setCover(k < 0.5); sfx.pip?.(); };
+  const force = (k) => { S.forced = k; scn.setCover(k < 0.5); sfx.pip?.(); body(k < 0.5); if (k >= 0.5) actor.hop(1.6); };
   async function lesson() {
     S.lesson = true; const prev = S.phase; S.phase = 'lesson'; readEl.hidden = false; readEl.classList.add('up');   // 휴대폰: 강의 단추와 겹치지 않게 장면 위쪽으로
     hud.goal('바이저 강의 · 조도 센서의 원리'); bot.setExpression('웃음');
@@ -196,7 +205,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
       ],
     });
     const r = await lessonRef.done; lessonRef = null; if (done) return;
-    markLesson(r); readEl.classList.remove('up'); S.lesson = false; S.forced = null; scn.setCover(false); S.phase = prev === 'lesson' ? 'prep' : prev; bot.setExpression('기본');
+    markLesson(r); readEl.classList.remove('up'); S.lesson = false; S.forced = null; scn.setCover(false); body(false); S.phase = prev === 'lesson' ? 'prep' : prev; bot.setExpression('기본');
     if (!r.skipped) { bot.play('환호', { once: true }); hud.toast(r.firstTry === r.total ? '퀴즈 만점! 빛 읽기 마스터 🔆' : `퀴즈 ${r.total}문제 모두 풀었어요`, 'ok'); }
   }
 
@@ -224,7 +233,8 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     release(); scn.setCover(false); scn.hideOrbs(); scn.hidePillars();
     if (game.mode === 'react') { S.beats = game.seq.map((need, i) => ({ need, target: 1000 + i * game.gap, judged: false })); S.total = S.beats.length; S.fly = null; }
     else { S.fly = { y: VH * 0.4, vy: 0, pillars: [], spawned: 0, t: 0, endT: 0, crash: 0 }; S.total = game.pillars; scn.drone(wy(S.fly.y), 0); }
-    bot.play('대기'); bot.setExpression('기본'); progressGoal(); bgm.setDuck(0);
+    bot.play('대기'); bot.setExpression('기본'); progressGoal(); bgm.setDuck(0); wasDark = null;
+    if (S.view === 'station') actor.look(lookV.set(FROM_X, RAIL_Y, RAIL_Z), 0.9);
     await hud.banner(STAGE_NAME[S.mode - 1], 'MISSION START', { ms: 1400 });
     if (done || S.phase !== 'count') return;
     padEl.hidden = false; readEl.hidden = false;
@@ -243,15 +253,16 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     let k = 0;
     for (const b of S.beats) {
       if (b.judged) continue; const d = b.target - now; if (d > LEAD || d < -360) continue;
-      if (k < 6) scn.orb(k++, HIT_X + Math.max(0, d / LEAD) * (FROM_X - HIT_X), b.need === 'bright' ? 'sun' : 'shade', Math.abs(d) < 160);
+      const ox = HIT_X + Math.max(0, d / LEAD) * (FROM_X - HIT_X); if (k === 0) lookV.set(ox, RAIL_Y, RAIL_Z);   // 바이저봇은 가장 가까운 구슬을 눈으로 좇는다
+      if (k < 6) scn.orb(k++, ox, b.need === 'bright' ? 'sun' : 'shade', Math.abs(d) < 160);
     }
     scn.hideOrbs(k);
     if (S.pausedAt) return;
     for (const b of S.beats) {   // 2D 판과 같음: 판정 시각이 지나는 순간의 빛 상태로 판정
       if (b.judged || now < b.target) continue; b.judged = true;
       const ok = (b.need === 'dark') === isDark(), at = new THREE.Vector3(HIT_X, RAIL_Y + 0.55, RAIL_Z);
-      if (ok) { good(); scn.hitFx(b.need === 'bright' ? 'sun' : 'shade'); popAt(at, b.need === 'bright' ? 'BRIGHT!' : 'SHADOW!', b.need === 'bright' ? '#ffd24a' : '#a9b2ff'); }
-      else { bad(); scn.missFx(); popAt(at, 'MISS', '#ff8a7a'); }
+      if (ok) { good(); actor.hop(2.4); scn.hitFx(b.need === 'bright' ? 'sun' : 'shade'); popAt(at, b.need === 'bright' ? 'BRIGHT!' : 'SHADOW!', b.need === 'bright' ? '#ffd24a' : '#a9b2ff'); }
+      else { bad(); actor.react('bad'); scn.missFx(); popAt(at, 'MISS', '#ff8a7a'); }
     }
     if (S.beats.length && now > S.beats[S.beats.length - 1].target + 950) endPlay();
   }
@@ -271,9 +282,9 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
       for (const p of f.pillars) {
         p.x -= 4.6 * d;
         if (!p.hit && !p.passed && PX + 20 > p.x && PX - 20 < p.x + p.w && (f.y - 18 < p.gapY || f.y + 18 > p.gapY + p.gapH)) {
-          p.hit = true; f.crash = 1; bad(); popAt(scn.pilot.position.clone().add(new THREE.Vector3(0, 0.5, 0)), 'CRASH', '#ff8a7a');
+          p.hit = true; f.crash = 1; bad(); actor.flinch(); later(500, () => { if (S.phase === 'play') bot.setExpression(isDark() ? '기본' : '웃음'); }); popAt(scn.pilot.position.clone().add(new THREE.Vector3(0, 0.5, 0)), 'CRASH', '#ff8a7a');
         }
-        if (!p.passed && p.x + p.w < PX - 20) { p.passed = true; if (!p.hit) { good(); popAt(scn.pilot.position.clone().add(new THREE.Vector3(0, 0.55, 0)), 'NICE!', '#ffd24a'); } }
+        if (!p.passed && p.x + p.w < PX - 20) { p.passed = true; if (!p.hit) { good(); if (S.combo % 3 === 0) actor.spin(); popAt(scn.pilot.position.clone().add(new THREE.Vector3(0, 0.55, 0)), 'NICE!', '#ffd24a'); } }
       }
       f.pillars = f.pillars.filter((p) => p.x > -200);
       scn.flyScroll(4.6 * d * K);
@@ -312,14 +323,16 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     if (roomCleared('cds') && !medals.isCleared('cds')) medals.mark('cds');
     const medal = medals.isCleared('cds');
     S.pass = pass; bgm.setDuck(1);
+    wasDark = null; actor.point(null);
     if (pass) {
       await wait(500); if (done) return;
       if (stageNo === 2) { setView('station'); scn.revealPart(); sfx.ok(); }
-      bot.play('환호', { once: true }); bot.setExpression('웃음');
+      actor.look(camPos).face(camPos); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
       await hud.banner(stageNo === 1 ? '신호 연결!' : '비행 성공!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(stageNo === 1 ? '드론들이 깨어났어! 이제 한 대를 직접 날려 보자.' : medal ? '태양광 날개 획득! 기지 로켓에 달러 가자 ☀️' : '비행 성공! 1단계도 통과하면 태양광 날개를 받아.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림');
+      if (stageNo === 2) setView('station');
+      actor.look(camPos); bot.setExpression('졸림'); actor.squash(0.18);
       await hud.banner('빛이 조금 엇갈렸어', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say(stageNo === 1 ? '구슬이 고리에 닿는 순간을 노려 봐. 조금 일찍 눌러도 괜찮아!' : '살짝살짝 끊어 누르면 높이를 맞추기 쉬워.', { mood: '졸림' });
     }
@@ -345,7 +358,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     // 빛: 2D 판처럼 부드럽게 따라간다(한 프레임에 18%)
     const want = S.forced != null ? Math.min(1, S.forced) : isDark() ? 0 : 1;
     S.light += (want - S.light) * (1 - Math.pow(0.82, Math.min(dt, 0.1) * 60));
-    scn.setLight(S.light); if (S.forced == null) scn.setCover(isDark());
+    scn.setLight(S.light); if (S.forced == null) { scn.setCover(isDark()); if (['play', 'count'].includes(S.phase)) body(isDark()); }
     readout(dt);
     if (S.phase === 'play' && !S.ended) { if (S.mode === 1) stepReact(); else stepFly(dt); }
     scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);
@@ -355,7 +368,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     cam.position.y += Math.sin(S.t * 0.6) * 0.002; cam.lookAt(camT);
   });
 
-  window.__solarGame = { el, S, scn, stage, hud, press, release, setView };   // 자동 점검용
+  window.__solarGame = { el, S, scn, stage, hud, press, release, setView, actor };   // 자동 점검용
   if (S.mode === 2) { S.view = 'flight'; const c = camGoal(); cam.position.copy(c.p); camT.copy(c.t); } else { cam.position.copy(introFrom.p); camT.copy(introFrom.t); }
   scn.show('all'); await stage.warm(); if (done) return;   // 2단계 비행 무대도 가림막 뒤에서 미리 컴파일 — 넘어갈 때 멈칫하지 않게
   scn.show(S.view);
