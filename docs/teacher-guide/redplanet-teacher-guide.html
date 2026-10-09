@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>붉은 행성 대탈출 · 교사 가이드</title>
+<!-- 원본: 이 HTML 을 고치고 docs/teacher-guide/build-pdf.mjs 로 PDF 를 다시 만든다(글꼴은 앱이 쓰는 npm 글꼴 그대로). 숫자 · 핀 · 기준은 코드 실측값(src/content/v4story.js LEARN · app/results.js) -->
+<link rel="stylesheet" href="../../node_modules/@fontsource/jua/index.css">
+<link rel="stylesheet" href="../../node_modules/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<link rel="stylesheet" href="../../node_modules/@fontsource/jetbrains-mono/600.css">
+<style>
+@page { size: A4; margin: 14mm 14mm 16mm; }
+:root { --ink:#1c2140; --sub:#5a607e; --line:#dfe2ee; --gold:#d99f1c; --navy:#1b2150; --mint:#0f9e83; --soft:#f3f5fb; }
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); font: 400 10.5pt/1.62 "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3 { font-family: "Jua", "Pretendard Variable", sans-serif; font-weight: 400; margin: 0; }
+h2 { font-size: 20pt; margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 2.5px solid var(--ink); }
+h2 small { font: 700 8.5pt "Pretendard Variable", sans-serif; letter-spacing: .14em; color: var(--gold); display: block; margin-bottom: 1mm; }
+h3 { font-size: 13.5pt; margin: 5mm 0 2mm; }
+p { margin: 0 0 2.5mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 5mm; } li { margin: .6mm 0; }
+.page { break-before: page; }
+code, pre { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8.8pt; }
+code { background: var(--soft); padding: 0 1.2mm; border-radius: 1.2mm; }
+table { width: 100%; border-collapse: collapse; font-size: 9.2pt; margin: 1mm 0 4mm; }
+th { text-align: left; font-size: 8.4pt; color: var(--sub); border-bottom: 1.5px solid var(--ink); padding: 1.5mm 1.8mm; }
+td { border-bottom: 1px solid var(--line); padding: 1.8mm; vertical-align: top; }
+tr { break-inside: avoid; }
+.muted { color: var(--sub); }
+.box { border-radius: 3mm; padding: 3.5mm 4.5mm; background: var(--soft); margin: 2mm 0 4mm; break-inside: avoid; }
+.box.tip { background: #eaf8f3; } .box.warn { background: #fff4e0; }
+.box b.t { display: block; font-family: "Jua", sans-serif; font-weight: 400; font-size: 11.5pt; margin-bottom: 1mm; }
+.fig { margin: 2mm 0 4mm; break-inside: avoid; } .fig img { width: 100%; border-radius: 2.5mm; display: block; border: 1px solid var(--line); } .fig.sm img { height: 38mm; object-fit: cover; } table.tight td { padding: 1.1mm 1.8mm; } table.tight { font-size: 8.8pt; } .fig figcaption { font-size: 8.4pt; color: var(--sub); margin-top: 1.2mm; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; } .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; } .four { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+.flow { display: flex; flex-wrap: wrap; gap: 1.5mm; align-items: center; font: 400 10pt "Jua", sans-serif; margin: 2mm 0 4mm; }
+.flow span { padding: 1.6mm 3mm; border-radius: 99px; background: var(--navy); color: #fff; } .flow i { font-style: normal; color: var(--gold); }
+.chip { display: inline-block; padding: .3mm 2mm; border-radius: 99px; background: var(--soft); font-size: 8.4pt; font-weight: 700; margin-right: 1mm; }
+.g { display: inline-grid; place-items: center; min-width: 6mm; height: 6mm; border-radius: 1.5mm; color: #fff; font-weight: 800; font-size: 8.5pt; }
+.gS { background: #7c3aed; } .gA { background: #e11d48; } .gB { background: #2563eb; } .gC { background: #c2410c; } .gD { background: #64748b; }
+/* 표지 */
+.cover { height: 265mm; display: grid; grid-template-rows: auto 1fr auto; color: #fff; border-radius: 5mm; overflow: hidden; position: relative; background: #120f3a url("img/title.jpg") 70% 50% / cover no-repeat; }
+.cover::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,12,48,.92) 0%, rgba(14,12,48,.55) 55%, rgba(14,12,48,.15) 100%); }
+.cover > * { position: relative; padding: 0 14mm; }
+.cover .top { padding-top: 14mm; font: 700 9pt "Pretendard Variable", sans-serif; letter-spacing: .26em; color: #8ff7ee; }
+.cover h1 { align-self: center; font-size: 46pt; line-height: 1.02; }
+.cover h1 small { display: block; font-size: 22pt; color: #fff; } .cover h1 b { font-weight: 400; color: #ffd25a; }
+.cover h1 em { display: block; font-style: normal; font-size: 18pt; margin-top: 6mm; color: #e4e7fb; }
+.cover .bot { padding-bottom: 12mm; font-size: 9.5pt; color: #c9d0ea; line-height: 1.7; }
+.toc { columns: 2; column-gap: 8mm; font-size: 10pt; } .toc div { break-inside: avoid; padding: 1.2mm 0; border-bottom: 1px dashed var(--line); display: flex; justify-content: space-between; }
+.lesson { break-inside: avoid; border: 1.5px solid var(--line); border-radius: 3.5mm; padding: 3.5mm 4.5mm; margin: 0 0 4mm; }
+.lesson h3 { margin: 0 0 1.5mm; display: flex; justify-content: space-between; align-items: baseline; } .lesson h3 small { font: 700 8.5pt "Pretendard Variable", sans-serif; color: var(--mint); }
+.lesson .meta { font-size: 8.8pt; color: var(--sub); margin-bottom: 1.5mm; }
+.lesson pre { margin: 1.5mm 0; padding: 2mm 3mm; border-radius: 2mm; background: #1b1f3a; color: #e9ecff; white-space: pre-wrap; }
+.tl { display: grid; grid-template-columns: 15mm 1fr; gap: .5mm 3mm; font-size: 9.2pt; } .tl b { color: var(--gold); font-family: "Jua", sans-serif; font-weight: 400; }
+.ws { border: 1.5px solid var(--ink); border-radius: 3mm; padding: 4mm; margin-bottom: 4mm; break-inside: avoid; }
+.ws h3 { margin-top: 0; } .ws .line { height: 8mm; border-bottom: 1px solid #bfc5da; }
+.ws .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3mm; } .ws .cell { border: 1px solid #bfc5da; border-radius: 2mm; min-height: 24mm; padding: 2mm; font-size: 8.6pt; color: var(--sub); }
+.foot { position: fixed; bottom: -9mm; left: 0; right: 0; font-size: 7.5pt; color: #9aa0bd; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<!-- 표지 -->
+<section class="cover">
+  <div class="top">RED PLANET ESCAPE · EDUINO AI 미니게임천국 v4</div>
+  <h1><small>붉은 행성</small><b>대탈출</b><em>교사 가이드 · 8차시 지도안 · 평가 · 활동지</em></h1>
+  <div class="bot">아두이노 센서로 에디와 함께 기지를 고치고 로켓을 쏘아 올리는 3D 메이커 어드벤처<br>대상: 초등 고학년 ~ 중학생 · 1차시 40~45분 기준 · 2026년 10월판</div>
+</section>
+
+<section class="page">
+  <h2><small>CONTENTS</small>차례</h2>
+  <div class="toc">
+    <div><span>1. 한눈에 보기</span><span>2</span></div>
+    <div><span>2. 수업 전 준비</span><span>3</span></div>
+    <div><span>3. 부품 · 핀 연결표</span><span>4</span></div>
+    <div><span>4. 8차시 지도안</span><span>5</span></div>
+    <div><span>5. 화면 기능 안내</span><span>8</span></div>
+    <div><span>6. 평가 · 탐사 보고서</span><span>9</span></div>
+    <div><span>7. 문제 해결</span><span>10</span></div>
+    <div><span>부록. 학생 활동지</span><span>11</span></div>
+  </div>
+
+  <h2 style="margin-top:8mm"><small>OVERVIEW</small>1. 한눈에 보기</h2>
+  <p>학생은 붉은 행성에 불시착한 <b>에디</b>(에듀이노 대표 캐릭터)와 함께 3D 기지를 돌며 미션 9개를 해결합니다. 미션마다 아두이노 부품 하나(또는 둘)의 원리를 <b>강의 → 퀴즈 → 게임</b>으로 익히고, 통과하면 로켓 부품을 얻습니다. 부품 8개를 모아 마지막 <b>발사 쇼</b>로 행성을 탈출하면, 그동안의 기록이 <b>탐사 보고서 PDF</b>(A4 4쪽)로 정리됩니다.</p>
+  <div class="flow"><span>타이틀</span><i>→</i><span>이름 · 번호</span><i>→</i><span>에디 꾸미기</span><i>→</i><span>보드 연결</span><i>→</i><span>3D 기지</span><i>→</i><span>미션 9개</span><i>→</i><span>발사 쇼</span><i>→</i><span>탐사 보고서 PDF</span></div>
+  <div class="two">
+    <figure class="fig sm"><img src="img/title.jpg" alt=""><figcaption>타이틀 — 이어하기 · 새로 시작 · 다른 기기 기록 불러오기 · 클래식 2D 판</figcaption></figure>
+    <figure class="fig sm"><img src="img/creator.jpg" alt=""><figcaption>에디 꾸미기 — 바이저 빛 · 망토 · 헬멧 · 귀 장식(별 조각으로 더 열림)</figcaption></figure>
+  </div>
+  <table class="tight">
+    <tr><th style="width:24%">미션</th><th>배우는 것</th><th style="width:22%">부품 · 핀</th><th style="width:12%">얻는 부품</th></tr>
+    <tr><td>🔋 부팅 훈련(프롤로그)</td><td>피지컬 컴퓨팅 개념 · 입력/처리/출력</td><td>—</td><td>출입 카드</td></tr>
+    <tr><td>🛬 01 착륙 유도등</td><td>디지털 출력 · 타이밍(<code>digitalWrite</code> · <code>delay</code>)</td><td>LED 3개 · D2 D3 D4</td><td>엔진 노즐</td></tr>
+    <tr><td>📡 02 구조 신호 비콘</td><td>주파수와 음 높이(<code>tone</code>)</td><td>부저 · D5</td><td>통신 안테나</td></tr>
+    <tr><td>🔋 03 에너지 셀 색 맞추기</td><td>빛의 삼원색 · 0~255 섞기</td><td>RGB LED · D6</td><td>에너지 셀</td></tr>
+    <tr><td>☀️ 04 태양광 충전소</td><td>아날로그 입력 · 기준값 <code>if</code></td><td>조도 센서 · A0</td><td>태양광 날개</td></tr>
+    <tr><td>🛞 05 로버 추력 조절</td><td>0~1023 · <code>map</code> 으로 범위 바꾸기</td><td>가변저항 · A0</td><td>추력 지느러미</td></tr>
+    <tr><td>🛡️ 06 운석 방어막</td><td>디지털 입력 · HIGH/LOW</td><td>버튼 2개 · D4 D5</td><td>방어막 노즈콘</td></tr>
+    <tr><td>🔦 07 어둠 동굴 탐사</td><td>입력 → 처리 → 출력(센서로 색 바꾸기)</td><td>조도 + RGB · A0 D6</td><td>연료 수정</td></tr>
+    <tr><td>⚛️ 08 원자로 진정</td><td>피드백 제어 · 차이에 따라 깜빡임</td><td>가변저항 + LED · A0 D13</td><td>동력 코어</td></tr>
+    <tr><td>🚀 FINAL 발사 쇼</td><td>종합: 다이얼 · RGB · 부저 · 버튼</td><td>A0 D6 D5 D4</td><td>행성 탈출</td></tr>
+  </table>
+</section>
+
+<section class="page">
+  <h2><small>BEFORE CLASS</small>2. 수업 전 준비</h2>
+  <h3>기기 · 브라우저</h3>
+  <ul>
+    <li><b>보드를 연결하는 PC:</b> 데스크톱 <b>Chrome 또는 Edge</b>(Web Serial 지원). 크롬북도 Chrome 이면 됩니다.</li>
+    <li><b>태블릿 · 휴대폰:</b> 게임은 화면 조작(띠 · 다이얼 · 단추)으로 끝까지 할 수 있지만, 보드 연결은 되지 않습니다.</li>
+    <li>3D 화면은 기기 성능에 맞춰 화질을 스스로 낮춥니다. 아주 느린 기기는 주소 끝에 <code>?q=low</code> 를 붙이면 처음부터 가벼운 화질로 시작합니다.</li>
+  </ul>
+  <h3>교실 수업 모드(권장)</h3>
+  <div class="box tip"><b class="t">학생 PC 즐겨찾기를 <code>…/?class</code> 주소로</b>한 번 열면 그 기기에 저장됩니다(해제는 <code>?class=0</code>). 배경음악 자동 재생 끔(30대가 동시에 틀면 부저 소리를 구분할 수 없어요) · 효과음 절반 · 첫 클릭에 전체화면(다른 탭으로 새는 것 방지).</div>
+  <h3>학생 기록 운영</h3>
+  <ul>
+    <li>기록은 <b>그 기기의 브라우저 안</b>에만 저장됩니다(서버로 보내지 않음). 학생 이름 · 번호는 첫 화면에서 받고, 보고서 PDF 에 그대로 들어갑니다.</li>
+    <li><b>공용 PC:</b> 다음 반 학생은 타이틀의 <b>‘새로 시작’</b> → 이전 기록을 지우고 이름부터 다시. 보드 연결 상태와 기기 설정은 남습니다.</li>
+    <li><b>다른 PC 로 옮기기:</b> 기지 오른쪽 위 <b>📒 일지 → 💾 기록 파일</b>(수백 바이트 ~ 수백 KB) → 새 PC 타이틀의 <b>📂 다른 기기 기록 불러오기</b>. USB · 학급 드라이브 · 메신저로 옮기면 됩니다.</li>
+  </ul>
+  <h3>준비물 체크</h3>
+  <table>
+    <tr><th style="width:8%">✓</th><th>항목</th><th>확인할 것</th></tr>
+    <tr><td>☐</td><td>아두이노 보드 + USB 케이블</td><td>데이터 전송 케이블인지(충전 전용 케이블은 포트가 안 보여요)</td></tr>
+    <tr><td>☐</td><td>LED 3 · 부저 · RGB LED · 조도 센서 · 가변저항 · 버튼 2</td><td>3장의 핀표대로 미리 꽂아 두면 차시마다 결선 시간이 줄어요</td></tr>
+    <tr><td>☐</td><td>아두이노 IDE · 시리얼 모니터 닫기</td><td>열려 있으면 포트를 잡고 있어 연결이 안 됩니다</td></tr>
+    <tr><td>☐</td><td>이어폰(선택)</td><td>부저 · 음 높이 미션(02 · 발사 쇼)은 소리를 들어야 해요</td></tr>
+    <tr><td>☐</td><td>보고서 제출 방법</td><td>PDF 를 학급 드라이브 · 과제함에 올리는 경로를 정해 두기</td></tr>
+  </table>
+  <div class="box"><b class="t">첫 연결은 1차시 앞 10분</b>로그인 뒤 ‘보드 연결’ 화면에서 [보드 연결] → 포트 선택. 한 번 연결한 PC 는 다음 수업부터 이 화면을 건너뜁니다.</div>
+</section>
+
+<section class="page">
+  <h2><small>WIRING</small>3. 부품 · 핀 연결표</h2>
+  <p>게임 안 결선 안내 · 강의 카드 · 탐사 보고서에 나오는 번호와 같습니다. 같은 핀을 여러 미션이 함께 씁니다(A0 = 조도 센서 <b>또는</b> 가변저항 — 미션에 맞게 바꿔 꽂기).</p>
+  <table>
+    <tr><th style="width:22%">부품</th><th style="width:12%">핀</th><th>쓰는 미션</th><th style="width:34%">핵심 코드</th></tr>
+    <tr><td>LED 3개(초록 · 노랑 · 빨강)</td><td>D2 · D3 · D4</td><td>01 착륙 유도등</td><td><code>digitalWrite(2, HIGH); delay(500);</code></td></tr>
+    <tr><td>피에조 부저</td><td>D5</td><td>02 비콘 · 발사 쇼</td><td><code>tone(5, 392); noTone(5);</code></td></tr>
+    <tr><td>RGB LED(네오픽셀)</td><td>D6</td><td>03 에너지 셀 · 07 동굴 · 발사 쇼</td><td><code>led.setPixelColor(0, 255, 225, 30);</code></td></tr>
+    <tr><td>조도 센서</td><td>A0</td><td>04 태양광 · 07 동굴</td><td><code>int v = analogRead(A0); if (v &lt; 473) …</code></td></tr>
+    <tr><td>가변저항(다이얼)</td><td>A0</td><td>05 로버 · 08 원자로 · 발사 쇼</td><td><code>map(v, 0, 1023, 0, 255)</code></td></tr>
+    <tr><td>택트 버튼 2개</td><td>D4 · D5</td><td>06 방어막 · 발사 쇼(D4)</td><td><code>if (digitalRead(4) == HIGH) …</code></td></tr>
+    <tr><td>보드 내장 LED</td><td>D13</td><td>08 원자로</td><td><code>delay(map(d, 0, 430, 90, 720));</code></td></tr>
+  </table>
+  <div class="box warn"><b class="t">D4 · D5 를 두 가지로 써요</b>01 착륙(D4 = 빨강 LED) · 02 비콘(D5 = 부저) · 06 방어막(D4 · D5 = 버튼). 차시마다 그 미션의 결선 안내 화면을 먼저 띄우고 그대로 꽂게 하세요.</div>
+  <h3>보드 없이도 됩니다</h3>
+  <p>모든 미션은 화면의 띠 · 다이얼 · 단추(또는 키보드 ←→ · 1 2 3 · 스페이스)로 끝까지 할 수 있습니다. 보드가 부족하면 2인 1조로 한 명은 보드, 한 명은 화면을 맡게 하고 다음 판에 바꿉니다.</p>
+  <h3>미션 하나의 짜임(모든 미션 공통)</h3>
+  <ol>
+    <li><b>결선 안내</b> — 꽂을 부품과 핀. [보드 연결] 단추로 바로 연결 확인</li>
+    <li><b>바이저 강의</b> — 카드 3장. 코드 한 줄마다 단추를 누르면 3D 장면(과 보드)에서 실제로 일어남</li>
+    <li><b>확인 퀴즈</b> — 3문제 · 3지선다. 틀리면 탓하지 않는 힌트 후 다시(메달과 무관)</li>
+    <li><b>단계별 게임</b> — 2~3단계. 정확도 80% 이상이면 통과. 단계 설명 창에서 🧪 자유 실험 · 🔭 둘러보기 · 💡 원리 다시 보기</li>
+    <li><b>결과</b> — 등급 · 별 · 📷 기념사진. 통과하면 로켓 부품 장착</li>
+  </ol>
+</section>
+
+<section class="page">
+  <h2><small>LESSON PLAN</small>4. 8차시 지도안</h2>
+  <table>
+    <tr><th style="width:9%">차시</th><th style="width:30%">미션</th><th>핵심 개념</th><th style="width:20%">산출물</th></tr>
+    <tr><td>1</td><td>오리엔테이션 · 에디 꾸미기 · 부팅 훈련</td><td>피지컬 컴퓨팅 · 입력/처리/출력 · 보드 연결</td><td>보드 연결 완료</td></tr>
+    <tr><td>2</td><td>01 착륙 유도등</td><td>디지털 출력 · HIGH/LOW · 타이밍</td><td>엔진 노즐</td></tr>
+    <tr><td>3</td><td>02 구조 신호 비콘 · 03 에너지 셀</td><td>주파수 · 빛의 삼원색 · PWM 0~255</td><td>안테나 · 셀</td></tr>
+    <tr><td>4</td><td>04 태양광 충전소</td><td>아날로그 입력 0~1023 · 기준값 비교 if</td><td>태양광 날개</td></tr>
+    <tr><td>5</td><td>05 로버 · 06 방어막</td><td>map 으로 범위 바꾸기 · 디지털 입력</td><td>지느러미 · 노즈콘</td></tr>
+    <tr><td>6</td><td>07 어둠 동굴 탐사</td><td>입력 → 처리 → 출력 연결</td><td>연료 수정</td></tr>
+    <tr><td>7</td><td>08 원자로 진정 · 자유 실험 탐구</td><td>피드백 제어 · 변수 관찰</td><td>동력 코어 · 활동지</td></tr>
+    <tr><td>8</td><td>발사 쇼 · 탐사 보고서</td><td>종합 프로젝트 · 돌아보기 · 발표</td><td>보고서 PDF 제출</td></tr>
+  </table>
+  <div class="box tip"><b class="t">한 차시 기본 흐름(45분)</b>
+    <div class="tl"><b>5분</b><span>지난 차시 돌아보기 · 오늘 미션 이야기(에디 대사로 도입)</span><b>5분</b><span>결선 안내 화면대로 부품 꽂기 · 보드 연결</span><b>8분</b><span>바이저 강의 + 확인 퀴즈(첫 시도 정답 수가 보고서에 남아요)</span><b>17분</b><span>단계 게임 — 80% 이상이면 통과. 막히면 🧪 자유 실험으로 원리부터 다시</span><b>5분</b><span>자유 실험으로 ‘값을 바꾸면 무엇이 달라지나’ 관찰 → 활동지 한 칸</span><b>5분</b><span>짝과 결과 비교 · 📒 일지에서 오늘 기록 확인</span></div>
+  </div>
+  <div class="lesson"><h3>1차시 · 오리엔테이션 · 에디 꾸미기 · 부팅 훈련 <small>준비 차시</small></h3>
+    <div class="meta">목표: 게임의 흐름을 알고 보드를 연결한다 · 입력/처리/출력을 말로 설명한다</div>
+    <ul><li>타이틀 → 이름 · 번호(보고서에 들어가니 정확히) → <b>에디 꾸미기</b>(이름은 ‘에디’ 그대로 또는 별명) → 보드 연결</li>
+    <li>기지 인트로를 함께 보고, 오른쪽 위 🎨 꾸미기 · 📷 사진 · 📒 일지를 짚어 준다</li>
+    <li>프롤로그 <b>부팅 훈련</b>으로 ‘센서(입력) → 보드(처리) → LED · 소리(출력)’ 개념 잡기</li></ul>
+    <div class="meta">관찰: 보드 연결이 안 되는 자리는 7장 문제 해결표로. 이 차시엔 등급보다 흐름 익히기가 먼저</div></div>
+  <div class="lesson"><h3>2차시 · 01 착륙 유도등 <small>디지털 출력</small></h3>
+    <div class="meta">부품: LED 3개 D2 · D3 · D4 · 단계: 타이밍 쇼 → 라이트 연주</div>
+    <pre>digitalWrite(2, HIGH);   // 켜기
+delay(500);              // 0.5초 기다리기
+digitalWrite(2, LOW);    // 끄기</pre>
+    <ul><li>보급선이 내려오는 박자에 맞춰 유도등을 켠다 — ‘켜는 순간’을 코드로 정하는 것이 타이밍</li>
+    <li>🧪 자유 실험: 1 · 2 · 3 으로 유도등 무늬 맞추기 — <code>digitalWrite(pin, HIGH/LOW)</code> 와 마지막 명령 뒤 지난 시간(<code>delay</code>)이 위에 보인다</li></ul>
+    <div class="meta">확장 질문: delay 를 절반으로 줄이면 빛 쇼는 어떻게 달라질까?</div></div>
+</section>
+
+<section>
+  <div class="lesson"><h3>3차시 · 02 구조 신호 비콘 · 03 에너지 셀 <small>소리 · 빛 출력</small></h3>
+    <div class="meta">부품: 부저 D5 · RGB LED D6 · 단계: 작은별 → 환희의 송가 / 쉬운 색 → 어려운 색</div>
+    <pre>tone(5, 392);                         // 솔(392Hz)
+led.setPixelColor(0, 255, 225, 30);   // 빨강 + 초록 = 노랑
+led.show();</pre>
+    <ul><li>비콘: 레인(D/F/J 또는 1 2 3)을 박자에 맞춰 — 주파수가 높을수록 높은 음. 자유 실험에서 ↑↓ 로 옥타브(×2)를 바꿔 들어 보기</li>
+    <li>에너지 셀: R · G · B 띠를 섞어 셀 색 만들기. 자유 실험의 ‘이 색 만들기’(노랑 · 자홍 · 하늘 · 흰색 · 분홍 · 연두)</li></ul>
+    <div class="meta">확장 질문: 빛은 섞을수록 밝아지는데, 물감은 왜 어두워질까?</div></div>
+  <div class="lesson"><h3>4차시 · 04 태양광 충전소 <small>아날로그 입력 · 조건</small></h3>
+    <div class="meta">부품: 조도 센서 A0 · 단계: 반딧불 신호 → 반딧불이 비행</div>
+    <pre>int v = analogRead(A0);       // 0 ~ 1023
+if (v &lt; 473) { /* 어둠 */ }    // 기준값보다 작으면 가렸다</pre>
+    <ul><li>손으로 센서를 가렸다 떼며 빛 / 그림자 신호 보내기. 에디가 몸으로 센서를 가리는 모습과 숫자를 함께 보게 한다</li>
+    <li>자유 실험 판독 줄: <code>analogRead(A0) → v · if (v &lt; 기준) → 참/거짓</code> — 교실 밝기에 따라 값이 달라짐을 발견</li></ul>
+    <div class="meta">확장 질문: 창가 자리와 안쪽 자리의 v 값이 다른 까닭은? 기준값은 어떻게 정하면 좋을까?</div></div>
+  <div class="lesson"><h3>5차시 · 05 로버 추력 조절 · 06 운석 방어막 <small>입력 두 가지</small></h3>
+    <div class="meta">부품: 가변저항 A0 · 버튼 D4 D5 · 단계: 협곡 점프 → 언덕 질주 / 운석 막기 → 방어막 명령</div>
+    <pre>int p = map(analogRead(A0), 0, 1023, 0, 255);   // 범위 바꾸기
+if (digitalRead(4) == HIGH) { shieldOn(LEFT); }  // 눌림</pre>
+    <ul><li>로버: 다이얼로 추력을 초록 띠에 넣고 버티기(관성이 있어 ‘미리’ 돌려야 함 — 2번 연속 못 넘기면 도우미가 켜져요)</li>
+    <li>방어막: 아날로그(여러 값) vs 디지털(두 값)을 비교하며 정리</li></ul>
+    <div class="meta">확장 질문: 가변저항을 반만 돌리면 analogRead 는 얼마쯤? map 결과는?</div></div>
+</section>
+
+<section>
+  <div class="lesson"><h3>6차시 · 07 어둠 동굴 탐사 <small>입력 → 처리 → 출력</small></h3>
+    <div class="meta">부품: 조도 센서 A0 + RGB LED D6 · 단계: 수정 깨우기 → 빛 따라가기 → 어둠의 보스</div>
+    <pre>int hue = map(analogRead(A0), 900, 100, 0, 320);   // 가릴수록 색이 바뀐다
+led.setPixelColor(0, color(hue));</pre>
+    <ul><li>손 그림자로 등불 색을 바꿔 몬스터 고리 색에 맞추기. 3단계 보스는 색이 <b>숨어 있어</b> 밝기 · ‘삐’ 소리 단서로 찾는다</li>
+    <li>센서 두 개를 묶는 첫 미션 — 앞 차시의 입력(4차시)과 출력(3차시)을 이어 보게 한다</li></ul>
+    <div class="meta">확장 질문: map 의 900 과 100 을 바꾸면(100, 900) 무슨 일이 생길까?</div></div>
+  <div class="lesson"><h3>7차시 · 08 원자로 진정 · 자유 실험 탐구 <small>피드백 제어</small></h3>
+    <div class="meta">부품: 가변저항 A0 + 보드 LED D13 · 단계: 제어봉 내리기 → 압력 맞추기(띠가 숨음) → 폭주 붙잡기</div>
+    <pre>int d = abs(analogRead(A0) - target);   // 목표와의 차이
+delay(map(d, 0, 430, 90, 720));          // 멀수록 느리게 깜빡</pre>
+    <ul><li>경고등이 빨리 깜빡일수록 가깝다 — 눈이 아니라 <b>신호</b>를 보고 맞추는 경험</li>
+    <li>남은 시간은 <b>자유 실험 탐구</b>: 아무 미션이나 골라 ‘값 하나를 바꿔 보고 결과를 적기’(부록 활동지 B)</li></ul>
+    <div class="meta">배려: 깜빡임이 불편한 학생은 일시정지 → ‘화면 효과 줄이기’(초당 3번 이하)</div></div>
+  <div class="lesson"><h3>8차시 · 발사 쇼 · 탐사 보고서 <small>종합 · 성찰</small></h3>
+    <div class="meta">부품: 다이얼 A0 · RGB D6 · 부저 D5 · 버튼 D4 · 단계: 발사대 조명 → 교신 멜로디 → 카운트다운(두 손)</div>
+    <ul><li>부품 8개를 모은 학생부터 발사 쇼. 3막은 다이얼로 엔진 압력을 붙잡은 채 버튼 큐 — 두 부품 동시 제어</li>
+    <li>탈출 뒤 기지로 돌아오면 <b>‘🎓 탐사 완료! 보고서를 만들어요’</b> 창이 저절로 뜬다 → ✏️ 돌아보기 4문항 쓰기 → 📄 보고서 PDF</li>
+    <li>아직 다 못 모은 학생도 📒 일지에서 같은 보고서를 만들 수 있다(‘탐사 중’ 도장)</li>
+    <li>마무리 5분: 돌아보기 1번(가장 재미있던 미션) 짝 발표 · 보고서 제출</li></ul></div>
+</section>
+
+<section class="page">
+  <h2><small>FEATURES</small>5. 화면 기능 안내</h2>
+  <table>
+    <tr><th style="width:24%">기능</th><th>어디서 · 무엇</th><th style="width:30%">수업에서 쓰는 법</th></tr>
+    <tr><td>💡 원리 다시 보기</td><td>단계 설명 창. 바이저 강의 카드 + 확인 퀴즈를 다시</td><td>막힌 학생에게 먼저 권하기</td></tr>
+    <tr><td>🧪 자유 실험</td><td>단계 설명 창. 점수 · 시간 없이 센서를 마음대로 — 위에 <code>analogRead → map → …</code> 실제 값</td><td>관찰 · 탐구 활동(활동지 B). 판정 없는 작은 놀이가 있음</td></tr>
+    <tr><td>🔭 둘러보기</td><td>단계 설명 창. 카메라 돌리기 · 땅 눌러 걷기 · 숨은 별 2개</td><td>먼저 끝낸 학생의 보너스 활동</td></tr>
+    <tr><td>⭐ 별 조각</td><td>미션마다 3개(숨은 별 2 + S등급 1), 모두 27개</td><td>꾸미기 색이 열림 — 동기 부여</td></tr>
+    <tr><td>🎨 꾸미기</td><td>기지 오른쪽 위. 바이저 빛 · 망토 · 헬멧 · 귀 장식</td><td>쉬는 시간 활동</td></tr>
+    <tr><td>📷 기념사진</td><td>기지 · 모든 결과창. 구도 · 몸짓 · 표정 → 이름 · 날짜 띠 PNG</td><td>최근 사진 2장이 보고서에 실림</td></tr>
+    <tr><td>🤝 도우미 모드</td><td>같은 단계를 2번 연속 못 넘기면 그 단계만 판정 폭 1.3배(에디가 알려 줌)</td><td>기록 · 메달은 그대로 — 낙담 방지</td></tr>
+    <tr><td>👁 보기 편하게</td><td>일시정지 창. 화면 효과 줄이기(흔들림 · 번쩍임) · 색 도우미(색약: 위치 · 숫자 단서)</td><td>광과민 · 색각 이상 학생 배려</td></tr>
+    <tr><td>📒 일지 · 💾 기록 파일</td><td>기지 오른쪽 위. 활동 기록 · 보고서 PDF · 다른 기기로 옮길 파일</td><td>차시 끝 기록 확인 · 결석생 이어하기</td></tr>
+  </table>
+  <div class="three">
+    <figure class="fig"><img src="img/sandbox.jpg" alt=""><figcaption>🧪 자유 실험 — 위쪽 판독 줄에 실제 값</figcaption></figure>
+    <figure class="fig"><img src="img/journal.jpg" alt=""><figcaption>📒 탐사 일지 — 기록 · 돌아보기 · PDF · 기록 파일</figcaption></figure>
+    <figure class="fig"><img src="img/photo.jpg" alt=""><figcaption>📷 기념사진 — 이름 · 별 · 날짜 띠</figcaption></figure>
+  </div>
+</section>
+
+<section class="page">
+  <h2><small>ASSESSMENT</small>6. 평가 · 탐사 보고서</h2>
+  <h3>게임 안의 기준(자동)</h3>
+  <p>단계마다 정확도로 등급을 매기고, <b>80% 이상이면 통과</b>입니다. 기록은 단계별 <b>가장 잘한 판</b>을 남깁니다.</p>
+  <p><span class="g gS">S</span> 95% 이상 &nbsp; <span class="g gA">A</span> 85% 이상 &nbsp; <span class="g gB">B</span> 70% 이상 &nbsp; <span class="g gC">C</span> 50% 이상 &nbsp; <span class="g gD">D</span> 그 아래</p>
+  <h3>탐사 보고서 PDF(A4 4쪽)</h3>
+  <div class="four">
+    <figure class="fig"><img src="img/report1.jpg" alt=""><figcaption>1 탐사 대원증 — 학생 · 에디 · 기간 · 시간 · 별 · 부품 · 종합 등급 · 최근 활동</figcaption></figure>
+    <figure class="fig"><img src="img/report2.jpg" alt=""><figcaption>2 미션 기록표 — 단계 최고 등급 · 도전 횟수 · 시간 · 퀴즈 첫 시도 · 별</figcaption></figure>
+    <figure class="fig"><img src="img/report3.jpg" alt=""><figcaption>3 코드와 부품 — 미션별 핵심 코드 · 핀 · 부품 체크</figcaption></figure>
+    <figure class="fig"><img src="img/report4.jpg" alt=""><figcaption>4 돌아보기 — 4문항(앱 답 또는 빈 줄) · 사진 · 선생님 확인란</figcaption></figure>
+  </div>
+  <h3>과정 중심 평가 예시(루브릭)</h3>
+  <table>
+    <tr><th style="width:16%">영역</th><th>잘함</th><th>보통</th><th>노력 필요</th><th style="width:20%">근거</th></tr>
+    <tr><td>참여 · 끈기</td><td>대부분 미션을 여러 번 도전해 통과</td><td>절반 이상 통과</td><td>도전이 적음</td><td>보고서 2쪽 도전 · 시간</td></tr>
+    <tr><td>개념 이해</td><td>퀴즈 첫 시도 대부분 정답, 코드 뜻을 설명</td><td>힌트 뒤 정답</td><td>개념 설명이 어려움</td><td>2쪽 퀴즈 · 4쪽 2번</td></tr>
+    <tr><td>탐구 · 설명</td><td>자유 실험으로 값을 바꿔 결과를 근거와 함께 설명</td><td>결과는 적었으나 까닭이 약함</td><td>관찰 기록 없음</td><td>활동지 B · 1쪽 자유 실험 시간</td></tr>
+    <tr><td>성찰</td><td>어려움과 해결 과정을 구체적으로</td><td>느낀 점 위주</td><td>빈칸</td><td>4쪽 3 · 4번</td></tr>
+  </table>
+  <div class="box"><b class="t">등급은 ‘얼마나 잘했나’ 보다 ‘얼마나 해 봤나’ 와 함께</b>도우미 모드로 통과한 기록도 그대로 남습니다(판정 폭만 넓어짐). 시간 · 도전 횟수 · 퀴즈 첫 시도 · 돌아보기를 함께 보면 과정이 보입니다.</div>
+</section>
+
+<section class="page">
+  <h2><small>TROUBLESHOOTING</small>7. 문제 해결</h2>
+  <table>
+    <tr><th style="width:30%">화면 문구 · 상황</th><th>해결</th></tr>
+    <tr><td>‘이 브라우저는 WebSerial 을 지원하지 않아요’</td><td>데스크톱 Chrome · Edge 로 열기. 태블릿은 화면 조작으로 진행</td></tr>
+    <tr><td>‘포트를 못 골랐어요’ · 선택창에 포트가 없음</td><td>① 아두이노 IDE · 시리얼 모니터 닫기 ② 케이블 다시 꽂기(데이터 케이블인지) ③ [보드 연결] 다시</td></tr>
+    <tr><td>‘포트가 다른 프로그램이나 다른 탭에서 사용 중’</td><td>같은 사이트를 연 다른 탭 · IDE 닫고 다시</td></tr>
+    <tr><td>‘연결 중 오류가 났어요’</td><td>케이블을 다시 꽂고 [다시 연결 시도]. 계속되면 다른 USB 포트</td></tr>
+    <tr><td>센서 값이 이상함(조도)</td><td>교실 밝기에 따라 달라요 — 자유 실험 판독 줄로 평소 값 확인. 형광등 바로 아래 · 창가는 차이가 큼</td></tr>
+    <tr><td>3D 화면이 느림 · 끊김</td><td>다른 탭 닫기 · 주소 끝 <code>?q=low</code>. 화질은 기기 따라 자동으로 낮아져요</td></tr>
+    <tr><td>소리가 안 남</td><td>타이틀 오른쪽 위 소리 단추 · 기기 음량. 수업 모드는 배경음악만 꺼져 있어요</td></tr>
+    <tr><td>다른 학생 기록이 보임</td><td>타이틀 ‘새로 시작’(이전 기록을 지우고 이름부터)</td></tr>
+    <tr><td>결석 · 자리 바꿈</td><td>원래 PC 에서 📒 일지 → 💾 기록 파일 → 새 PC 타이틀 📂 불러오기</td></tr>
+    <tr><td>PDF 가 안 받아짐</td><td>브라우저 다운로드 허용 확인. 파일 이름 <code>red-planet-report-번호-날짜.pdf</code>(다운로드 폴더). 태블릿은 공유 메뉴로 저장</td></tr>
+    <tr><td>깜빡임 · 흔들림이 불편</td><td>일시정지(Esc) → ‘화면 효과 줄이기’</td></tr>
+  </table>
+  <div class="box warn"><b class="t">기록은 브라우저에 저장돼요</b>브라우저 ‘인터넷 사용 기록 삭제(쿠키 · 사이트 데이터)’를 하면 기록이 지워집니다. 학기 중엔 기록 파일을 가끔 받아 두세요.</div>
+</section>
+
+<section class="page">
+  <h2><small>WORKSHEET</small>부록. 학생 활동지</h2>
+  <div class="muted" style="margin-bottom:3mm">이름: ______________ &nbsp; 번호: ____ &nbsp; 함께한 에디의 이름: ______________ &nbsp; 날짜: ____________</div>
+  <div class="ws"><h3>A. 예측 · 관찰 · 설명 — 오늘의 미션: ______________________</h3>
+    <div class="row"><div class="cell">① 예측: 코드를 이렇게 바꾸면 이렇게 될 것이다</div><div class="cell">② 관찰: 🧪 자유 실험에서 실제로 본 것(판독 줄 숫자도)</div><div class="cell">③ 설명: 왜 그렇게 됐을까?</div></div></div>
+  <div class="ws"><h3>B. 값 하나 바꿔 보기(자유 실험 탐구)</h3>
+    <table><tr><th>바꾼 것(입력 값)</th><th>판독 줄에 나온 값</th><th>장면에서 일어난 일</th></tr><tr><td style="height:10mm"></td><td></td><td></td></tr><tr><td style="height:10mm"></td><td></td><td></td></tr><tr><td style="height:10mm"></td><td></td><td></td></tr></table></div>
+  <div class="ws"><h3>C. 코드 한 줄 읽기</h3>
+    <p class="muted">강의 카드에서 고른 코드 한 줄을 그대로 적고, 우리말로 풀어 보세요.</p>
+    <div class="line"></div><div class="line"></div><div class="line"></div></div>
+  <div class="ws"><h3>D. 오늘의 한 줄 돌아보기</h3><div class="line"></div><div class="line"></div></div>
+</section>
+
+</body>
+</html>
