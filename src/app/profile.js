@@ -1,4 +1,4 @@
-// profile.js — v4 '바이저봇 탈출기' 플레이어 캐릭터: 바이저봇 이름 + 꾸민 모습. three.js 없이 읽는다(타이틀 · 대화 얼굴 · 기록 PDF 가 쓴다).
+// profile.js — v4 '붉은 행성 대탈출' 플레이어 캐릭터 에디: 이름(별명) + 꾸민 모습. three.js 없이 읽는다(타이틀 · 대화 얼굴 · 기록 PDF 가 쓴다).
 // 학생 이름 · 번호는 student.js(기록증 이름) 그대로. 모습을 실제 3D 모델에 입히는 건 gfx3d/style.js applyStyle.
 // 기본 칸(need 0)은 캐릭터 만들기에서 바로 고르고, 나머지는 별 조각(stars.js)으로 연다. '새 학생으로 시작'이면 함께 지운다(student.js).
 import { stars } from './stars.js';

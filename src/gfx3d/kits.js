@@ -2,7 +2,7 @@
 // 파일: src/assets/3d/kits/space/*.glb (라이선스 원문 같은 폴더). 새 모델은 art/3d-kits/README.md 장부에 먼저 적을 것.
 import { Box3, Vector3, Group } from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { instantiate } from './assets.js';
+import { instantiate, loadGLB } from './assets.js';
 import { vinyl, gloss, PALETTE } from './materials.js';
 import { isToyRock, toyRock } from './toyrock.js';
 
@@ -21,6 +21,9 @@ const RESTYLE = {
   crystal: (sm) => vinyl(PALETTE.mint, { roughness: 0.15, clearcoat: 1, sheen: 0, flat: !sm }),
   _defaultMat: () => vinyl(PALETTE.white),
 };
+
+/** 미리 받아 두기(타이틀 화면 쉬는 동안) — 다음에 placeKit 이 캐시에서 바로 꺼낸다. 실패해도 조용히 */
+export function warmKits(names) { for (const n of names) { const u = !isToyRock(n) && url(n); if (u) loadGLB(u).catch(() => {}); } }
 
 /**
  * 키트 모델 하나를 놓는다. 바닥 중심이 원점이 되도록 맞춘 뒤 크기 s 로 키운다.

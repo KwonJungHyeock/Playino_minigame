@@ -797,7 +797,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   stage.reveal();
 
   // 처음이면 인트로, 아니면 새로 얻은 것부터 축하
-  bgm.setDuck(1);
+  bgm.setDuck(1); bgm.theme('space');   // 기지 · 미션은 붉은 행성 테마곡
   const clearedNow = order.filter((id) => progress.isCleared(id)).concat(bonus.has('booster') ? ['challenge'] : []);   // 보너스도 처음 얻으면 장착 연출
   const seen = Array.isArray(save.cleared) ? save.cleared : null;
   const fresh = seen ? clearedNow.filter((id) => !seen.includes(id)) : [];
