@@ -579,10 +579,11 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
         <div class="jr-stats"><div><small>플레이 시간</small><b>${R.playText}</b></div><div><small>통과 미션</small><b>${R.cleared}/${R.total}</b></div><div><small>로켓 부품</small><b>${R.parts}/${R.partsTotal}</b></div><div><small>별 조각</small><b>${R.stars}/${R.starsMax}</b></div></div>
         <div class="jr-list">${rows}</div>
         <div class="jr-recent">${R.recent.slice(0, 4).map((e) => `<div><em>${e.when}</em>${e.text}</div>`).join('') || '아직 활동 기록이 없어요 — 미션을 하면 여기에 쌓여요'}</div>
-        <div class="hud-row"><button class="hud-btn" data-act="reflect" type="button">✏️ 돌아보기 ${wrote}/${QUESTIONS.length}</button><button class="hud-btn" data-act="pdf" type="button">📄 보고서 PDF</button><span class="hud-sp"></span><button class="hud-btn main" data-act="ok" type="button"><span class="hud-key wide">스페이스</span>닫기</button></div>`, { keys: { Space: 'ok', Escape: 'ok' } });
+        <div class="hud-row"><button class="hud-btn" data-act="reflect" type="button">✏️ 돌아보기 ${wrote}/${QUESTIONS.length}</button><button class="hud-btn" data-act="pdf" type="button">📄 보고서 PDF</button><button class="hud-btn" data-act="save" type="button" title="다른 기기에서 이어하기">💾 기록 파일</button><span class="hud-sp"></span><button class="hud-btn main" data-act="ok" type="button"><span class="hud-key wide">스페이스</span>닫기</button></div>`, { keys: { Space: 'ok', Escape: 'ok' } });
       if (done) return;
       if (a === 'reflect') { await reflectWin(); if (done) return; continue; }
       if (a === 'pdf') { await makePdf(); if (done) return; continue; }
+      if (a === 'save') { try { const { exportSave } = await import('../app/saveFile.js'); const n = await exportSave(); if (!done) hud.toast(`💾 ${n} 저장 — 다른 기기 타이틀에서 '기록 불러오기'`, 'ok'); } catch { if (!done) hud.toast('기록 파일을 만들지 못했어요', 'bad'); } if (done) return; continue; }
       break;
     }
     S.busy = false; S.near = null;

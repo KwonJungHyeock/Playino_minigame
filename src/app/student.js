@@ -40,8 +40,9 @@ export function resetForNewStudent() {
   results.reset();
   if (deviceReady) progress.mark('setup');
   try { localStorage.removeItem(KEY); } catch (_) {}
-  try { localStorage.removeItem('eduino.v4.stars.v1'); localStorage.removeItem('eduino.v4.style.v1'); localStorage.removeItem('eduino.v4.profile.v1'); localStorage.removeItem('eduino.v4.reflect.v1'); } catch (_) {}
-  journal.reset();   // v4 탐사 일지 · 사진   // v4 별 조각 · 바이저봇 이름 · 꾸미기도 학생 것
+  // v4 학생 것: 기지(인트로 본 것 · 축하한 부품) · 강의 · 별 조각 · 꾸미기 · 에디 · 돌아보기 · 보너스 부품(saveFile.js STUDENT_KEYS 와 같은 묶음)
+  try { ['eduino.v4.hub.v1', 'eduino.v4.lesson.v1', 'eduino.v4.stars.v1', 'eduino.v4.style.v1', 'eduino.v4.profile.v1', 'eduino.v4.reflect.v1', 'eduino.v4.bonus.v1'].forEach((k) => localStorage.removeItem(k)); } catch (_) {}
+  journal.reset();   // v4 탐사 일지 · 사진
   try { sessionStorage.removeItem(ROUTE_KEY); } catch (_) {}
 }
 

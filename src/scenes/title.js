@@ -36,6 +36,7 @@ const CSS = `
 .ttl-btn.alt{color:#fff;background:rgba(14,12,48,.55);box-shadow:inset 0 0 0 2px rgba(255,255,255,.28);backdrop-filter:blur(6px);font-size:20px}.ttl-btn.alt small{color:#c9d0ea}
 .ttl-btn:focus-visible,.ttl-classic:focus-visible{outline:3px solid #8ff7ee;outline-offset:3px}
 .ttl-classic{border:0;background:none;color:rgba(255,255,255,.72);font:600 13px var(--f-ui);cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.ttl-links{display:flex;gap:18px;flex-wrap:wrap;justify-content:inherit}
 .ttl-key{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:6px;background:#fff;color:#1c2140;font:800 11px var(--f-ui);vertical-align:2px}
 .ttl-snd{position:absolute;right:max(16px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));z-index:2;width:46px;height:46px;border-radius:16px;border:1px solid rgba(255,255,255,.22);background:rgba(14,12,48,.5);backdrop-filter:blur(8px);color:#fff;display:grid;place-items:center;cursor:pointer}.ttl-snd:focus-visible{outline:3px solid #8ff7ee;outline-offset:2px}
 .ttl-brand{position:absolute;right:max(3vw,16px);bottom:max(14px,env(safe-area-inset-bottom));z-index:1;font:700 12px var(--f-num);letter-spacing:.18em;color:rgba(255,255,255,.7)}
@@ -65,7 +66,7 @@ export function showTitle(root, { onContinue, onNew, onClassic }) {
         ${canGo ? `<button class="ttl-btn" id="ttl-go" type="button"><span><span class="ttl-key">스페이스</span>이어하기 ▶</span><small>${esc(student.label())} · ${esc(josa(profile.name(), '과', '와'))} 함께 · 로켓 부품 ${parts}/${PART_ROOMS.length} · ⭐ ${stars.total()}</small></button>` : ''}
         <button class="ttl-btn${canGo ? ' alt' : ''}" id="ttl-new" type="button"><span>${canGo ? '새로 시작' : '<span class="ttl-key">스페이스</span>모험 시작 ▶'}</span><small>${canGo ? '다른 학생이에요 — 기록을 비우고 처음부터' : who ? `${esc(student.label())} · 에디를 꾸미고 출발해요` : '이름을 적고 나만의 에디를 꾸며요'}</small></button>
       </div>
-      <button class="ttl-classic" id="ttl-classic" type="button">클래식 2D 판으로 하기</button>
+      <div class="ttl-links"><button class="ttl-classic" id="ttl-load" type="button">📂 다른 기기 기록 불러오기</button><button class="ttl-classic" id="ttl-classic" type="button">클래식 2D 판으로 하기</button></div><input type="file" id="ttl-file" accept=".eduino,.json,application/json,application/octet-stream" hidden>
     </div><div class="ttl-brand">EDUINO AI · 3D MAKER ADVENTURE</div><button class="ttl-snd" id="ttl-snd" type="button" aria-label="소리 켜기/끄기">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button></section>`;
   const $ = (s) => root.querySelector(s), el = $('.ttl');
   let done = false;
@@ -75,6 +76,17 @@ export function showTitle(root, { onContinue, onNew, onClassic }) {
   const fresh = () => { sfx.click?.(); if (canGo && !confirmNewStudent()) return; finish(() => onNew?.({ cleared: canGo })); };
   $('#ttl-go')?.addEventListener('click', go);
   $('#ttl-new').addEventListener('click', fresh);
+  // 다른 기기 기록 불러오기(app/saveFile.js) — 지금 기록이 있으면 덮어쓰기 확인 후, 새로고침해서 읽는다
+  const fileIn = $('#ttl-file');
+  $('#ttl-load').addEventListener('click', () => { sfx.click?.(); fileIn.click(); });
+  fileIn.addEventListener('change', async () => {
+    const f = fileIn.files?.[0]; fileIn.value = ''; if (!f) return;
+    try {
+      const { readSave, applySave } = await import('../app/saveFile.js'), pack = await readSave(f), who = pack.who ? `${pack.who.no ? `${pack.who.no}번 ` : ''}${pack.who.name}` : '이름 없음';
+      if (student.get() && !window.confirm(`${who} 학생의 기록을 불러올까요?\n\n이 기기의 지금 기록(${student.label()})은 지워져요. 필요하면 먼저 기지의 📒 일지에서 '기록 파일 저장'을 하세요.`)) return;
+      applySave(pack); sfx.perfect?.(); location.reload();
+    } catch (e) { sfx.no?.(); window.alert(e?.message || '기록 파일을 읽지 못했어요'); }
+  });
   $('#ttl-classic').addEventListener('click', () => { sfx.click?.(); bgm.theme('arcade'); finish(onClassic); });
   function onKey(e) {
     if (!el.isConnected) { finish(); return; }
