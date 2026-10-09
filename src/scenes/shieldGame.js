@@ -160,8 +160,8 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
 
   // ── 결선 준비 ──
   async function prep() {
-    hud.goal('결선 준비 · 버튼을 D4 · D5 에');
-    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>버튼 두 개를 D4 · D5 에 꽂자</h2>
+    hud.goal('결선 준비 · 버튼을 D4 · D5에');
+    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>버튼 두 개를 D4 · D5에 꽂자</h2>
       <p>이지 커넥트로 <b>버튼 1</b>을 <b>D4</b>(왼쪽 · 파랑), <b>버튼 2</b>를 <b>D5</b>(오른쪽 · 하양)에 꽂고 보드를 연결해요. 보드가 없어도 화면 단추나 <b>1 · 2</b> 키로 할 수 있어요.</p>
       <div style="display:flex;gap:12px;align-items:center;margin-top:14px;border-radius:18px;padding:12px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)"><i style="font-size:30px;font-style:normal">🔘</i><div><b style="display:block;font:400 22px var(--f-display);color:#fff">D4 · D5 · 버튼</b><span style="font-size:13px">누르면 HIGH, 떼면 LOW — 켜짐/꺼짐 두 가지만 알려 줘요</span></div></div>
       <div class="hud-status" id="w-st">보드를 연결하면 진짜 버튼으로 방어막을 올려요</div>
@@ -196,7 +196,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
           code: ['if (digitalRead(4) == HIGH) {', '  shieldOn(LEFT);   // 왼쪽 방어막!', '}'],
           acts: [{ code: 'HIGH', label: '왼쪽 누르기', color: SIDE_CSS[0], line: [0, 1], run: () => demo(0, true) }],
           after: '조건이 참일 때만 { } 안이 실행돼.' },
-        { title: '두 버튼 = 두 핀', say: '버튼마다 다른 핀에 꽂으면 따로 읽을 수 있어. D4 는 왼쪽, D5 는 오른쪽!',
+        { title: '두 버튼 = 두 핀', say: '버튼마다 다른 핀에 꽂으면 따로 읽을 수 있어. D4는 왼쪽, D5는 오른쪽!',
           code: ['if (digitalRead(4) == HIGH) shieldOn(LEFT);', 'if (digitalRead(5) == HIGH) shieldOn(RIGHT);'],
           acts: [{ code: 'D4', label: '왼쪽', color: SIDE_CSS[0], line: 0, run: () => demo(0, true) }, { code: 'D5', label: '오른쪽', color: '#c9d0ea', line: 1, run: () => demo(1, true) }],
           after: '핀 번호가 버튼의 주소야 — 유도등 때 배운 것과 같지?' },
@@ -204,10 +204,10 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
       quiz: [
         { q: '버튼을 누르고 있을 때 digitalRead 값은?', options: [{ label: 'LOW' }, { label: 'HIGH' }, { label: '1023' }], answer: 1,
           hint: '디지털은 두 가지뿐 — 눌림은 켜짐 쪽이야.', good: '정답! 누르면 HIGH.', onRight: () => demo(0, true) },
-        { q: 'if (digitalRead(5) == HIGH) { … } 가 하는 일은?', code: ['if (digitalRead(5) == HIGH) { … }'], options: [{ label: '5초 기다리기' }, { label: 'D5 를 켜기' }, { label: 'D5 버튼이 눌렸을 때만 실행' }], answer: 2,
+        { q: 'if (digitalRead(5) == HIGH) { … } 가 하는 일은?', code: ['if (digitalRead(5) == HIGH) { … }'], options: [{ label: '5초 기다리기' }, { label: 'D5를 켜기' }, { label: 'D5 버튼이 눌렸을 때만 실행' }], answer: 2,
           hint: 'if 는 조건이 참일 때만 실행했지.', good: '맞아! 눌렸을 때만 { } 안이 돌아가.', onRight: () => demo(1, true) },
         { q: '왼쪽 · 오른쪽 버튼을 따로 알아채는 방법은?', options: [{ label: '서로 다른 핀에 꽂아 따로 읽는다' }, { label: '한 핀에 둘 다 꽂는다' }, { label: '세게 누른다' }], answer: 0,
-          hint: 'D4 와 D5 — 핀 번호가 달랐어.', good: '완벽해! 핀이 다르면 따로 읽을 수 있어.', onRight: () => { demo(0, true); later(350, () => demo(1, true)); } },
+          hint: 'D4와 D5 — 핀 번호가 달랐어.', good: '완벽해! 핀이 다르면 따로 읽을 수 있어.', onRight: () => { demo(0, true); later(350, () => demo(1, true)); } },
       ],
     });
     const r = await lessonRef.done; lessonRef = null; if (done) return;
@@ -271,7 +271,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
       f.side = null; f.wait = 0.8;
     } else sfx.click?.();
   }
-  sandbox = createSandbox({ stage, hud, tip: '화면 단추 · 1 2 키 · 보드 버튼 D4 D5 를 눌러요. 운석이 오는 쪽 방어막을 올리면 막아요',
+  sandbox = createSandbox({ stage, hud, tip: '화면 단추 · 1 2 키 · 보드 버튼 D4 D5를 눌러요. 운석이 오는 쪽 방어막을 올리면 막아요',
     enter: () => {
       S.fr = { prev: S.phase, pads: padsEl.hidden, side: null, k: 0, gold: false, dur: 3, wait: 0.6, n: 0, note: '', noteT: 0 }; S.phase = 'free';
       scn.show('catch'); actor.arms(null, null).pose(null).look(null); padsEl.hidden = false; [...padsEl.children].forEach((b) => b.classList.remove('on')); bot.play('대기'); bot.setExpression('웃음');

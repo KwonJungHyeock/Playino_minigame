@@ -215,8 +215,8 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
 
   // ── 결선 준비 ──
   async function prep() {
-    hud.goal('결선 준비 · 조도 센서를 A0 에');
-    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>조도 센서를 A0 에 꽂아 충전소를 깨우자</h2>
+    hud.goal('결선 준비 · 조도 센서를 A0에');
+    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>조도 센서를 A0에 꽂아 충전소를 깨우자</h2>
       <p>이지 커넥트로 <b>조도 센서(CDS)</b> 를 <b>A0</b>(아날로그) 에 꽂고 보드를 연결해요. 보드가 없어도 <b>가리기 단추</b>나 <b>스페이스</b>로 할 수 있어요.</p>
       <div style="display:flex;gap:12px;align-items:center;margin-top:14px;border-radius:18px;padding:12px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)"><i style="font-size:30px;font-style:normal">🔆</i><div><b style="display:block;font:400 22px var(--f-display);color:#fff">A0 · 조도 센서</b><span style="font-size:13px">빛이 많을수록 큰 숫자를 알려 주는 센서예요</span></div></div>
       <div class="hud-status" id="w-st">보드를 연결하면 진짜 손으로 센서를 가려도 돼요</div>
@@ -247,10 +247,10 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
           code: ['int v = analogRead(A0);   // 빛의 양 읽기', '// 밝으면 큰 수, 가리면 작은 수'],
           acts: [{ code: '☀️', label: '비추기', color: '#ffd24a', line: [0, 1], run: () => force(1) }, { code: '🖐️', label: '가리기', color: '#5d6bd8', line: [0, 1], run: () => force(0) }],
           after: 'analogRead 숫자를 봐! 가리면 확 작아지지?' },
-        { title: '0 ~ 1023', say: 'analogRead 는 0 부터 1023 까지의 숫자를 줘. 빛이 셀수록 1023 에 가까워.',
+        { title: '0 ~ 1023', say: 'analogRead 는 0 부터 1023 까지의 숫자를 줘. 빛이 셀수록 1023에 가까워.',
           code: ['// 한낮 햇빛   → 900 쯤', '// 구름 낀 날  → 500 쯤', '// 손 그림자   → 100 쯤'],
           acts: [{ code: '900', label: '한낮', color: '#ffd24a', line: 0, run: () => force(1.05) }, { code: '500', label: '흐림', color: '#c9b46a', line: 1, run: () => force(0.52) }, { code: '100', label: '그림자', color: '#5d6bd8', line: 2, run: () => force(0) }],
-          after: 'LED 는 0~255 였지? 센서 값은 0~1023 — 더 잘게 나눠 읽어.' },
+          after: 'LED는 0~255 였지? 센서 값은 0~1023 — 더 잘게 나눠 읽어.' },
         { title: 'if 로 기준 넘기', say: '숫자가 기준보다 작으면 "어둡다" 고 정할 수 있어.',
           code: ['if (v < 400) {', '  // 어두워! → 충전 멈춤', '} else {', '  // 밝아! → 충전 중', '}'],
           acts: [{ code: 'v < 400', label: '가리기', color: '#5d6bd8', line: [0, 1], run: () => force(0) }, { code: 'else', label: '비추기', color: '#ffd24a', line: [2, 3], run: () => force(1) }],
@@ -260,7 +260,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
         { q: '조도 센서를 손으로 가리면 analogRead 값은?', options: [{ label: '커진다' }, { label: '작아진다' }, { label: '그대로다' }], answer: 1,
           hint: '빛이 적을수록 숫자가 어떻게 됐지?', good: '정답! 가리면 값이 작아져.', onRight: () => force(0) },
         { q: 'analogRead 가 주는 값의 범위는?', options: [{ label: '0 ~ 255' }, { label: '0 ~ 1' }, { label: '0 ~ 1023' }], answer: 2,
-          hint: 'LED 는 0~255, 센서는 더 잘게 나눠 읽었어.', good: '맞아! 0 부터 1023 까지.', onRight: () => force(1) },
+          hint: 'LED는 0~255, 센서는 더 잘게 나눠 읽었어.', good: '맞아! 0 부터 1023 까지.', onRight: () => force(1) },
         { q: 'if (v < 400) 이 참이 되는 때는?', code: ['if (v < 400) { … }'], options: [{ label: '센서를 가렸을 때' }, { label: '아주 밝을 때' }, { label: '보드를 껐을 때' }], answer: 0,
           hint: '400 보다 작다 = 빛이 적다는 뜻이야.', good: '완벽해! 가려서 어두울 때 참이야.', onRight: () => { force(0); later(800, () => force(1)); } },
       ],

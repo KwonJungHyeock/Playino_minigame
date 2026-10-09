@@ -63,6 +63,11 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .sty-row button[aria-pressed=true]{border-color:var(--gold);background:rgba(255,210,90,.12)}
     .sty-row button:disabled{cursor:not-allowed;opacity:.55}.sty-row button:disabled i{filter:grayscale(.85) brightness(.6);box-shadow:none}
     .sty-row button small{font-weight:800;color:var(--gold)}
+    .sty-tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:10px 0 12px;padding:4px;border-radius:16px;background:rgba(0,0,0,.25)}
+    .sty-tab{display:grid;justify-items:center;gap:3px;height:56px;align-content:center;border:0;border-radius:12px;background:transparent;color:rgba(255,255,255,.62);font:700 11px/1.1 "Pretendard Variable",sans-serif;cursor:pointer}
+    .sty-tab i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:16px;font-style:normal}.sty-tab i.sw{background:var(--c);box-shadow:inset 0 -3px 0 rgba(0,0,0,.22),0 0 10px var(--c)}
+    .sty-tab[aria-selected=true]{background:rgba(255,255,255,.12);color:#fff;box-shadow:inset 0 0 0 2px rgba(255,210,90,.55)}
+    .sty-sec{display:none}.sty-sec.on{display:block}.sty-sec .sty-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sty-sec .sty-row button{width:auto;height:76px;align-content:center;gap:6px}
     .sty-h{font:800 13px "Pretendard Variable",sans-serif;color:var(--sub);letter-spacing:.02em}
     .sty-stars{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 12px}.sty-stars span{padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.07);font:800 13px "Pretendard Variable",sans-serif;letter-spacing:1px}.sty-stars i{font-style:normal;color:rgba(255,255,255,.22)}.sty-stars i.on{color:var(--gold)}
     @media (max-width:560px){.hub3-tools button{height:44px;min-width:44px;padding:0 10px;font-size:15px}.hub3-tools{right:calc(max(16px,env(safe-area-inset-right)) + 58px)}.sty-row button{width:50px}}
@@ -573,14 +578,21 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     const have = stars.total(), cur = style.get();
     const row = (part) => `<div class="sty-row" role="group">${STYLE[part].map((o) => { const ok = style.unlocked(part, o.id); return `<button type="button" data-part="${part}" data-id="${o.id}" ${o.icon ? '' : `style="--c:#${o.hex.toString(16).padStart(6, '0')}"`} aria-pressed="${cur[part] === o.id}" ${ok ? '' : 'disabled'}>${o.icon ? `<i class="ic">${o.icon}</i>` : '<i></i>'}${o.name}${ok ? '' : `<small>${lockLabel(o)}</small>`}</button>`; }).join('')}</div>`;
     const grid = STAR_ROOMS.map((id) => `<span title="${STORY[id]?.name || id}">${STORY[id]?.icon || ''}${stars.get(id).map((x) => `<i${x ? ' class="on"' : ''}>★</i>`).join('')}</span>`).join('');
+    const tabSw = (part) => { const o = STYLE[part].find((x) => x.id === style.get()[part]); return o?.icon ? `<i>${o.icon}</i>` : `<i class="sw" style="--c:#${(o?.hex ?? 0xffffff).toString(16).padStart(6, '0')}"></i>`; };
+    const SHORT = { led: '바이저', cape: '망토', helmet: '헬멧', ear: '귀', hat: '머리', plate: '명패' };
     const win = hud.window(`<div class="hud-eye">${profile.name()} 꾸미기</div><h2>별 조각 ⭐ ${have} / ${stars.max()}</h2>
-      <p>미션마다 <b>🔭 둘러보기</b>에서 숨은 별 2개, <b>S등급</b>으로 1개. 모을수록 새 색이 열려요.</p>
-      ${PARTS.map(([part, label]) => `<div class="sty-h">${label}</div>${row(part)}`).join('')}
+      <p>미션마다 <b>🔭 둘러보기</b>에서 숨은 별 2개, <b>S등급</b>으로 1개. 모을수록 새 장식이 열려요.</p>
+      <div class="sty-tabs" role="tablist">${PARTS.map(([part, label], i) => `<button class="sty-tab" role="tab" type="button" data-tab="${part}" aria-selected="${i === 0}" title="${label}">${tabSw(part)}${SHORT[part]}</button>`).join('')}</div>
+      ${PARTS.map(([part, label], i) => `<div class="sty-sec${i === 0 ? ' on' : ''}" data-sec="${part}"><div class="sty-h">${label}</div>${row(part)}</div>`).join('')}
       <div class="sty-stars">${grid}</div>
       <div class="hud-row"><span class="hud-sp"></span><button class="hud-btn main" data-act="ok" type="button"><span class="hud-key wide">스페이스</span>다 했어요</button></div>`, { keys: { Space: 'ok', Escape: 'ok', Enter: 'ok' } });
+    hud.lastWindow?.querySelectorAll('.sty-tab').forEach((t) => t.addEventListener('click', () => {
+      hud.lastWindow.querySelectorAll('.sty-tab').forEach((x) => x.setAttribute('aria-selected', x === t)); hud.lastWindow.querySelectorAll('.sty-sec').forEach((x) => x.classList.toggle('on', x.dataset.sec === t.dataset.tab)); sfx.hover?.();
+    }));
     hud.lastWindow?.querySelectorAll('[data-part]').forEach((b) => b.addEventListener('click', () => {
       if (!style.set(b.dataset.part, b.dataset.id)) return;
       hud.lastWindow.querySelectorAll(`[data-part="${b.dataset.part}"]`).forEach((x) => x.setAttribute('aria-pressed', x === b));
+      const tb = hud.lastWindow.querySelector(`[data-tab="${b.dataset.part}"] i`); if (tb) tb.outerHTML = tabSw(b.dataset.part);
       applyStyle(botObj); curve.curveTree(botObj); bot.play('인사', { once: true }); bot.setExpression('웃음'); sfx.pop?.();
     }));
     await win; if (done) return; S.busy = false; S.near = null;
@@ -597,7 +609,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
       const R = buildReport(), wrote = QUESTIONS.filter((q) => (R.reflect[q.id] || '').trim()).length;
       const rows = R.missions.map((m) => `<div class="jr-row${m.cleared ? ' done' : ''}"><span>${m.cleared ? '✔ ' : ''}${m.icon} ${m.name}<small>${m.attempts ? `${m.attempts}회 도전` : '아직'}${m.ms ? ` · ${Math.round(m.ms / 60000) || '<1'}분` : ''}</small></span><span>${m.stages.map((x) => `<i class="g${x.passed ? ' on' : ''}" title="${x.title}">${x.grade || '·'}</i>`).join('')}</span></div>`).join('');
       const a = await hud.window(`<div class="hud-eye">탐사 일지 · ${student.label() || '대원'} × ${profile.name()}</div><h2>${ending ? '🎓 탐사 완료! 보고서를 만들어요' : '지금까지의 탐사'}</h2>
-        ${ending ? `<div class="jr-end">${profile.name()}: 우리가 한 일을 보고서로 남기자! 돌아보기를 쓰고 PDF 로 받아 선생님께 내 봐.</div>` : ''}
+        ${ending ? `<div class="jr-end">${profile.name()}: 우리가 한 일을 보고서로 남기자! 돌아보기를 쓰고 PDF로 받아 선생님께 내 봐.</div>` : ''}
         <div class="jr-stats"><div><small>플레이 시간</small><b>${R.playText}</b></div><div><small>통과 미션</small><b>${R.cleared}/${R.total}</b></div><div><small>로켓 부품</small><b>${R.parts}/${R.partsTotal}</b></div><div><small>별 조각</small><b>${R.stars}/${R.starsMax}</b></div></div>
         <div class="jr-list">${rows}</div>
         <div class="jr-recent">${R.recent.slice(0, 4).map((e) => `<div><em>${e.when}</em>${e.text}</div>`).join('') || '아직 활동 기록이 없어요 — 미션을 하면 여기에 쌓여요'}</div>

@@ -175,8 +175,8 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
 
   // ── 결선 준비 ──
   async function prep() {
-    hud.goal('결선 준비 · 가변저항을 A0 에');
-    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>가변저항을 A0 에 꽂아 다이얼을 깨우자</h2>
+    hud.goal('결선 준비 · 가변저항을 A0에');
+    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>가변저항을 A0에 꽂아 다이얼을 깨우자</h2>
       <p>이지 커넥트로 <b>회전형 가변저항</b>을 <b>A0</b>(아날로그) 에 꽂고 보드를 연결해요. 보드가 없어도 화면 다이얼이나 <b>← →</b> 키로 할 수 있어요.</p>
       <div style="display:flex;gap:12px;align-items:center;margin-top:14px;border-radius:18px;padding:12px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)"><i style="font-size:30px;font-style:normal">🎛️</i><div><b style="display:block;font:400 22px var(--f-display);color:#fff">A0 · 가변저항</b><span style="font-size:13px">돌린 만큼 0~1023 숫자가 바뀌는 다이얼이에요</span></div></div>
       <div class="hud-status" id="w-st">보드를 연결하면 진짜 다이얼로 로버를 몰아요</div>
@@ -207,7 +207,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
           code: ['int v = analogRead(A0);   // 다이얼 값 읽기', '// 왼쪽 끝 0 · 가운데 512 · 오른쪽 끝 1023'],
           acts: [{ code: '0', label: '왼쪽 끝', color: '#5d6bd8', line: [0, 1], run: () => turn(0) }, { code: '512', label: '가운데', color: '#8ff7ee', line: [0, 1], run: () => turn(0.5) }, { code: '1023', label: '오른쪽 끝', color: '#ffd24a', line: [0, 1], run: () => turn(1) }],
           after: '로버 뒤 분사구 빛과 계기판 바늘을 봐. 숫자만큼 힘이 나지?' },
-        { title: 'map() 으로 범위 바꾸기', say: '모터는 0~255 로 힘을 받아. map 으로 0~1023 을 0~255 로 바꿔 줘.',
+        { title: 'map() 으로 범위 바꾸기', say: '모터는 0~255로 힘을 받아. map 으로 0~1023을 0~255로 바꿔 줘.',
           code: ['int speed = map(v, 0, 1023, 0, 255);', '// 1023 → 255 · 512 → 127 · 0 → 0'],
           acts: [{ code: '0 → 0', label: '멈춤', color: '#5d6bd8', line: 0, run: () => turn(0) }, { code: '512 → 127', label: '반쯤', color: '#8ff7ee', line: 0, run: () => turn(0.5) }, { code: '1023 → 255', label: '최대', color: '#ffd24a', line: 0, run: () => turn(1) }],
           after: '두 범위의 크기가 달라도 비율은 같게 옮겨 줘 — 그게 map 이야.' },
@@ -220,9 +220,9 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
         { q: '다이얼을 오른쪽 끝까지 돌리면 analogRead 값은?', options: [{ label: '255' }, { label: '1023' }, { label: '0' }], answer: 1,
           hint: '센서 값은 LED 보다 잘게 — 0 부터 몇까지였지?', good: '정답! 1023 이야.', onRight: () => turn(1) },
         { q: 'map(512, 0, 1023, 0, 255) 의 결과는 대략?', code: ['map(512, 0, 1023, 0, 255)'], options: [{ label: '512' }, { label: '255' }, { label: '127' }], answer: 2,
-          hint: '512 는 0~1023 의 딱 절반이야. 0~255 의 절반은?', good: '맞아! 절반은 절반으로 — 127.', onRight: () => turn(0.5) },
+          hint: '512는 0~1023 의 딱 절반이야. 0~255 의 절반은?', good: '맞아! 절반은 절반으로 — 127.', onRight: () => turn(0.5) },
         { q: 'map() 은 무엇을 할까?', options: [{ label: '값의 범위를 다른 범위로 바꾼다' }, { label: '핀 번호를 바꾼다' }, { label: '값을 화면에 그린다' }], answer: 0,
-          hint: '0~1023 을 0~255 로 옮겼던 걸 떠올려 봐.', good: '완벽해! 범위를 바꿔 주는 함수야.', onRight: () => { turn(0.12); later(500, () => turn(0.9)); later(1000, () => turn(0.5)); } },
+          hint: '0~1023을 0~255로 옮겼던 걸 떠올려 봐.', good: '완벽해! 범위를 바꿔 주는 함수야.', onRight: () => { turn(0.12); later(500, () => turn(0.9)); later(1000, () => turn(0.5)); } },
       ],
     });
     const r = await lessonRef.done; lessonRef = null; if (done) return;

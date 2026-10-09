@@ -20,7 +20,7 @@ export function disposeObject(root) {
     if (o.geometry && !o.geometry.userData.gfxShared) o.geometry.dispose();
     for (const m of [].concat(o.material || [])) disposeMaterial(m);
     if (o.isSkinnedMesh && o.skeleton?.boneTexture) o.skeleton.boneTexture.dispose();
-    if (o.isLight && o.shadow?.map) o.shadow.dispose();   // 그림자 지도(VSM 은 2장) — 안 풀면 재입장마다 쌓인다
+    if (o.isLight && o.shadow?.map) o.shadow.dispose();   // 그림자 지도(VSM은 2장) — 안 풀면 재입장마다 쌓인다
   });
   root.removeFromParent();
 }

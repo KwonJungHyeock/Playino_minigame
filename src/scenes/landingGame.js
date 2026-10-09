@@ -5,7 +5,7 @@
 //   → 화물칸 열림 · 엔진 노즐 → 결과.
 // 허브에서 2단계를 골라 들어오면(stage: 2) 인트로 없이 결선 준비 → 2단계로 간다.
 // 판정 · 박자표 · 멜로디 · 통과 기준(A등급 85%↑) · 보드 LED(D2/D3/D4) · results 단계 이름은 ledGame.js 1 · 2단계와 같다.
-// 화면 표시는 공통 HUD(gfx3d/hud.js) — 원칙은 docs/V4-UI.md. WebGL2 가 없으면 2D 판(ledGame)으로 넘긴다.
+// 화면 표시는 공통 HUD(gfx3d/hud.js) — 원칙은 docs/V4-UI.md. WebGL2가 없으면 2D 판(ledGame)으로 넘긴다.
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
 import { board } from '../app/board.js';
@@ -124,7 +124,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   juice = createJuice({ stage, hud, rhythm: true });   // 손맛(히트스톱 · 줌 킥 · 플래시 · 반동 · 꼬리)
   explore = createExplore({ stage, hud, host, bot, actor, id: 'led' }); hud.explore = explore;   // 둘러보기 · 숨은 별 조각
   photo = createPhoto({ stage, hud, bot, actor, title: '착륙 유도등', subject: bot.object }); hud.photo = photo;   // 결과창 기념사진
-  // 자유 실험: 점수 없이 1·2·3 으로 유도등을 켜고 끄며(digitalWrite HIGH/LOW) 보급선이 바라는 빛 신호를 맞춰 네 번 만에 착륙시키기
+  // 자유 실험: 점수 없이 1·2·3으로 유도등을 켜고 끄며(digitalWrite HIGH/LOW) 보급선이 바라는 빛 신호를 맞춰 네 번 만에 착륙시키기
   const FREE_STEPS = 4, dots = (m) => [0, 1, 2].map((i) => `<span style="color:${m & (1 << i) ? LANE_CSS[i] : '#5a6080'}">${m & (1 << i) ? '●' : '○'}</span>`).join('');
   const freeGoal = (f) => { let m; do m = 1 + Math.floor(Math.random() * 7); while (m === f.goal || m === f.on); return m; };
   sandbox = createSandbox({ stage, hud, tip: '1·2·3 키나 아래 단추로 유도등을 켜고 꺼요. 목표 신호와 똑같이 켜면 보급선이 한 칸씩 내려와요',
@@ -215,7 +215,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     hud.goal('결선 준비 — LED 3개를 꽂아요');
     const pin = (c, p, t) => `<div style="border-radius:18px;padding:12px 8px;text-align:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)"><i style="display:block;width:24px;height:24px;border-radius:50%;margin:0 auto 6px;background:${c};box-shadow:0 0 16px ${c}"></i><b style="display:block;font:400 20px Jua,sans-serif;color:#fff">${p}</b><span style="font-size:13px">${t}</span></div>`;
     const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>LED 3개를 꽂아 유도등을 켜자</h2>
-      <p>이지 커넥트로 LED 를 아래 핀에 꽂고 보드를 연결해요. 보드가 없어도 화면으로 할 수 있어요.</p>
+      <p>이지 커넥트로 LED를 아래 핀에 꽂고 보드를 연결해요. 보드가 없어도 화면으로 할 수 있어요.</p>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px">${pin('#2ee86a', 'D2', '초록 · 정확')}${pin('#ffcd32', 'D3', '노랑 · 좋음')}${pin('#ff4d4d', 'D4', '빨강 · 놓침')}</div>
       <div class="hud-status" id="w-st">보드를 연결하면 실제 LED 도 함께 켜져요</div>
       <div class="hud-row"><button class="hud-btn" id="w-conn" type="button">🔌 보드 연결</button><button class="hud-btn" id="w-test" type="button" disabled>💡 LED 테스트</button><span class="hud-sp"></span>
@@ -260,9 +260,9 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
       ],
       quiz: [
         { q: '노랑 유도등(3번 핀)을 켜는 코드는?', options: [{ code: 'digitalWrite(3, LOW);' }, { code: 'digitalWrite(3, HIGH);' }, { code: 'digitalWrite(2, HIGH);' }], answer: 1,
-          hint: 'HIGH 가 켜짐, 노랑은 3번 핀이었지!', good: '정답! 노랑 유도등이 켜졌어.', onRight: () => { lampAll(false); blink(1, 1400); } },
-        { q: 'LOW 는 무슨 뜻일까?', options: [{ label: '켜짐 (5V)' }, { label: '반만 켜짐' }, { label: '꺼짐 (0V)' }], answer: 2,
-          hint: '디지털은 켜짐 아니면 꺼짐, 딱 두 가지야.', good: '맞아! LOW 는 꺼짐이야.', onRight: () => { lampAll(true); later(500, () => lampAll(false)); } },
+          hint: 'HIGH가 켜짐, 노랑은 3번 핀이었지!', good: '정답! 노랑 유도등이 켜졌어.', onRight: () => { lampAll(false); blink(1, 1400); } },
+        { q: 'LOW는 무슨 뜻일까?', options: [{ label: '켜짐 (5V)' }, { label: '반만 켜짐' }, { label: '꺼짐 (0V)' }], answer: 2,
+          hint: '디지털은 켜짐 아니면 꺼짐, 딱 두 가지야.', good: '맞아! LOW는 꺼짐이야.', onRight: () => { lampAll(true); later(500, () => lampAll(false)); } },
         { q: '빨강을 1초 켰다 끄려면 빈칸에는?', code: ['digitalWrite(4, HIGH);', '____', 'digitalWrite(4, LOW);'], runLine: [0, 1, 2],
           options: [{ code: 'delay(1000);' }, { code: 'delay(1);' }, { code: 'wait(1);' }], answer: 0,
           hint: 'delay 숫자는 1000분의 1초 단위야. 1초는 1000!', good: '완벽해! 빨강이 1초 동안 켜졌어.', onRight: () => { lampAll(false); blink(2, 1000); } },
@@ -511,7 +511,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   // 2단계 별자리 · 보상 연출
   function lanesFrame(dt, playing, now) {
     target.material.opacity = 0; pool.forEach((m) => { m.visible = false; });
-    if (S.phase === 'count' && S.countAt != null) {   // 카운트다운 동안 별자리가 흘러 들어와 GO 에 시작점에 닿는다
+    if (S.phase === 'count' && S.countAt != null) {   // 카운트다운 동안 별자리가 흘러 들어와 GO에 시작점에 닿는다
       const flow = Math.min(0, -PRE_ROLL + (S.t - S.countAt) * 1000);
       if (S.rewind > 0) { S.rewind = Math.min(1, S.rewind + dt * 2.2); const e = 1 - Math.pow(1 - S.rewind, 3); S.preNow = S.rewindFrom + (flow - S.rewindFrom) * e; if (S.rewind >= 1) S.rewind = 0; }
       else S.preNow = flow;

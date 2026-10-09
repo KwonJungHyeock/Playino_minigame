@@ -1,4 +1,4 @@
-// post.js — 후처리: 접촉 그림자(GTAO) + 빛 번짐(블룸). 품질 단계 low 에서는 블룸만, 그림자 AO 는 끈다.
+// post.js — 후처리: 접촉 그림자(GTAO) + 빛 번짐(블룸). 품질 단계 low 에서는 블룸만, 그림자 AO는 끈다.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -15,7 +15,7 @@ export function addPost(stage, { bloom = 0.55, bloomRadius = 0.5, threshold = 0.
   let aoPass = null;
   if (ao) {
     aoPass = new GTAOPass(scene, camera, size.x, size.y); aoPass.blendIntensity = 0.6; aoPass.updateGtaoMaterial({ radius: 0.5, distanceFallOff: 1, thickness: 1.5 }); composer.addPass(aoPass);
-    // userData.noAO 가 붙은 것(안내판 · 빛기둥 · 홀로그램 같은 반투명 효과)은 AO 계산에서 뺀다 — 넣으면 뒤쪽 땅에 검은 판 그림자가 생긴다
+    // userData.noAO가 붙은 것(안내판 · 빛기둥 · 홀로그램 같은 반투명 효과)은 AO 계산에서 뺀다 — 넣으면 뒤쪽 땅에 검은 판 그림자가 생긴다
     const render = aoPass.render.bind(aoPass);
     aoPass.render = (...a) => { const hid = []; scene.traverseVisible((o) => { if (o.userData.noAO) hid.push(o); }); hid.forEach((o) => { o.visible = false; }); render(...a); hid.forEach((o) => { o.visible = true; }); };
   }

@@ -4,7 +4,7 @@
 //   → 1단계 쉬운 색 → 2단계 어려운 색 → 보상(에너지 셀) → 기지로.
 // 게임 형태: 시간 압박 없는 조합 퍼즐. 목표 색 · 정확도 계산(색 거리) · 통과 기준(평균 A등급 85%↑) · 기록 이름은 2D 판(rgbGame.js)과 같다.
 // 셀이 목표 색에 가까워지면(정확도 85%↑) 셀이 공명한다 — 숫자 대신 빛으로 '거의 다 왔어' 를 알려 준다.
-// 조작: 슬라이더 끌기 · 1·2·3 으로 빛 고르고 ←→(↑↓) 로 세기(Shift = 크게) · 스페이스 = 충전.
+// 조작: 슬라이더 끌기 · 1·2·3으로 빛 고르고 ←→(↑↓) 로 세기(Shift = 크게) · 스페이스 = 충전.
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
 import { board } from '../app/board.js';
@@ -174,7 +174,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     { c: [255, 255, 255], name: '흰색', hint: '셋 다 가장 밝게' }, { c: [255, 120, 170], name: '분홍', hint: '빨강 가득 + 초록 · 파랑 조금' }, { c: [170, 240, 40], name: '연두', hint: '초록 가득 + 빨강 조금' }];
   const freePick = (prev) => { let t; do t = FREE[Math.floor(Math.random() * FREE.length)]; while (t === prev); return t; };
   function freeTarget(t) { Object.assign(S.fr, { tg: t, holdT: 0, tryT: 0 }); scn.setTarget(t.c); $('#eng-tg').style.background = css(t.c); $('#eng-tg').style.setProperty('--g', css(t.c)); cvdHint(); }
-  sandbox = createSandbox({ stage, hud, tip: '슬라이더를 끌거나 1·2·3 으로 빛 고르고 ←→ · 견본 구슬과 같은 색을 만들면 셀이 공명해요',
+  sandbox = createSandbox({ stage, hud, tip: '슬라이더를 끌거나 1·2·3으로 빛 고르고 ←→ · 견본 구슬과 같은 색을 만들면 셀이 공명해요',
     enter: () => {
       const tg = $('#eng-tg');
       S.fr = { prev: S.phase, ctl: ctl.hidden, go: goBtn.disabled, tg0: [tg.style.background, tg.style.getPropertyValue('--g')], tg: null, holdT: 0, tryT: 0, busy: false, made: 0 };
@@ -221,15 +221,15 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
 
   // ── 결선 준비 ──
   async function prep() {
-    hud.goal('결선 준비 · RGB LED 를 D6 에');
-    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>RGB LED 를 D6 에 꽂아 셀 빛을 켜자</h2>
+    hud.goal('결선 준비 · RGB LED를 D6에');
+    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>RGB LED를 D6에 꽂아 셀 빛을 켜자</h2>
       <p>이지 커넥트로 <b>풀 컬러 RGB LED</b> 를 <b>D6</b> 에 꽂고 보드를 연결해요. 보드가 없어도 화면 빛으로 할 수 있어요.</p>
       <div style="display:flex;gap:12px;align-items:center;margin-top:14px;border-radius:18px;padding:12px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)"><i style="font-size:30px;font-style:normal">🌈</i><div><b style="display:block;font:400 22px var(--f-display);color:#fff">D6 · 풀 컬러 RGB LED</b><span style="font-size:13px">선 하나로 빨강 · 초록 · 파랑을 모두 바꿀 수 있어요</span></div></div>
       <div class="hud-status" id="w-st">보드를 연결하면 진짜 LED 도 같은 색으로 켜져요</div>
       <div class="hud-row"><button class="hud-btn" id="w-conn" type="button">🔌 보드 연결</button><button class="hud-btn" id="w-test" type="button">🌈 빛 테스트</button><span class="hud-sp"></span>
         <button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>준비 완료</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     const w = hud.lastWindow, st = w.querySelector('#w-st'), set = (t, k = '') => { st.textContent = t; st.className = 'hud-status ' + k; };
-    const ok = () => { set('보드 연결 완료 ✅ 빛 테스트로 LED 를 확인해 보세요', 'ok'); w.querySelector('#w-conn').textContent = '연결됨 ✓'; hud.toast('보드가 연결됐어요', 'ok'); };
+    const ok = () => { set('보드 연결 완료 ✅ 빛 테스트로 LED를 확인해 보세요', 'ok'); w.querySelector('#w-conn').textContent = '연결됨 ✓'; hud.toast('보드가 연결됐어요', 'ok'); };
     if (!board.isSupported()) set('이 브라우저는 보드 연결을 지원하지 않아요 — 화면 빛으로 진행해요', 'warn');
     else board.connectAuto().then((a) => { if (a?.ok && w.isConnected) ok(); }).catch(() => {});
     w.querySelector('#w-conn').onclick = async () => { if (!board.isSupported()) return; set('포트를 골라 주세요 🔌'); try { await board.connect(); ok(); } catch (e) { set(board.classify(e).note, 'warn'); } };
@@ -255,7 +255,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
           code: ['led.setPixelColor(0, 255, 0, 0);  // 빨강', 'led.setPixelColor(0, 0, 255, 0);  // 초록', 'led.setPixelColor(0, 0, 0, 255);  // 파랑', 'led.show();                      // 켜기'],
           acts: [0, 1, 2].map((i) => ({ code: CH_NAME[i], label: '켜기', color: CH_CSS[i], line: [i, 3], run: () => show([0, 1, 2].map((k) => (k === i ? 255 : 0))) })),
           after: '세 숫자 = 빨강 · 초록 · 파랑 빛의 양이야. 탑 세 개가 그 숫자대로 빛을 쏴.' },
-        { title: '0 ~ 255 = 빛의 세기', say: '숫자가 클수록 그 빛이 세져. 0 은 꺼짐, 255 는 가장 밝게!',
+        { title: '0 ~ 255 = 빛의 세기', say: '숫자가 클수록 그 빛이 세져. 0은 꺼짐, 255는 가장 밝게!',
           code: ['led.setPixelColor(0, 60, 0, 0);   // 어둑한 빨강', 'led.setPixelColor(0, 255, 0, 0);  // 가장 밝은 빨강', 'led.setPixelColor(0, 0, 0, 0);    // 모두 꺼짐'],
           acts: [{ code: '60', label: '어둑하게', color: CH_CSS[0], line: 0, run: () => show([60, 0, 0]) }, { code: '255', label: '가장 밝게', color: CH_CSS[0], line: 1, run: () => show([255, 0, 0]) }, { code: '0', label: '끄기', color: '#3a3c40', line: 2, run: () => show([0, 0, 0]) }],
           after: '탑 기둥의 눈금 8칸이 숫자를 보여 줘. 빛줄기 굵기도 따라 바뀌지!' },
@@ -268,9 +268,9 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
         { q: '빨강 빛과 초록 빛을 함께 켜면 무슨 색?', options: [{ label: '검정' }, { label: '노랑' }, { label: '갈색' }], answer: 1,
           hint: '빛은 섞을수록 밝아졌지! 세 번째 카드를 떠올려 봐.', good: '정답! 빨강 + 초록 = 노랑 빛.', onRight: () => show([255, 255, 0]) },
         { q: 'setPixelColor(0, 255, 0, 0) 에서 255 의 뜻은?', code: ['led.setPixelColor(0, 255, 0, 0);'], options: [{ label: '빨강을 끄기' }, { label: '255번째 LED' }, { label: '빨강을 가장 밝게' }], answer: 2,
-          hint: '0 은 꺼짐, 숫자가 클수록…?', good: '맞아! 255 는 가장 센 빛이야.', onRight: () => show([255, 0, 0]) },
-        { q: 'LED 를 완전히 끄는 코드는?', options: [{ code: 'led.setPixelColor(0, 0, 0, 0);' }, { code: 'led.setPixelColor(0, 255, 255, 255);' }, { code: 'led.setPixelColor(0, 128, 128, 128);' }], answer: 0,
-          hint: '세 빛을 모두 0 으로 하면?', good: '완벽해! 셋 다 0 이면 깜깜.', onRight: () => { show([0, 0, 0]); later(700, () => show([128, 128, 128])); } },
+          hint: '0은 꺼짐, 숫자가 클수록…?', good: '맞아! 255는 가장 센 빛이야.', onRight: () => show([255, 0, 0]) },
+        { q: 'LED를 완전히 끄는 코드는?', options: [{ code: 'led.setPixelColor(0, 0, 0, 0);' }, { code: 'led.setPixelColor(0, 255, 255, 255);' }, { code: 'led.setPixelColor(0, 128, 128, 128);' }], answer: 0,
+          hint: '세 빛을 모두 0으로 하면?', good: '완벽해! 셋 다 0 이면 깜깜.', onRight: () => { show([0, 0, 0]); later(700, () => show([128, 128, 128])); } },
       ],
     });
     const r = await lessonRef.done; lessonRef = null; if (done) return;

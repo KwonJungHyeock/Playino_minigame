@@ -1,6 +1,6 @@
 // launch.js — 마지막 '발사 쇼' 장면. 붉은 행성의 해 질 녘 발사대와 바이저봇이 모은 부품으로 완성한 탈출 로켓.
 // 로켓도 바이저봇 식구(TOY 재질): 흰 유광 몸 · 금 띠 · 이음선 · 검은 바이저 얼굴(LED 표정) — 부품 8개(+ 보너스 부스터)는 진짜로 붙고, 못 모은 부품은 청사진 홀로그램.
-// 1막(발사대 조명): 로켓 얼굴 LED 가 원하는 색 → 다이얼 색 조명 두 대가 로켓을 비춘다. 맞추면 발사탑 점검등이 아래부터 하나씩 초록.
+// 1막(발사대 조명): 로켓 얼굴 LED가 원하는 색 → 다이얼 색 조명 두 대가 로켓을 비춘다. 맞추면 발사탑 점검등이 아래부터 하나씩 초록.
 // 2막(교신 멜로디): 발사대 앞 음표등 7개(도~시). 관제가 들려준 순서대로 따라 친다 — 바이저봇이 음 높이만큼 팔로 지휘.
 // 3막(카운트다운): 발사대 바닥 둘레를 도는 빛 점이 금색 구간에 올 때 큐 — 맞을 때마다 숫자가 줄고 엔진이 달아오른다.
 // 끝: 바이저봇이 엘리베이터로 올라 다리를 건너 탑승 → 점화 → 발사(카메라가 따라 올라가 하늘이 우주로 바뀐다).
@@ -18,7 +18,7 @@ export const PAD = new V(0.6, 0, -1.2);
 const PAD_R = 3.0, DECK = 0.3, S = 1.15, PLANET_R = 600;
 export const NOTE_HEX = [0xff5a5a, 0xff9a3a, 0xffd23a, 0x5ff07a, 0x4fd6ff, 0x6f7bff, 0xc77dff];
 export const NOTE_CSS = NOTE_HEX.map((h) => `#${h.toString(16).padStart(6, '0')}`);
-export const CUE_LOW = 0.76, CUE_HIGH = 0.97;   // launchGame CUE 와 같게
+export const CUE_LOW = 0.76, CUE_HIGH = 0.97;   // launchGame CUE와 같게
 const TOWER = new V(PAD.x - 2.25, 0, PAD.z - 0.55), ARM_Y = 3.35;
 const BOT_AT = new V(-2.75, 0, 1.05), BOT_YAW = 1.15, CONSOLE_AT = new V(-2.1, 0, 1.4);
 /** 2D 판과 같은 색: HSV(h, 1, 1) */

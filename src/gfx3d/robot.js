@@ -1,5 +1,5 @@
 // robot.js — 브랜드 캐릭터 '바이저 로봇' 실시간 제어: 동작 클립 · LED 표정 · 눈 깜빡임 · 로딩 점.
-// 원본 GLB 는 art/characters/visor 에서 만든다(표정 7종이 모두 들어 있고, 숨길 표정은 extras.hidden 으로 표시).
+// 원본 GLB는 art/characters/visor 에서 만든다(표정 7종이 모두 들어 있고, 숨길 표정은 extras.hidden 으로 표시).
 import * as THREE from 'three';
 import robotUrl from '../assets/3d/visor-bot.glb?url';
 import { instantiate } from './assets.js';

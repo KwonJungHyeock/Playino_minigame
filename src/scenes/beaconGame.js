@@ -187,8 +187,8 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   // ── 결선 준비 ──
   const tone = (f, ms) => { sfx.note(f, ms, 0.2); if (board.connected) board.tone(PIN, f, ms).catch(() => {}); };
   async function prep() {
-    hud.goal('결선 준비 · 부저를 D5 에');
-    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>부저를 D5 에 꽂아 비콘을 켜자</h2>
+    hud.goal('결선 준비 · 부저를 D5에');
+    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>부저를 D5에 꽂아 비콘을 켜자</h2>
       <p>이지 커넥트로 <b>수동 부저</b>를 <b>D5</b> 에 꽂고 보드를 연결해요. 보드가 없어도 화면 소리로 할 수 있어요.</p>
       <div style="display:flex;gap:12px;align-items:center;margin-top:14px;border-radius:18px;padding:12px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)"><i style="font-size:30px;font-style:normal">🔊</i><div><b style="display:block;font:400 22px var(--f-display);color:#fff">D5 · 수동 부저</b><span style="font-size:13px">소리 높이(주파수)를 바꿀 수 있는 부저예요</span></div></div>
       <div class="hud-status" id="w-st">보드를 연결하면 진짜 부저도 함께 울려요</div>

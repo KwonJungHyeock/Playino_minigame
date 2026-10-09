@@ -1,5 +1,5 @@
 // assets.js — GLB 로더(메시옵트 압축 해제 포함) + URL 별 캐시. 같은 모델을 여러 번 써도 한 번만 받는다.
-// URL 은 반드시 import 로 받은 값을 넘길 것: `import url from '../assets/3d/x.glb?url'` — 절대경로(/brand/…)를 새로 만들지 않는다.
+// URL은 반드시 import 로 받은 값을 넘길 것: `import url from '../assets/3d/x.glb?url'` — 절대경로(/brand/…)를 새로 만들지 않는다.
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';

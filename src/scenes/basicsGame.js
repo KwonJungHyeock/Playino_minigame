@@ -192,7 +192,7 @@ export async function showBasicsGame(root, { onExit } = {}) {
           hint: '센서는 정보를 받는 쪽이었지? 빛이 어느 쪽으로 흘렀는지 떠올려 봐.', good: '정답! 센서로 정보를 받으니 입력이야.', onRight: () => { wake('temp'); scn.beam(scn.partTop('temp'), scn.boardAt(), IN_HEX); } },
         { q: '버튼처럼 눌림 / 안 눌림 두 값만 있는 신호는?', options: [{ label: '아날로그' }, { label: '디지털' }, { label: '주파수' }], answer: 1,
           hint: '두 값(0 / 1)뿐인 신호를 뭐라고 했지?', good: '맞아! 두 값뿐이라 디지털.', onRight: () => wake('button') },
-        { q: 'LED 를 켜서 빛을 "내는" 것은?', options: [{ label: '⬅ 입력' }, { label: '접지' }, { label: '출력 ➡' }], answer: 2,
+        { q: 'LED를 켜서 빛을 "내는" 것은?', options: [{ label: '⬅ 입력' }, { label: '접지' }, { label: '출력 ➡' }], answer: 2,
           hint: '빛 · 소리 · 움직임을 만들어 내는 쪽은…?', good: '정답! 동작을 만들어 내니 출력이야.', onRight: () => { scn.beam(scn.boardAt(), scn.partTop('led'), OUT_HEX).then(() => { if (!done) wake('led', 1.8); }); } },
         { q: '아두이노가 일하는 순서로 맞는 것은?', options: [{ label: '출력 → 입력 → 처리' }, { label: '입력 → 처리 → 출력' }, { label: '처리 → 출력 → 입력' }], answer: 1,
           hint: '받고(입력) → 생각하고 → 행동해. 첫 번째 카드를 떠올려 봐!', good: '완벽해! 받고 → 생각하고 → 행동해.', onRight: () => chain('button', 'buzzer') },

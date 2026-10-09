@@ -241,7 +241,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
       sfx: { click: () => sfx.click?.(), perfect: () => sfx.perfect(), no: () => sfx.no() }, skippable: true,
       outro: '좋아! 이제 진짜 쇼를 시작하자.',
       cards: [
-        { title: '부품 묶기 — 다이얼 → 빛', say: '다이얼 값을 읽어서 색으로 바꾸고, LED 로 켜. 입력 하나로 출력을 바꿔!',
+        { title: '부품 묶기 — 다이얼 → 빛', say: '다이얼 값을 읽어서 색으로 바꾸고, LED로 켜. 입력 하나로 출력을 바꿔!',
           code: ['int v = analogRead(A0);              // 입력', 'int hue = map(v, 0, 1023, 0, 320);  // 처리', 'led.setPixelColor(0, color(hue));   // 출력'],
           acts: [{ code: '0°', label: '빨강', color: hueCss(0), line: [0, 1, 2], run: () => turn(0) }, { code: '120°', label: '초록', color: hueCss(120), line: [0, 1, 2], run: () => turn(120 / HUE_MAX) }, { code: '240°', label: '파랑', color: hueCss(240), line: [0, 1, 2], run: () => turn(240 / HUE_MAX) }],
           after: '조명탑 두 대 색이 바뀌지? 로켓 얼굴 색과 같게 맞추면 돼.' },
@@ -255,12 +255,12 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
           after: '빛 점이 금색 구간에 올 때 누르면 숫자가 줄어. 0 이 되면 발사!' },
       ],
       quiz: [
-        { q: 'tone(5, 440) 에서 5 는?', code: ['tone(5, 440);'], options: [{ label: '소리 높이' }, { label: '부저 핀 번호' }, { label: '소리 길이' }], answer: 1,
+        { q: 'tone(5, 440) 에서 5는?', code: ['tone(5, 440);'], options: [{ label: '소리 높이' }, { label: '부저 핀 번호' }, { label: '소리 길이' }], answer: 1,
           hint: '첫 번째 숫자는 어디에 꽂았는지였지.', good: '정답! 5번 핀의 부저야.', onRight: () => playNote(5) },
-        { q: 'for 문으로 멜로디를 치면 좋은 점은?', options: [{ label: '같은 일을 순서대로 반복할 수 있다' }, { label: 'LED 가 더 밝아진다' }, { label: '버튼이 저절로 눌린다' }], answer: 0,
+        { q: 'for 문으로 멜로디를 치면 좋은 점은?', options: [{ label: '같은 일을 순서대로 반복할 수 있다' }, { label: 'LED가 더 밝아진다' }, { label: '버튼이 저절로 눌린다' }], answer: 0,
           hint: 'i 가 0, 1, 2 … 로 바뀌며 한 줄씩 꺼냈지.', good: '맞아! 순서대로 반복해 줘.', onRight: () => { playNote(0); later(300, () => playNote(2)); later(600, () => playNote(4)); } },
         { q: '버튼이 눌렸는지 읽는 함수는?', options: [{ label: 'analogWrite(4)' }, { label: 'tone(4)' }, { label: 'digitalRead(4)' }], answer: 2,
-          hint: '켜짐 · 꺼짐 두 가지 값을 읽는 함수야.', good: '완벽해! digitalRead 로 HIGH · LOW 를 읽어.', onRight: () => { scn.press(); pressPose(); } },
+          hint: '켜짐 · 꺼짐 두 가지 값을 읽는 함수야.', good: '완벽해! digitalRead 로 HIGH · LOW를 읽어.', onRight: () => { scn.press(); pressPose(); } },
       ],
     });
     const r = await lessonRef.done; lessonRef = null; if (done) return;

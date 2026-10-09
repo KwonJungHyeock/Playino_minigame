@@ -49,6 +49,6 @@ export const TOY = {
   red: () => vinyl(0xd14139, { roughness: 0.52, clearcoat: 0.4 }),
   visor: () => gloss(0x0b0907),
 };
-export const LED = new THREE.MeshBasicMaterial({ color: 0x8ef7ed, toneMapped: false });   // 바이저봇 얼굴 LED 와 같은 하늘색
+export const LED = new THREE.MeshBasicMaterial({ color: 0x8ef7ed, toneMapped: false });   // 바이저봇 얼굴 LED와 같은 하늘색
 LED.userData.gfxShared = true;
 

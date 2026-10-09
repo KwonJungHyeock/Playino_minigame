@@ -4,7 +4,7 @@
 //   본문 · 안내(ui)       Pretendard      — 또렷한 한글 본문(작은 글씨 · 대사 · 설명)
 //   숫자 · 영문 표기(num)  Fredoka         — 둥근 라틴 · 숫자(MISSION 01 · 3/8 · 카운트다운 · 콤보 · 등급)
 //   코드(code)            JetBrains Mono  — 아두이노 코드
-// 3D 씬은 이 파일을 불러오기만 하면 된다(글꼴 CSS 가 함께 딸려 온다). 캔버스 글씨는 FONT.* 문자열을 쓰고 fontsReady() 뒤에 그린다.
+// 3D 씬은 이 파일을 불러오기만 하면 된다(글꼴 CSS가 함께 딸려 온다). 캔버스 글씨는 FONT.* 문자열을 쓰고 fontsReady() 뒤에 그린다.
 import '@fontsource/jua/index.css';
 import '@fontsource/fredoka/600.css';
 import '@fontsource/fredoka/700.css';

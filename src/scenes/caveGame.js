@@ -169,7 +169,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   // ── 결선 준비 ──
   async function prep() {
     hud.goal('결선 준비 · 조도 센서 A0 + RGB LED D6');
-    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>센서와 LED 를 함께 꽂자</h2>
+    const closed = hud.window(`<div class="hud-eye">결선 준비</div><h2>센서와 LED를 함께 꽂자</h2>
       <p><b>조도 센서</b>를 <b>A0</b>(입력), <b>풀 컬러 RGB LED</b>를 <b>D6</b>(출력)에 꽂고 보드를 연결해요. 보드가 없어도 화면 <b>손 그림자 띠</b>로 할 수 있어요.</p>
       <div style="display:flex;gap:12px;align-items:center;margin-top:14px;border-radius:18px;padding:12px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)"><i style="font-size:30px;font-style:normal">🔦</i><div><b style="display:block;font:400 22px var(--f-display);color:#fff">A0 입력 → D6 출력</b><span style="font-size:13px">가린 만큼 읽고, 그만큼 색을 바꿔 켜요</span></div></div>
       <div class="hud-status" id="w-st">보드를 연결하면 진짜 손으로 센서를 가리고 LED 색이 따라 바뀌어요</div>
@@ -197,7 +197,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
       sfx: { click: () => sfx.click?.(), perfect: () => sfx.perfect(), no: () => sfx.no() }, skippable: true,
       outro: '좋아! 등불을 들고 동굴로 들어가자.',
       cards: [
-        { title: '입력 → 처리 → 출력', say: '센서로 읽고(입력), 숫자를 바꾸고(처리), LED 로 내보내(출력). 차례로 눌러 봐!',
+        { title: '입력 → 처리 → 출력', say: '센서로 읽고(입력), 숫자를 바꾸고(처리), LED로 내보내(출력). 차례로 눌러 봐!',
           code: ['int v = analogRead(A0);            // 입력', 'int hue = map(v, 900, 100, 0, 320); // 처리', 'led.setPixelColor(0, color(hue));  // 출력'],
           acts: [{ code: '입력', label: '읽기', color: '#8ff7ee', line: 0, run: () => cover(0.12) }, { code: '처리', label: '바꾸기', color: '#ffd25a', line: 1, run: () => cover(0.5) }, { code: '출력', label: '켜기', color: '#ff8a7a', line: 2, run: () => cover(0.85) }],
           after: '세 줄이 계속 돌면서 등불 색을 바꿔 — 이게 프로그램의 흐름이야.' },

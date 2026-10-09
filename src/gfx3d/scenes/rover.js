@@ -136,7 +136,7 @@ export async function createRoverScene(stage) {
   Object.assign(key.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 40 }); root.add(key, key.target);
   const rim = new THREE.DirectionalLight(0x7fd8ff, 1.4); rim.position.set(6, 5, -8); root.add(rim);
 
-  // 트랙(로버는 늘 x≈0 에 있고, 땅이 뒤로 흐른다)
+  // 트랙(로버는 늘 x≈0에 있고, 땅이 뒤로 흐른다)
   const track = new THREE.Group(); track.name = 'Track'; root.add(track);
   // 아득한 협곡 바닥 + 먼 협곡 벽(실루엣)
   const floor = mesh(new THREE.PlaneGeometry(400, 80), new THREE.MeshStandardMaterial({ color: 0x5a3434, roughness: 1 }), { cast: false }); floor.rotation.x = -Math.PI / 2; floor.position.set(0, -7, -10); root.add(floor);
@@ -217,7 +217,7 @@ export async function createRoverScene(stage) {
   function setThrust(k) { thrust = Math.max(0, Math.min(1, k)); }
   function setBand(c, h) { bandC = c; bandH = h; }
   function show(m) { mode = m; jumpG.visible = m === 'jump' || m === 'all'; rideG.visible = m === 'ride' || m === 'all'; track.position.set(0, 0, 0); rover.position.set(0, 0, 0); rover.rotation.set(0, 0, 0); if (m === 'jump' || m === 'all') resetJump(); }
-  /** 뛰어넘기: 로버가 포물선으로 건너편에 내려앉고, 땅을 당겨 다시 x≈0 으로 */
+  /** 뛰어넘기: 로버가 포물선으로 건너편에 내려앉고, 땅을 당겨 다시 x≈0으로 */
   function jump(d) { return new Promise((res) => { anim = { kind: 'jump', d, t: 0, dur: 0.85 + d * 0.06, res }; }); }
   /** 구조 다리: 시간이 지나면 다리가 펴지고 천천히 건너간다 */
   function rescue(d) { bridge.visible = true; bridge.scale.set(0.01, 1, 1); bridge.position.set(baseX + NEAR_END + d / 2, -0.04, 0); return new Promise((res) => { anim = { kind: 'bridge', d, t: 0, dur: 1.6, res }; }); }

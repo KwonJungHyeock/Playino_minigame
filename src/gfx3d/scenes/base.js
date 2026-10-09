@@ -72,7 +72,7 @@ function bake(group) {
     if (!o.isMesh || o.isInstancedMesh || Array.isArray(o.material)) return;
     const key = o.material.uuid + (o.castShadow ? ':c' : ':n');
     let src = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
-    for (const n of Object.keys(src.attributes)) if (n !== 'position' && n !== 'normal') src.deleteAttribute(n);
+    for (const n of Object.keys(src.attributes)) if (n !== 'position' && n !== 'normal' && !(n === 'color' && o.material.vertexColors)) src.deleteAttribute(n);   // 정점색 재질(장난감 바위)은 색을 지킨다 — 지우면 까맣게 나온다
     if (!src.attributes.normal) src.computeVertexNormals();
     src.applyMatrix4(o.matrixWorld);
     if (!buckets.has(key)) buckets.set(key, { mat: o.material, cast: o.castShadow, geos: [] });
@@ -394,7 +394,7 @@ export async function createBaseScene(stage) {
   // 작은 행성 둘레로 우주가 보인다 — 지평선 띠 없이 깊은 남색 우주 + 별을 많이
   const sky = addSpaceSky(scene, { top: 0x04061a, horizon: 0x0d1030, glow: 0x24163e, stars: 2600, fog: [24, 80] }); sky.userData.noAO = true;
   renderer.toneMappingExposure = 1.0;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;   // VSM 은 휜 행성에서 땅 전체를 그림자로 덮는다(모멘트 비교가 어긋남) — 부드러운 PCF 로
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;   // VSM은 휜 행성에서 땅 전체를 그림자로 덮는다(모멘트 비교가 어긋남) — 부드러운 PCF로
   scene.environmentIntensity = 0.38;
   root.add(new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.8));
   // 그림자는 바이저봇 둘레만 — 달빛(키 라이트)이 봇을 따라다닌다(지도 전체를 덮으면 해상도가 모자란다)

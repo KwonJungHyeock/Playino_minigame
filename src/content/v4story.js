@@ -32,7 +32,7 @@ export const PART_ROOMS = Object.keys(STORY).filter((id) => STORY[id].part && !S
 export const LEARN = {
   led:    { parts: 'LED 3개', pins: 'D2 · D3 · D4', code: ['digitalWrite(2, HIGH);', 'delay(500);'], idea: '디지털 출력과 타이밍 — 켜고(HIGH) 끄기(LOW)를 정한 때에' },
   buzzer: { parts: '피에조 부저', pins: 'D5', code: ['tone(5, 392);', 'noTone(5);'], idea: '주파수(Hz)로 음 높이 — 두 배면 한 옥타브 위' },
-  rgb:    { parts: 'RGB LED(네오픽셀)', pins: 'D6', code: ['led.setPixelColor(0, 255, 225, 30);', 'led.show();'], idea: '빛의 삼원색 R · G · B 를 섞어 색 만들기' },
+  rgb:    { parts: 'RGB LED(네오픽셀)', pins: 'D6', code: ['led.setPixelColor(0, 255, 225, 30);', 'led.show();'], idea: '빛의 삼원색 R · G · B를 섞어 색 만들기' },
   cds:    { parts: '조도 센서', pins: 'A0', code: ['int v = analogRead(A0);', 'if (v < 473) { /* 어둠 */ }'], idea: '아날로그 입력(빛의 양)과 기준값 비교' },
   pot:    { parts: '가변저항(다이얼)', pins: 'A0', code: ['int v = analogRead(A0);', 'int p = map(v, 0, 1023, 0, 255);'], idea: '0 ~ 1023 값을 map 으로 원하는 범위로 바꾸기' },
   button: { parts: '택트 버튼 2개', pins: 'D4 · D5', code: ['if (digitalRead(4) == HIGH) {', '  shieldOn(LEFT); }'], idea: '디지털 입력 — 눌림(HIGH)과 뗌(LOW)' },
