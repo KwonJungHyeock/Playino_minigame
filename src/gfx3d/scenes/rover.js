@@ -5,8 +5,10 @@
 //   20개 관문을 지날 때 추력이 맞으면 관문이 초록, 아니면 빨강. 너무 세면 앞바퀴가 들리며 미끄러지고, 약하면 헛바퀴 · 먼지.
 // 게임 연결점: setThrust(k) · setBand(center, half) · show(mode) · gap(d) · jump(d) · rescue(d) · buildRoad(fn, dur, checks) · ride(X, state) · gate(i, ok) · revealPart()
 import * as THREE from 'three';
-import { vinyl, lamp, PALETTE } from '../materials.js';
-import { roundedBox, roundedCylinder, dome, mesh } from '../shapes.js';
+import { vinyl, lamp, PALETTE, TOY, LED } from '../materials.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { FONT } from '../type.js';
+import { roundedBox, roundedCylinder, dome, extrude, mesh } from '../shapes.js';
 import { placeKit } from '../kits.js';
 import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
@@ -17,58 +19,112 @@ export const ROAD_V = 3.2;                 // 2단계: 로버가 달리는 빠�
 const SLOPE_K = 0.85;                     // 목표 추력 0.5 = 평지, 1 = 가파른 오르막
 const ROCK = 0xc77a5e, ROCK_D = 0x8c4d3d, SAND = 0xe0a07c;
 
-/** 6바퀴 로버 + 추력 계기판 + 뒤 분사구. 바이저봇 자리(seat)를 돌려준다 */
+let treadGeo = null;
+/** 홈 무늬 타이어(굴림 고리 + 돌기 14개를 한 덩어리로) — 바퀴 6개가 같은 모양을 나눠 쓴다 */
+function tireGeo() {
+  if (treadGeo) return treadGeo;
+  const parts = [new THREE.TorusGeometry(0.17, 0.078, 16, 40)];
+  for (let k = 0; k < 14; k++) { const a = (k / 14) * Math.PI * 2, lug = roundedBox(0.075, 0.05, 0.17, 0.02, 2); lug.rotateZ(a); lug.translate(Math.cos(a + Math.PI / 2) * 0.245, Math.sin(a + Math.PI / 2) * 0.245, 0); parts.push(lug); }
+  const merged = mergeGeometries(parts.map((g) => g.toNonIndexed()), false); parts.forEach((g) => g.dispose());
+  merged.userData.gfxShared = true; treadGeo = merged; return merged;
+}
+function badgeTex() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 96; const x = c.getContext('2d');
+  x.fillStyle = '#e7b535'; x.beginPath(); x.roundRect(4, 4, 248, 88, 26); x.fill();
+  x.fillStyle = '#c32721'; x.font = `700 58px ${FONT.num}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('Eduino', 128, 52);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+
+/** 바이저 로버: 바이저봇 헬멧을 닮은 장난감 탐사차. 앞은 검은 유광 바이저 + LED 웃는 눈, 금색 이어팟 바퀴, 흰 흙받기 · 이음선, 옆 명찰 */
 function roverModel() {
-  const g = new THREE.Group(); g.name = 'Rover';
+  const g = new THREE.Group(); g.name = 'VisorRover';
   const body = new THREE.Group(); body.position.y = 0.42; g.add(body);   // 바퀴 위로 출렁이는 몸통
-  body.add(mesh(roundedBox(1.55, 0.36, 0.95, 0.14), vinyl(P.white)));
-  const stripe = mesh(roundedBox(1.57, 0.08, 0.97, 0.04), vinyl(P.mustard)); stripe.position.y = -0.08; body.add(stripe);
-  const nose = mesh(roundedBox(0.3, 0.26, 0.85, 0.1), vinyl(P.coral)); nose.position.set(0.82, -0.02, 0); body.add(nose);
-  for (const s of [-1, 1]) { const hl = mesh(new THREE.SphereGeometry(0.07, 16, 12), lamp(0xfff2c8, 2.4), { cast: false }); hl.position.set(0.97, 0.02, s * 0.28); body.add(hl); }
-  // 자리(바이저봇) + 손잡이
-  const seat = new THREE.Group(); seat.position.set(-0.05, 0.18, 0); body.add(seat);
-  seat.add(mesh(roundedBox(0.5, 0.08, 0.5, 0.04), vinyl(P.charcoal)));
-  const back = mesh(roundedBox(0.08, 0.36, 0.5, 0.04), vinyl(P.charcoal)); back.position.set(-0.26, 0.18, 0); seat.add(back);
-  const bar = mesh(roundedCylinder(0.025, 0.5, 0.01, 0), vinyl(P.steel)); bar.rotation.x = Math.PI / 2; bar.position.set(0.42, 0.32, -0.25); body.add(bar);
-  const barPost = mesh(roundedCylinder(0.025, 0.32, 0.01, 0), vinyl(P.steel)); barPost.position.set(0.42, 0.0, 0); body.add(barPost);
-  // 분사구 둘(뒤): 추력만큼 빛난다
+  const M = { shell: TOY.shell(), dark: TOY.dark(), gold: TOY.gold(), goldD: TOY.goldDeep(), coral: TOY.coral(), grey: TOY.grey(), visor: TOY.visor(), red: TOY.red() };
+  // 아래 몸(짙은 고무 · 목 테처럼) + 위 껍데기(흰 유광, 크게 둥근)
+  const chassis = mesh(roundedBox(1.42, 0.18, 0.82, 0.08, 5), M.dark); chassis.position.y = -0.14; body.add(chassis);
+  const shell = mesh(roundedBox(1.3, 0.36, 0.94, 0.17, 6), M.shell); shell.position.set(-0.08, 0.06, 0); body.add(shell);
+  const nose = mesh(new THREE.SphereGeometry(0.5, 40, 24), M.shell); nose.scale.set(0.62, 0.42, 0.95); nose.position.set(0.5, 0.04, 0); body.add(nose);
+  // 바이저(검은 유광 앞얼굴) + LED 웃는 눈 · 입 + 금색 테
+  const visor = mesh(new THREE.SphereGeometry(0.5, 48, 32), M.visor, { cast: false }); visor.scale.set(0.3, 0.3, 0.68); visor.position.set(0.66, 0.06, 0); body.add(visor);   // 코 앞에 볼록한 렌즈
+  const visorRim = mesh(new THREE.TorusGeometry(0.5, 0.03, 12, 64), M.gold); visorRim.scale.set(0.62, 0.32, 1); visorRim.rotation.y = Math.PI / 2; visorRim.position.set(0.7, 0.06, 0); visorRim.scale.set(0.69, 0.31, 1); body.add(visorRim);
+  const face = new THREE.Group(); face.position.set(0.815, 0.07, 0); face.rotation.y = Math.PI / 2; body.add(face);   // 렌즈 앞면(+x)에 LED
+  for (const s of [-1, 1]) { const eye = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.015, 8, 20, Math.PI), LED); eye.position.set(s * 0.12, 0.02, 0); face.add(eye); }
+  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 8, 20, Math.PI), LED); mouth.rotation.z = Math.PI; mouth.position.set(0, -0.05, -0.004); face.add(mouth);
+  const shine = new THREE.Mesh(new THREE.CircleGeometry(0.03, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, toneMapped: false })); shine.position.set(-0.2, 0.08, -0.01); shine.scale.set(1.6, 0.7, 1); face.add(shine);   // 바이저 반사광 점
+  // 이음선(헬멧 이음선처럼) · 금색 허리띠
+  const seam = mesh(roundedBox(1.32, 0.018, 0.96, 0.009, 2), M.dark, { cast: false }); seam.position.set(-0.08, -0.06, 0); body.add(seam);
+  for (const x of [-0.42, 0.06]) { const s2 = mesh(roundedBox(0.016, 0.01, 0.8, 0.005, 1), M.dark, { cast: false }); s2.position.set(x, 0.245, 0); body.add(s2); }
+  const belt = mesh(roundedBox(1.44, 0.05, 0.84, 0.025, 3), M.gold); belt.position.set(-0.02, -0.04, 0); body.add(belt);
+  // 앞 범퍼 + 전조등(작은 유리 돔)
+  const bump = mesh(roundedBox(0.16, 0.12, 0.78, 0.06), M.dark); bump.position.set(0.78, -0.16, 0); body.add(bump);
+  for (const s of [-1, 1]) { const hl = mesh(dome(0.05, 20), lamp(0xfff2c8, 2.2), { cast: false }); hl.rotation.z = -Math.PI / 2; hl.position.set(0.86, -0.14, s * 0.26); body.add(hl); }
+  // 옆 명찰(바이저봇 가슴 명찰과 같은 금색 · 빨강 글씨)
+  const bt = badgeTex();
+  for (const s of [-1, 1]) { const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.135), new THREE.MeshPhysicalMaterial({ map: bt, roughness: 0.42, clearcoat: 0.7 })); plate.position.set(0.12, 0.13, s * 0.473); if (s < 0) plate.rotation.y = Math.PI; body.add(plate); }
+  // 조종석: 흰 둥근 통 + 산호 방석 + 핸들
+  const seat = new THREE.Group(); seat.position.set(-0.1, 0.24, 0); body.add(seat);
+  const tub = mesh(roundedBox(0.52, 0.16, 0.56, 0.08, 4), M.shell); tub.position.y = 0.0; seat.add(tub);
+  const cushion = mesh(roundedBox(0.44, 0.06, 0.46, 0.03, 3), M.coral); cushion.position.y = 0.07; seat.add(cushion);
+  const back = mesh(roundedBox(0.1, 0.4, 0.5, 0.05, 4), M.shell); back.position.set(-0.26, 0.2, 0); seat.add(back);
+  const backPad = mesh(roundedBox(0.04, 0.3, 0.4, 0.02, 3), M.coral); backPad.position.set(-0.2, 0.22, 0); seat.add(backPad);
+  const col = mesh(roundedCylinder(0.025, 0.3, 0.01, 0), M.grey); col.position.set(0.32, 0.02, 0); col.rotation.z = 0.45; seat.add(col);
+  const wheelS = mesh(new THREE.TorusGeometry(0.1, 0.02, 10, 28), M.dark); wheelS.position.set(0.25, 0.32, 0); wheelS.rotation.y = Math.PI / 2; wheelS.rotation.x = 0.45; seat.add(wheelS);
+  const hubS = mesh(new THREE.SphereGeometry(0.03, 12, 8), M.gold); hubS.position.copy(wheelS.position); seat.add(hubS);
+  // 분사구 둘(뒤): 흰 몸 + 금 고리 + 짙은 노즐 + 빛
   const podMat = lamp(0x8ff7ee, 0.4), pods = [];
   for (const s of [-1, 1]) {
-    const pod = mesh(roundedCylinder(0.13, 0.32, 0.04, 0.04, 28), vinyl(P.grey)); pod.rotation.z = Math.PI / 2; pod.position.set(-0.86, 0.02, s * 0.3); body.add(pod);
-    const fl = mesh(new THREE.SphereGeometry(0.1, 16, 12), podMat, { cast: false }); fl.position.set(-1.03, 0.02, s * 0.3); fl.scale.set(0.6, 1, 1); body.add(fl); pods.push(fl);
+    const pod = mesh(new THREE.CapsuleGeometry(0.12, 0.22, 8, 24), M.shell); pod.rotation.z = Math.PI / 2; pod.position.set(-0.72, 0.0, s * 0.3); body.add(pod);
+    const ring = mesh(new THREE.TorusGeometry(0.122, 0.02, 10, 32), M.gold); ring.rotation.y = Math.PI / 2; ring.position.set(-0.78, 0.0, s * 0.3); body.add(ring);
+    const noz = mesh(new THREE.CylinderGeometry(0.075, 0.1, 0.08, 24, 1, true), vinyl(0x3d3e42, { side: THREE.DoubleSide }), { cast: false }); noz.rotation.z = Math.PI / 2; noz.position.set(-0.9, 0.0, s * 0.3); body.add(noz);
+    const fl = mesh(new THREE.SphereGeometry(0.07, 16, 12), podMat, { cast: false }); fl.position.set(-0.93, 0.0, s * 0.3); fl.scale.set(0.6, 1, 1); body.add(fl); pods.push(fl);
   }
-  // 추력 계기판: 기둥 위 반원판 + 목표 띠 + 바늘
-  const gauge = new THREE.Group(); gauge.position.set(-0.55, 0.62, 0.36); gauge.rotation.y = 0.35; body.add(gauge);
-  const gp = mesh(roundedCylinder(0.02, 0.45, 0.01, 0), vinyl(P.steel)); gp.position.y = -0.45; gauge.add(gp);
-  gauge.add(mesh(new THREE.CircleGeometry(0.34, 48, 0, Math.PI), new THREE.MeshBasicMaterial({ color: 0x141833 })));
-  const rimG = mesh(new THREE.TorusGeometry(0.34, 0.025, 8, 48, Math.PI), vinyl(P.mustard)); gauge.add(rimG);
+  // 추력 계기판: 흰 베젤 + 금 테 + 남색 판 + 목표 띠 + 바늘 + 유리 덮개(조종석 왼쪽 뒤, 화면 쪽을 본다)
+  const gauge = new THREE.Group(); gauge.position.set(-0.5, 0.62, 0.34); gauge.rotation.y = 0.3; gauge.scale.setScalar(0.85); body.add(gauge);
+  const gp = mesh(roundedCylinder(0.02, 0.42, 0.01, 0), M.grey); gp.position.y = -0.46; gauge.add(gp);
+  const bez = mesh(roundedCylinder(0.27, 0.07, 0.03, 0.03, 40), M.shell); bez.rotation.x = -Math.PI / 2; bez.position.z = -0.004; gauge.add(bez);   // 판 뒤로 두께
+  const gr = mesh(new THREE.TorusGeometry(0.255, 0.016, 8, 48), M.gold); gr.position.z = 0.02; gauge.add(gr);
+  gauge.add(mesh(new THREE.CircleGeometry(0.245, 48), new THREE.MeshBasicMaterial({ color: 0x141833 }), { cast: false }));
   const bandMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x5ff0a0).multiplyScalar(1.3), toneMapped: false, side: THREE.DoubleSide });
-  const band = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.31, 32, 1, 0, 0.5), bandMat); band.position.z = 0.003; gauge.add(band);
-  for (let k = 0; k <= 10; k++) { const a = Math.PI * (1 - k / 10), tk = new THREE.Mesh(new THREE.PlaneGeometry(0.012, k % 5 ? 0.04 : 0.07), new THREE.MeshBasicMaterial({ color: 0xc9d0ea })); tk.position.set(Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.004); tk.rotation.z = a - Math.PI / 2; gauge.add(tk); }
+  const band = new THREE.Mesh(new THREE.RingGeometry(0.13, 0.215, 32, 1, 0, 0.5), bandMat); band.position.z = 0.003; gauge.add(band);
+  for (let k = 0; k <= 10; k++) { const a = Math.PI * (1 - k / 10), tk = new THREE.Mesh(new THREE.PlaneGeometry(0.01, k % 5 ? 0.03 : 0.055), new THREE.MeshBasicMaterial({ color: 0xc9d0ea })); tk.position.set(Math.cos(a) * 0.21, Math.sin(a) * 0.21, 0.004); tk.rotation.z = a - Math.PI / 2; gauge.add(tk); }
   const needle = new THREE.Group(); needle.position.z = 0.008; gauge.add(needle);
-  const nMat = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
-  const nd = new THREE.Mesh(new THREE.PlaneGeometry(0.022, 0.3), nMat); nd.position.y = 0.15; needle.add(nd);
-  needle.add(new THREE.Mesh(new THREE.CircleGeometry(0.04, 20), new THREE.MeshBasicMaterial({ color: 0xffd25a })));
-  // 바퀴 6개(흔들 팔 위)
-  const wheels = [];
-  for (const x of [-0.55, 0, 0.55]) for (const s of [-1, 1]) {
-    const w = new THREE.Group(); w.position.set(x, 0.22, s * 0.56); g.add(w);
-    const tire = mesh(roundedCylinder(0.22, 0.2, 0.06, 0.06, 32), vinyl(P.charcoal, { roughness: 0.7 })); tire.rotation.x = Math.PI / 2; tire.position.y = -0.1 * 0 - 0.1; w.add(tire);
-    const hub = mesh(roundedCylinder(0.1, 0.22, 0.03, 0.03, 20), vinyl(P.mustard)); hub.rotation.x = Math.PI / 2; hub.position.y = -0.1; w.add(hub);
-    const arm = mesh(roundedBox(0.06, 0.25, 0.06, 0.02), vinyl(P.steel)); arm.position.set(0, 0.08, -s * 0.12); w.add(arm);
-    wheels.push({ w, spin: tire, hub, x });
+  const nd = new THREE.Mesh(new THREE.PlaneGeometry(0.018, 0.21), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false })); nd.position.y = 0.105; needle.add(nd);
+  needle.add(new THREE.Mesh(new THREE.CircleGeometry(0.03, 20), new THREE.MeshBasicMaterial({ color: 0xe4755a })));
+  const glass = mesh(new THREE.SphereGeometry(0.25, 32, 12, 0, Math.PI * 2, 0, Math.PI * 0.18), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.08, roughness: 0.05, clearcoat: 1, depthWrite: false }), { cast: false });
+  glass.rotation.x = Math.PI / 2; glass.position.z = -0.2; glass.scale.z = 1.0; glass.userData.noAO = true; gauge.add(glass);
+  // 안테나(산호 공 + 작은 깃발)
+  const ant = mesh(roundedCylinder(0.012, 0.55, 0.005, 0), M.grey); ant.position.set(-0.55, 0.22, -0.34); body.add(ant);
+  const antT = mesh(new THREE.SphereGeometry(0.04, 14, 10), M.coral); antT.position.set(-0.55, 0.79, -0.34); body.add(antT);
+  const flag = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(0.16, -0.05), new THREE.Vector2(0, -0.1)])), new THREE.MeshPhysicalMaterial({ color: 0xe4755a, roughness: 0.5, side: THREE.DoubleSide })); flag.position.set(-0.55, 0.74, -0.34); body.add(flag);
+  // 바퀴 6개: 홈 무늬 타이어 + 금색 이어팟 휠 + 흰 흙받기 + 흔들 팔(금색 축)
+  const wheels = [], tg = tireGeo();
+  for (const x of [-0.52, 0.02, 0.56]) for (const s of [-1, 1]) {
+    const w = new THREE.Group(); w.position.set(x, 0.25, s * 0.55); g.add(w);
+    const spin = new THREE.Group(); w.add(spin);
+    spin.add(mesh(tg, M.dark));
+    const pod = mesh(dome(0.13, 28), M.gold); pod.rotation.x = s * Math.PI / 2; pod.position.z = s * 0.04; spin.add(pod);   // 이어팟처럼 볼록한 금 휠
+    const ringW = mesh(new THREE.TorusGeometry(0.13, 0.018, 8, 32), M.goldD); ringW.position.z = s * 0.04; spin.add(ringW);
+    const cap = mesh(new THREE.SphereGeometry(0.04, 14, 10), M.grey); cap.position.z = s * 0.15; spin.add(cap);
+    for (let k = 0; k < 4; k++) { const bolt = mesh(new THREE.SphereGeometry(0.014, 8, 6), M.dark, { cast: false }); const a = (k / 4) * Math.PI * 2; bolt.position.set(Math.cos(a) * 0.075, Math.sin(a) * 0.075, s * 0.135); spin.add(bolt); }
+    const fender = mesh(new THREE.TorusGeometry(0.29, 0.05, 10, 28, Math.PI), M.shell); fender.position.set(x, 0.25, s * 0.55); fender.scale.set(1, 1, 1.6); g.add(fender);
+    const arm = mesh(roundedBox(0.07, 0.07, 0.2, 0.03, 2), M.grey); arm.position.set(x, 0.28, s * 0.42); g.add(arm);
+    const piv = mesh(roundedCylinder(0.045, 0.04, 0.015, 0.015, 20), M.gold); piv.rotation.x = Math.PI / 2; piv.position.set(x, 0.28, s * 0.35); g.add(piv);
+    wheels.push({ w, spin, x });
   }
-  const ant = mesh(roundedCylinder(0.012, 0.5, 0.005, 0), vinyl(P.steel)); ant.position.set(0.3, 0.18, -0.38); body.add(ant);
-  const antT = mesh(new THREE.SphereGeometry(0.04, 12, 8), lamp(P.coral, 2), { cast: false }); antT.position.set(0.3, 0.7, -0.38); body.add(antT);
+  // 흔들 팔 막대(앞뒤 바퀴를 잇는 로커)
+  for (const s of [-1, 1]) { const rk = mesh(roundedBox(1.12, 0.06, 0.06, 0.03, 2), M.grey); rk.position.set(0.02, 0.32, s * 0.4); g.add(rk); }
   g.userData = { body, seat, pods, podMat, band, needle, bandMat, wheels };
   return g;
 }
 
-/** 추력 지느러미(보상 부품) — 기지 로켓 'fins' 와 같은 모양 */
+/** 추력 지느러미(보상 부품) — 기지 로켓 'fins' 와 같은 산호 지느러미 셋 + 금 테 + 흰 몸통(바이저봇 재질) */
 function finsPart() {
   const g = new THREE.Group();
-  for (let k = 0; k < 3; k++) { const h = new THREE.Group(); h.rotation.y = (k / 3) * Math.PI * 2; const f = mesh(roundedBox(0.08, 0.6, 0.42, 0.03), vinyl(P.coral), { cast: false }); f.position.z = 0.3; f.rotation.x = -0.2; h.add(f); g.add(h); }
-  g.add(mesh(new THREE.SphereGeometry(0.12, 20, 14), lamp(0x8ff7ee, 2.2), { cast: false }));
+  const hub = mesh(new THREE.CapsuleGeometry(0.12, 0.26, 8, 24), TOY.shell(), { cast: false }); g.add(hub);
+  const band = mesh(new THREE.TorusGeometry(0.122, 0.02, 10, 32), TOY.gold(), { cast: false }); band.rotation.x = Math.PI / 2; band.position.y = 0.08; g.add(band);
+  const fs = new THREE.Shape(); fs.moveTo(0, 0.18); fs.quadraticCurveTo(0.28, 0.1, 0.32, -0.22); fs.lineTo(0, -0.12); fs.lineTo(0, 0.18);
+  for (let k = 0; k < 3; k++) { const h = new THREE.Group(); h.rotation.y = (k / 3) * Math.PI * 2; const f = mesh(extrude(fs, 0.035, 0.012), TOY.coral(), { cast: false }); f.position.set(0.1, -0.02, -0.018); h.add(f); g.add(h); }
+  const glow = mesh(new THREE.SphereGeometry(0.07, 16, 12), lamp(0x8ff7ee, 2.4), { cast: false }); glow.position.y = -0.24; g.add(glow);
   return g;
 }
 
@@ -134,7 +190,7 @@ export async function createRoverScene(stage) {
     gates = [];
     for (let k = 1; k <= checks; k++) {
       const x = ROAD_V * (k * dur / checks), y = heightAt(x), gt = new THREE.Group(); gt.position.set(x, y, 0); rideG.add(gt);
-      for (const s of [-1, 1]) { const p = mesh(roundedCylinder(0.06, 1.7, 0.02, 0), vinyl(P.white)); p.position.z = s * 1.25; gt.add(p); }
+      for (const s of [-1, 1]) { const p = mesh(roundedCylinder(0.06, 1.7, 0.02, 0), TOY.shell()); p.position.z = s * 1.25; gt.add(p); const ft = mesh(roundedCylinder(0.13, 0.08, 0.03, 0.02, 24), TOY.gold()); ft.position.z = s * 1.25; gt.add(ft); const ball = mesh(new THREE.SphereGeometry(0.08, 16, 12), TOY.gold()); ball.position.set(0, 1.74, s * 1.25); gt.add(ball); }   // 바이저봇 재질(흰 기둥 · 금 받침 · 금 공)
       const barMat = lamp(0x8ff7ee, 0.8), barM = mesh(roundedBox(0.12, 0.12, 2.6, 0.05), barMat, { cast: false }); barM.position.y = 1.72; gt.add(barM);
       gt.userData = { barMat }; gates.push(gt);
     }
@@ -145,7 +201,7 @@ export async function createRoverScene(stage) {
   const rover = roverModel(); root.add(rover);
   rover.traverse((m) => { if (m.isMesh && m.castShadow !== false && !m.material.isMeshBasicMaterial) m.castShadow = true; });
   const R = rover.userData;
-  const bot = await loadRobot(); bot.object.scale.setScalar(0.62); bot.object.position.set(-0.04, 0.02, 0); bot.object.rotation.y = Math.PI / 2; R.seat.add(bot.object);   // +x(앞)을 본다
+  const bot = await loadRobot(); bot.object.scale.setScalar(0.62); bot.object.position.set(-0.04, 0.09, 0); bot.object.rotation.y = Math.PI / 2; R.seat.add(bot.object);   // +x(앞)을 본다
 
   // 배경 바위(무료 모델)
   await Promise.all([
@@ -211,7 +267,7 @@ export async function createRoverScene(stage) {
       // 관문 빛은 서서히 식는다
       gates.forEach((g) => { const m = g.userData.barMat; m.emissiveIntensity = Math.max(0.8, m.emissiveIntensity - dt * 0.8); });
     }
-    wheelA -= speed * dt / 0.22; R.wheels.forEach((w) => { w.spin.rotation.y = wheelA; w.hub.rotation.y = wheelA; });
+    wheelA -= speed * dt / 0.22; R.wheels.forEach((w) => { w.spin.rotation.z = wheelA; });
     // 먼 협곡 벽은 천천히(깊이감)
     walls.position.x = mode === 'ride' ? -(X * 0.15) % 4.2 : rover.position.x * 0.85;   // 먼 벽은 천천히(깊이감)
     dust.update(dt); sparks.update(dt);

@@ -34,3 +34,21 @@ export function lamp(color, intensity = 3) {
   const base = new THREE.Color(color).multiplyScalar(0.28);   // 꺼져 있을 때도 색유리처럼 보이게
   return new THREE.MeshPhysicalMaterial({ color: base, emissive: color, emissiveIntensity: intensity, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.08 });
 }
+
+/**
+ * 소품 품질 기준 = 바이저봇. 차량 · 기계 · 보상 부품은 이 재질로 만든다(캐릭터 GLB 재질값을 그대로 옮김).
+ * 흰 껍데기 · 회색 · 짙은 고무 · 금(이어팟) · 진한 금 · 산호(안테나) · 빨강(망토) · 검은 유광 바이저 + LED 하늘색.
+ */
+export const TOY = {
+  shell: () => vinyl(0xf8f9f6, { roughness: 0.4, clearcoat: 0.8, clearcoatRoughness: 0.18, sheen: 0.3 }),
+  grey: () => vinyl(0xced1cc, { roughness: 0.6, clearcoat: 0.3 }),
+  dark: () => vinyl(0x3d3e42, { roughness: 0.55, clearcoat: 0.2, sheen: 0.2 }),
+  gold: () => vinyl(0xe7b535, { roughness: 0.42, clearcoat: 0.7, clearcoatRoughness: 0.2 }),
+  goldDeep: () => vinyl(0xd1992a, { roughness: 0.45, clearcoat: 0.6 }),
+  coral: () => vinyl(0xe4755a, { roughness: 0.42, clearcoat: 0.6 }),
+  red: () => vinyl(0xd14139, { roughness: 0.52, clearcoat: 0.4 }),
+  visor: () => gloss(0x0b0907),
+};
+export const LED = new THREE.MeshBasicMaterial({ color: 0x8ef7ed, toneMapped: false });   // 바이저봇 얼굴 LED 와 같은 하늘색
+LED.userData.gfxShared = true;
+
