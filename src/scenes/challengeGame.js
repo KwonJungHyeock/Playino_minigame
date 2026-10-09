@@ -6,6 +6,7 @@
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
 import { bonus, BONUS } from '../app/bonus.js';
+import { comfort } from '../gfx3d/comfort.js';
 
 const R = 0.32;                       // 몸 반지름(m)
 const RUN = 5.6, ACC_G = 42, ACC_A = 15, FRICTION = 20, GRAV = 27, JUMP = 9.4, DIVE_H = 8.2, DIVE_V = 3.2;
@@ -276,7 +277,7 @@ export async function showChallengeGame(root, { onExit } = {}) {
     if (camSnap) { camPos.copy(want); camLook.copy(look); cv.set(0, 0, 0); lv.set(0, 0, 0); camSnap = false; }
     damp(camPos, want, cv, 0.22, dt); damp(camLook, look, lv, 0.16, dt);
     cam.position.copy(camPos); S.shake = Math.max(0, (S.shake || 0) - dt * 4);
-    if (S.shake > 0) cam.position.y += Math.sin(S.t * 63) * 0.06 * S.shake;
+    if (S.shake > 0) cam.position.y += Math.sin(S.t * 63) * 0.06 * S.shake * comfort.shake();
     cam.lookAt(camLook);
   }
 

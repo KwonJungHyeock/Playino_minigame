@@ -47,7 +47,7 @@ const CSS = `
 .lsn-next:active{transform:translateX(-50%) translateY(4px)}
 .lsn-skip{position:absolute;right:calc(max(16px,env(safe-area-inset-right)) + 66px);top:max(20px,env(safe-area-inset-top));pointer-events:auto;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#c9d0ea;font:700 13px "Pretendard Variable","Noto Sans KR",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
 @media (pointer:coarse){.lsn .lsn-next .hud-key,.lsn-btn .kk.key{display:none}}
-@media (max-width:640px){.lsn-wrap{top:118px}.lsn-title{font-size:24px}.lsn-code{font-size:14px;padding-right:30px}.lsn-btn{min-height:48px;font-size:16px}.lsn-say span{font-size:16px}.lsn-say{bottom:calc(max(16px,env(safe-area-inset-bottom)) + 76px)}.lsn-skip{padding:8px 12px;font-size:12px;top:calc(max(16px,env(safe-area-inset-top)) + 62px);right:max(16px,env(safe-area-inset-right))}}
+@media (max-width:640px){.lsn-wrap{top:118px}.lsn-title{font-size:24px}.lsn-code{font-size:12.5px;padding-right:30px}.lsn-code div{white-space:pre-wrap;padding-left:40px;text-indent:0}.lsn-code .c{white-space:nowrap}.lsn-btn{min-height:48px;font-size:16px}.lsn-say span{font-size:16px}.lsn-say{bottom:calc(max(16px,env(safe-area-inset-bottom)) + 76px)}.lsn-skip{padding:8px 12px;font-size:12px;top:calc(max(16px,env(safe-area-inset-top)) + 62px);right:max(16px,env(safe-area-inset-right))}}
 @media (prefers-reduced-motion:reduce){.lsn *{transition-duration:.01ms!important;animation-duration:.01ms!important}}
 `;
 

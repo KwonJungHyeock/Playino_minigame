@@ -13,6 +13,7 @@ import { gradeOf as utilGrade, clamp, lerp } from '../engine/utils.js';
 import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
+import { comfort } from '../gfx3d/comfort.js';
 
 const ADC = 0, NEO = 6, HUE_MAX = 320, PASS = 0.8;
 const ACTS = [   // 2D 판과 같다
@@ -47,12 +48,14 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
     .cav-sl{flex:1;-webkit-appearance:none;appearance:none;height:18px;border-radius:999px;background:linear-gradient(90deg,${rainbow});box-shadow:inset 0 2px 3px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.15);cursor:pointer;touch-action:none;margin:0}
     .cav-sl::-webkit-slider-thumb{-webkit-appearance:none;width:32px;height:32px;border-radius:50%;background:radial-gradient(circle at 50% 36%,#fffaf0,#e9e2d2 70%,#cfc5ad);border:5px solid #1c2140;box-shadow:0 3px 0 #a99f86,0 6px 12px rgba(0,0,0,.4)}
     .cav-sl::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fffaf0;border:5px solid #1c2140}
+    .cav-slw{position:relative;flex:1;display:flex}.cav-slw .cav-sl{flex:1}
+    .cav-tg{position:absolute;top:-9px;left:calc(16px + (100% - 32px) * var(--k,0));width:0;height:0;margin-left:-8px;border:8px solid transparent;border-top:11px solid #fff;filter:drop-shadow(0 1px 0 #1c2140);pointer-events:none}.cav-tg::after{content:attr(data-d);position:absolute;left:50%;bottom:12px;transform:translateX(-50%);font:700 11px var(--f-num);color:#fff;white-space:nowrap;text-shadow:0 1px 2px #000}
     .cav-hold{height:6px;margin-top:8px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}.cav-hold i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#8ff7ee,#5ff0a0);transition:width .08s}
     @media (max-width:640px){.cav-ctl{padding:8px 12px 12px}.cav-ctl code{font-size:11.5px}.cav-ctl.up{bottom:calc(max(14px,env(safe-area-inset-bottom)) + 186px)}}</style>
     <section class="cav" aria-label="어둠 동굴 탐사"><div class="cav-stage" id="cav-stage"></div><button class="cav-skip" id="cav-skip" type="button">인트로 건너뛰기 ⏭</button>
       <div class="cav-ctl" id="cav-ctl" hidden>
         <code><span><span class="f">analogRead</span>(A0) → <b id="cav-v">860</b></span><span>→ 색상 <b id="cav-h">0</b>°</span><span id="cav-st" style="color:#c9d0ea">약점 색을 찾아요</span></code>
-        <div class="cav-row"><small>🖐️ 안 가림</small><input class="cav-sl" id="cav-sl" type="range" min="0" max="1000" value="120" aria-label="손 그림자(가린 정도)"><small>다 가림</small><span class="cav-sw" id="cav-sw"></span></div>
+        <div class="cav-row"><small>🖐️ 안 가림</small><span class="cav-slw"><input class="cav-sl" id="cav-sl" type="range" min="0" max="1000" value="120" aria-label="손 그림자(가린 정도)"><i class="cav-tg" id="cav-tg" hidden></i></span><small>다 가림</small><span class="cav-sw" id="cav-sw"></span></div>
         <div class="cav-hold"><i id="cav-hold"></i></div>
       </div></section>`;
   const el = root.querySelector('.cav'), host = root.querySelector('#cav-stage'), $ = (s) => root.querySelector(s);
@@ -345,6 +348,8 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
       else if (S.mode === 2) { inZone = stepTrack(ms); holdEl.style.width = `${(S.tk.t / ACTS[1].dur) * 100}%`; actor.point(() => scn.swarmAt(), R_ARM).look(() => scn.swarmAt(), 0.9); }
       else if (S.sp) { inZone = stepSpell(ms); holdEl.style.width = `${clamp(S.sp.holdT / ACTS[2].holdNeed, 0, 1) * 100}%`; actor.point(() => scn.sealAt(S.sp.idx), R_ARM).look(() => scn.sealAt(S.sp.idx), 0.9); }
       $('#cav-st').textContent = inZone ? '✨ 약점 색! 버텨요' : '약점 색을 찾아요';
+      const tg = S.mode === 1 ? S.m?.target : S.mode === 2 && S.tk ? trackTarget(S.tk.t, ACTS[1].dur) : S.sp?.seq[S.sp.idx], tgEl = $('#cav-tg');   // 색 도우미: 목표 위치 · 각도
+      tgEl.hidden = !comfort.cvd || tg == null; if (!tgEl.hidden) { tgEl.style.setProperty('--k', (tg / HUE_MAX).toFixed(4)); tgEl.dataset.d = `목표 ${Math.round(tg)}°`; }
     }
     scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);
     const c = camGoal();

@@ -14,6 +14,7 @@ import { gradeOf as utilGrade, clamp, lerp } from '../engine/utils.js';
 import { progress as medals } from '../app/progress.js';
 import { roomCleared, roomStages } from '../content/curriculum.js';
 import { STORY, PART_ROOMS } from '../content/v4story.js';
+import { comfort } from '../gfx3d/comfort.js';
 
 const ADC = 0, NEO = 6, BUZZ = 5, BTN = 4, PASS = 0.8, HUE_MAX = 320;
 const NOTES = [['도', 262], ['레', 294], ['미', 330], ['파', 349], ['솔', 392], ['라', 440], ['시', 494]];
@@ -45,6 +46,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     .lch-dial .knob{position:absolute;inset:14%;border-radius:50%;background:radial-gradient(circle at 50% 34%,#fffaf0,#e9e2d2 68%,#cfc5ad);box-shadow:0 7px 0 #a99f86,0 16px 26px rgba(8,10,30,.45);transform:rotate(var(--a,0deg))}
     .lch-dial .knob::after{content:'';position:absolute;left:50%;top:9%;width:12%;height:30%;margin-left:-6%;border-radius:999px;background:#e5765a;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
     .lch-dial .cap{position:absolute;inset:36%;border-radius:50%;background:var(--cv,#ffd24a);box-shadow:inset 0 -4px 0 rgba(0,0,0,.2),0 0 18px var(--cv,#ffd24a);pointer-events:none}
+    .lch-dial .tg{position:absolute;inset:-10px;transform:rotate(var(--t,0deg));pointer-events:none}.lch-dial .tg::before{content:'';position:absolute;left:50%;top:0;margin-left:-8px;border:8px solid transparent;border-top:13px solid #fff;filter:drop-shadow(0 1px 0 #1c2140)}
     .lch-pads{left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:clamp(6px,1.6vw,12px)}.lch-pads:not(.on){transform:translate(-50%,20px)}
     .lch-pad{position:relative;width:clamp(42px,11vw,64px);height:clamp(42px,11vw,64px);border-radius:50%;border:0;padding:0;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;
       background:radial-gradient(circle at 50% 36%,#fffaf0,#e9e2d2 70%,#cfc5ad);box-shadow:0 5px 0 #a99f86,0 12px 20px rgba(8,10,30,.45);transition:transform .08s,box-shadow .08s}
@@ -63,7 +65,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     @media (pointer:coarse){.lch-pad em{display:none}}</style>
     <section class="lch" aria-label="발사 쇼"><div class="lch-stage" id="lch-stage"></div><button class="lch-skip" id="lch-skip" type="button">인트로 건너뛰기 ⏭</button>
       <div class="lch-read" id="lch-read" hidden><code id="lch-c1"></code><code id="lch-c2"></code><small id="lch-st"></small></div>
-      <div class="lch-ctl lch-dial" id="lch-dial" role="slider" aria-label="조명 색 다이얼" aria-valuemin="0" aria-valuemax="1023" tabindex="0"><div class="ring"></div><div class="knob"></div><div class="cap"></div></div>
+      <div class="lch-ctl lch-dial" id="lch-dial" role="slider" aria-label="조명 색 다이얼" aria-valuemin="0" aria-valuemax="1023" tabindex="0"><div class="ring"></div><i class="tg" id="lch-tg" hidden></i><div class="knob"></div><div class="cap"></div></div>
       <div class="lch-ctl lch-pads" id="lch-pads">${NOTES.map((n, i) => `<button class="lch-pad" type="button" data-i="${i}" style="--c:${NOTE_CSS[i]}" aria-label="${n[0]} 음"><i>${n[0]}</i><em>${i + 1}</em></button>`).join('')}</div>
       <button class="lch-ctl lch-cue" id="lch-cue" type="button" aria-label="카운트다운 큐"><i>큐!</i><em>스페이스 · 보드 버튼</em></button></section>`;
   const el = root.querySelector('.lch'), host = root.querySelector('#lch-stage'), $ = (s) => root.querySelector(s);
@@ -405,7 +407,8 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     S.knob += (want() - S.knob) * (1 - Math.pow(0.7, step * 60));   // 2D 판처럼 한 프레임 30%
     const hue = S.knob * HUE_MAX; scn.setFlood(hue);
     if (S.mode === 1 || S.lessonDemo) { const css = hueCss(hue), v = Math.round(S.knob * 1023); dialEl.style.setProperty('--cv', css); knobEl.style.setProperty('--a', `${-135 + S.knob * 270}deg`); dialEl.setAttribute('aria-valuenow', v);
-      if (S.mode === 1 || S.lesson) { c1.innerHTML = `<span class="f">analogRead</span>(A0) → <b>${v}</b>`; c2.innerHTML = `<span class="f">map</span>(v, 0, 1023, 0, 320) → <b>${Math.round(hue)}</b>°`; const tg = S.col?.target; stEl.innerHTML = `지금 <span class="lch-sw" style="background:${css}"></span>${tg != null && S.mode === 1 ? ` 목표 <span class="lch-sw" style="background:${hueCss(tg)}"></span> <i>${hueDiff(hue, tg) <= COLOR.tol ? '딱 맞아 — 버텨!' : '로켓 얼굴 색으로'}</i>` : ''}`; }
+      if (S.mode === 1 || S.lesson) { c1.innerHTML = `<span class="f">analogRead</span>(A0) → <b>${v}</b>`; c2.innerHTML = `<span class="f">map</span>(v, 0, 1023, 0, 320) → <b>${Math.round(hue)}</b>°`; const tg = S.col?.target; const cvd = comfort.cvd && tg != null && S.mode === 1; stEl.innerHTML = `지금 <span class="lch-sw" style="background:${css}"></span>${cvd ? ` ${Math.round(hue)}°` : ''}${tg != null && S.mode === 1 ? ` 목표 <span class="lch-sw" style="background:${hueCss(tg)}"></span>${cvd ? ` ${tg}°` : ''} <i>${hueDiff(hue, tg) <= COLOR.tol ? '딱 맞아 — 버텨!' : cvd ? (tg > hue ? '오른쪽으로 ▶' : '◀ 왼쪽으로') : '로켓 얼굴 색으로'}</i>` : ''}`;
+        const tgEl = $('#lch-tg'); tgEl.hidden = !cvd; if (cvd) tgEl.style.setProperty('--t', `${-135 + (tg / HUE_MAX) * 270}deg`); }
       if (S.phase === 'play' || S.lesson) { const c = hueColor(hue); neo([c.r, c.g, c.b].map((x) => Math.round(Math.pow(x, 1 / 2.2) * 255))); } }
     if (S.mode === 2 && S.phase === 'play' && !c1.dataset.m2) { c1.dataset.m2 = 1; c1.innerHTML = '<span class="f">for</span> (i = 0; i &lt; 길이; i++) 따라 치기'; }
     if (S.mode !== 2) delete c1.dataset.m2;
@@ -417,7 +420,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     const c = camGoal();
     if (S.phase === 'intro') { S.introT += dt; const k = ease(Math.min(1, S.introT / INTRO)); cam.position.lerpVectors(introFrom.p, c.p, k); camT.lerpVectors(introFrom.t, c.t, k); }
     else { const k = 1 - Math.exp(-dt * (S.view === 'launch' ? 5 : 3.0)); cam.position.lerp(c.p, k); camT.lerp(c.t, k); }
-    shake = Math.max(0, shake - dt * (S.view === 'launch' ? 0.35 : 2.5)); if (shake > 0) { cam.position.x += Math.sin(S.t * 63) * shake * 0.05; cam.position.y += Math.cos(S.t * 51) * shake * 0.04; }
+    shake = Math.max(0, shake - dt * (S.view === 'launch' ? 0.35 : 2.5)); if (shake > 0) { const sk = shake * comfort.shake(); cam.position.x += Math.sin(S.t * 63) * sk * 0.05; cam.position.y += Math.cos(S.t * 51) * sk * 0.04; }
     cam.lookAt(camT);
   });
 

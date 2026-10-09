@@ -10,6 +10,7 @@ import { roundedBox, roundedCylinder, dome, mesh } from '../shapes.js';
 import { placeKit } from '../kits.js';
 import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
+import { comfort } from '../comfort.js';
 
 const V = THREE.Vector3;
 export const R_AT = new V(0.9, 0, -1.3);
@@ -200,7 +201,7 @@ export async function createReactorScene(stage) {
 
   // 노심 빛(방 전체 분위기) · 경고등 빛 · 김(증기) · 불꽃
   const coreLight = new THREE.PointLight(0xffffff, 5, 9, 1.4); coreLight.position.set(R_AT.x, 2.6, R_AT.z + 1.2); root.add(coreLight);
-  const ledLight = new THREE.PointLight(0xff3020, 0, 4, 2); ledLight.position.set(R_AT.x, 3.2, R_AT.z + 0.3); root.add(ledLight);
+  const ledLight = new THREE.PointLight(0xff3020, 0, 2.2, 2); ledLight.position.set(R_AT.x, 3.2, R_AT.z + 0.3); root.add(ledLight);
   const steamP = createParticles({ max: 160, tier: stage.tier }); root.add(steamP.points);
   const sparks = createParticles({ max: 140, additive: true, tier: stage.tier }); root.add(sparks.points);
   const part = corePart(); part.visible = false; root.add(part);
@@ -256,7 +257,7 @@ export async function createReactorScene(stage) {
     const m = moodOv || (h > 0.72 ? 'hot' : h > 0.38 ? 'worry' : 'calm');
     U.face.draw(m, m === 'hot' ? '#ff9a6a' : m === 'worry' ? '#ffd25a' : '#8ef7ed');
     // 경고등(D13)
-    U.ledMat.color.setHex(ledOn ? 0xff3a2a : 0x55201c); if (ledOn) U.ledMat.color.multiplyScalar(1.8); U.ledGlow.material.opacity = ledOn ? 0.85 : 0; ledLight.intensity = ledOn ? 2.4 : 0;
+    U.ledMat.color.setHex(ledOn ? 0xff3a2a : 0x55201c); if (ledOn) U.ledMat.color.multiplyScalar(1.8); U.ledGlow.material.opacity = ledOn ? (comfort.reduce ? 0.35 : 0.7) : 0; ledLight.intensity = ledOn && !comfort.reduce ? 1.1 : 0;   // 방 전체가 빨갛게 번쩍이지 않게(경고등 둘레만)
     // 제어봉: 잠기면 쑥 내려간다 · 실패하면 덜컹
     rods.forEach((r, k) => { const u = r.userData; u.k += (u.goal - u.k) * (1 - Math.exp(-dt * 6)); u.bad = Math.max(0, u.bad - dt * 2); r.position.y = 2.2 - u.k * 0.62 + Math.sin(t * 50 + k) * 0.015 * u.bad + (u.goal ? 0 : Math.sin(t * 3 + k) * 0.02 * h); if (!u.goal) u.tipMat.color.setHex(0xff8a3a).multiplyScalar(1 + Math.sin(t * 6 + k) * 0.3 * h); });
     // 탱크: 잠근 밸브는 한 바퀴 돌고 멈춤 · 안 잠근 탱크는 가끔 칙

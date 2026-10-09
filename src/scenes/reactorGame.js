@@ -14,6 +14,7 @@ import { gradeOf as utilGrade, clamp, lerp } from '../engine/utils.js';
 import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
+import { comfort } from '../gfx3d/comfort.js';
 
 const ADC = 0, LED_PIN = 13, PASS = 0.8;
 const ACTS = [   // 2D 판과 같다
@@ -29,7 +30,7 @@ const SHOW = ['arm', 'tune', 'live'];
 // 3막 목표 곡선(2D 판 trackTarget 과 같다)
 function trackTarget(t, dur) { const s = t / 1000; const ramp = clamp(t / dur, 0, 1); return clamp(0.5 + (0.30 + 0.06 * ramp) * Math.sin(s * (1.0 + ramp * 0.7)) + 0.1 * Math.sin(s * 2.1 + 0.8), 0.07, 0.93); }
 /** 2D 판 LED: 목표와의 거리 → 깜빡 간격(ms). 가까울수록 빠르다 */
-const blinkMs = (dist) => lerp(90, 720, clamp(dist / 0.42, 0, 1));
+const blinkMs = (dist) => Math.max(comfort.blinkMin(), lerp(90, 720, clamp(dist / 0.42, 0, 1)));   // 효과 줄이기: 초당 3번 이하
 
 export async function showReactorGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
@@ -368,7 +369,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
     const c = camGoal();
     if (S.phase === 'intro') { S.introT += dt; const k = ease(Math.min(1, S.introT / INTRO)); cam.position.lerpVectors(introFrom.p, c.p, k); camT.lerpVectors(introFrom.t, c.t, k); }
     else { const k = 1 - Math.exp(-dt * 3.2); cam.position.lerp(c.p, k); camT.lerp(c.t, k); }
-    shake = Math.max(0, shake - dt * 2.5); if (shake > 0) cam.position.x += Math.sin(S.t * 60) * shake * 0.04;
+    shake = Math.max(0, shake - dt * 2.5); if (shake > 0) cam.position.x += Math.sin(S.t * 60) * shake * 0.04 * comfort.shake();
     cam.lookAt(camT);
   });
 

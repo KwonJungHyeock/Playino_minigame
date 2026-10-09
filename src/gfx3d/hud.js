@@ -3,6 +3,7 @@
 // 대화는 화자 · 얼굴 · 한 글자씩 · 넘김 표시, 버튼에는 조작 표시(스페이스 / 탭), 결과는 한 가지 결론 + 다음 행동 하나.
 import { PORTRAIT } from './portrait.js';
 import { injectType } from './type.js';
+import { comfort } from './comfort.js';
 
 const CSS = `
 .hud{--hud-ink:#fff;--hud-sub:#c9d0ea;--hud-glass:rgba(18,24,56,.66);--hud-line:rgba(255,255,255,.16);--hud-gold:#ffd25a;--hud-led:#8ff7ee;--hud-good:#5ff0a0;--hud-bad:#ff6f6f;
@@ -88,10 +89,14 @@ const CSS = `
 .hud-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
 .hud-stat{border-radius:18px;padding:10px 6px;background:rgba(255,255,255,.07)}
 .hud-stat small{display:block;font-size:12px;color:var(--hud-sub)}.hud-stat b{display:block;font:700 24px/1.2 "Fredoka","Pretendard Variable",sans-serif;font-variant-numeric:tabular-nums;margin-top:2px}
-@media (max-width:640px){.hud-text{font-size:17px}.hud-face{width:68px;height:68px;border-radius:22px}.hud-face svg{width:58px;height:58px}.hud-win{padding:20px}.hud-win h2{font-size:26px}.hud-count{font-size:96px}.hud-obj-t b{font-size:17px}}
+.hud-comfort{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 4px}
+.hud-tog{display:grid;gap:2px;text-align:left;padding:10px 12px;border-radius:14px;border:1px solid var(--hud-line);background:rgba(255,255,255,.06);color:#fff;font:700 14px/1.3 "Pretendard Variable","Noto Sans KR",sans-serif;cursor:pointer}
+.hud-tog small{font-size:11px;font-weight:600;color:var(--hud-sub)}.hud-tog[aria-pressed="true"]{background:rgba(95,240,160,.16);border-color:rgba(95,240,160,.6)}.hud-tog[aria-pressed="true"]::after{content:"켜짐";font-size:11px;color:var(--hud-good)}
+@media (max-width:640px){.hud-comfort{grid-template-columns:1fr}.hud-talk{bottom:46px}.hud-text{font-size:17px}.hud-face{width:68px;height:68px;border-radius:22px}.hud-face svg{width:58px;height:58px}.hud-win{padding:20px}.hud-win h2{font-size:26px}.hud-count{font-size:96px}.hud-obj-t b{font-size:17px}}
 @media (prefers-reduced-motion:reduce){.hud *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 `;
 
+const comfortRow = () => `<div class="hud-comfort"><button class="hud-tog" data-comfort="reduce" type="button" aria-pressed="${comfort.reduce}">🌙 화면 효과 줄이기<small>흔들림 · 번쩍임 · 빠른 깜빡임</small></button><button class="hud-tog" data-comfort="cvd" type="button" aria-pressed="${comfort.cvd}">👁️ 색 도우미<small>색 맞추기에 숫자 · 위치 표시</small></button></div>`;
 const STAR = (on) => `<svg class="hud-star${on ? ' on' : ''}" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5c2 0 3 1.4 4 3.4l6 12.3 13.5 2c2.2.3 3.5 1.2 4 2.8.5 1.7-.1 3.2-1.7 4.7l-9.8 9.5 2.3 13.4c.4 2.2-.1 3.7-1.5 4.7-1.4 1-3.1.9-5-.1L32 51.4 20.2 57.7c-1.9 1-3.6 1.1-5 .1-1.4-1-1.9-2.5-1.5-4.7L16 39.7l-9.8-9.5c-1.6-1.5-2.2-3-1.7-4.7.5-1.6 1.8-2.5 4-2.8l13.5-2 6-12.3C29 6.4 30 5 32 5z" fill="#ffd25a" stroke="#fff4c8" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
 
 // 글꼴은 앱에 넣어 둔 것을 쓴다(gfx3d/type.js) — 외부 글꼴 서버(Google Fonts)에 기대지 않는다
@@ -179,7 +184,8 @@ export function createHud(host, o) {
     /** 가운데 창. html 안의 [data-act] 버튼을 누르면 그 값으로 resolve. keys: {Space:'go'} */
     window(html, { keys = {} } = {}) {
       return new Promise((res) => {
-        const v = document.createElement('div'); v.className = 'hud-veil'; v.innerHTML = `<div class="hud-win hud-glass" role="dialog">${html}</div>`; root.appendChild(v);
+        const v = document.createElement('div'); v.className = 'hud-veil'; v.innerHTML = `<div class="hud-win hud-glass" role="dialog">${html.includes('hud-eye">일시정지<') ? html.replace(/(<div class="hud-row">)/, `${comfortRow()}$1`) : html}</div>`; root.appendChild(v);   // 일시정지 창엔 늘 '보기 편하게' 설정
+        v.querySelectorAll('[data-comfort]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.comfort; comfort[k] = !comfort[k]; b.setAttribute('aria-pressed', comfort[k]); window.dispatchEvent(new CustomEvent('eduino:comfort')); }));
         const close = (val) => { window.removeEventListener('keydown', k, true); v.remove(); res(val); };
         // 창이 뜬 직후 0.4초는 키 입력을 받지 않는다 — 앞 대화를 넘기던 연타 · 키 반복으로 창이 그냥 지나가지 않게
         const opened = performance.now();

@@ -157,7 +157,7 @@ export async function createShieldScene(stage) {
   function meteor(side, k, golden = false, fresh = false) {
     const m = meteors[side], u = m.userData;
     if (fresh || !m.visible) {
-      m.visible = true; from[side].set(GEN[side].x + (side ? 1.6 : -1.6) + (Math.random() - 0.5) * 1.4, 5.6, -1.8 - Math.random() * 0.8);   // 화면 위 끝 안쪽에서 시작 — 떨어지는 길이 다 보이게 to[side].set(GEN[side].x * 0.9, 1.9, -0.2);
+      m.visible = true; from[side].set(GEN[side].x + (side ? 1.6 : -1.6) + (Math.random() - 0.5) * 1.4, 5.6, -1.8 - Math.random() * 0.8); to[side].set(GEN[side].x * 0.9, 1.9, -0.2);   // 화면 위 끝 안쪽에서 시작 — 떨어지는 길이 다 보이게
       u.rock.material = golden ? u.goldMat : u.rockMat; u.glowMat.color.setHex(golden ? 0xffd25a : 0xff8a4a).multiplyScalar(1.4); m.scale.setScalar(golden ? 0.85 : 1);
     }
     m.position.lerpVectors(from[side], to[side], k);

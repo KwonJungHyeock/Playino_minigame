@@ -13,6 +13,7 @@ import { gradeOf } from '../engine/utils.js';
 import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
+import { comfort } from '../gfx3d/comfort.js';
 
 const NEO = 6, PASS_ACC = 0.85, MAXD = Math.sqrt(3 * 255 * 255);
 const TARGETS = [   // 2D 판과 같은 목표 색
@@ -42,10 +43,10 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     .eng-sw{flex:none;display:grid;justify-items:center;gap:4px}.eng-sw i{width:46px;height:46px;border-radius:50%;box-shadow:inset 0 -5px 0 rgba(0,0,0,.25),0 0 0 3px rgba(255,255,255,.18),0 0 22px var(--g,transparent)}
     .eng-sw small{font:700 11px var(--f-ui);color:#c9d0ea;white-space:nowrap}
     .eng-sl-wrap{flex:1;display:grid;gap:7px;min-width:0}
-    .eng-sl{display:grid;grid-template-columns:28px 1fr 40px;align-items:center;gap:10px;padding:2px 6px;border-radius:12px;transition:background .15s}
+    .eng-sl{display:grid;grid-template-columns:28px 1fr 54px;align-items:center;gap:10px;padding:2px 6px;border-radius:12px;transition:background .15s}
     .eng-sl.sel{background:rgba(255,255,255,.08)}
     .eng-sl span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--c);color:#0b0e26;font:700 14px/1 var(--f-num);box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
-    .eng-sl b{font:700 16px var(--f-num);color:#fff;text-align:right;font-variant-numeric:tabular-nums}
+    .eng-sl b{font:700 16px var(--f-num);color:#fff;text-align:right;font-variant-numeric:tabular-nums;position:relative}.eng-sl b{padding-right:14px}.eng-sl b::after{content:attr(data-h);position:absolute;right:0;top:0;font-size:12px;color:#ffd25a}
     .eng-sl input{-webkit-appearance:none;appearance:none;width:100%;height:16px;margin:0;border-radius:999px;background:linear-gradient(90deg,#0b0d1c,var(--c));box-shadow:inset 0 2px 3px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.12);cursor:pointer;touch-action:none}
     .eng-sl input::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 50% 36%,#fffaf0,#e9e2d2 70%,#cfc5ad);border:5px solid var(--c);box-shadow:0 3px 0 #a99f86,0 6px 12px rgba(0,0,0,.4)}
     .eng-sl input::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fffaf0;border:5px solid var(--c);box-shadow:0 3px 0 #a99f86}
@@ -82,6 +83,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.neoFill(NEO, 0, 0, 0).catch(() => {});
+    window.removeEventListener('eduino:comfort', onComfort);
     if (window.__energyGame?.el === el) delete window.__energyGame;
   }
   const exit = () => { cleanup(); onExit?.(); };
@@ -130,7 +132,13 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     rgb.forEach((v, i) => { const n = Math.max(0, Math.min(255, Math.round(v))); if (n !== S.mix[i]) { const b = $(`#eng-c${i}`); b.classList.add('bump'); later(120, () => b.classList.remove('bump')); } S.mix[i] = n; });
     sliders.forEach((s, i) => { if (s.input !== from) s.input.value = S.mix[i]; s.out.textContent = S.mix[i]; $(`#eng-c${i}`).textContent = S.mix[i]; });
     $('#eng-my').style.background = css(S.mix); $('#eng-my').style.setProperty('--g', css(S.mix)); ctl.style.setProperty('--mix', css(S.mix));
-    scn.setMix(S.mix); sendBoard(); checkReso();
+    scn.setMix(S.mix); sendBoard(); checkReso(); cvdHint();
+  }
+  /** 색 도우미: 빛마다 더(▲) · 덜(▼) · 맞음(✓) */
+  function onComfort() { cvdHint(); }   // 함수 선언 — 불러오는 중에 나가도(cleanup) 이름이 살아 있게
+  window.addEventListener('eduino:comfort', onComfort);   // 일시정지 창에서 켜고 끄면 바로
+  function cvdHint() {
+    const tg = cur()?.c, on = comfort.cvd && tg && ['play', 'count'].includes(S.phase); sliders.forEach((sl, i) => { const d = on ? tg[i] - S.mix[i] : 0; sl.out.dataset.h = on ? (d > 24 ? '▲' : d < -24 ? '▼' : '✓') : ''; });
   }
   function checkReso() {
     if (S.phase !== 'play' || S.busy || !S.placed) { scn.setResonance(0); resoEl.classList.remove('on'); return; }
