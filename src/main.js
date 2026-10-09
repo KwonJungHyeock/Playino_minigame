@@ -147,7 +147,7 @@ function enterRoom(roomId) {
   }
 }
 
-// v4 3D 기지 허브 — 미션 문 → 방. 착륙 유도등 1단계만 3D 판이 있고, 나머지는 기존 방(2D)으로 들어간다.
+// v4 3D 기지 허브 — 미션 문 → 방. 모든 미션(프롤로그 포함)이 3D 판으로 들어간다(MISSION_3D · WebGL2 가 없으면 각 게임이 2D 판으로).
 // 3D 청크 · 모델을 받는 동안 흰 화면이 비치지 않게 밤하늘색 바탕을 먼저 깐다(씬이 뜨면 덮어쓴다)
 const darkHold = () => { app().innerHTML = '<div style="position:fixed;inset:0;background:radial-gradient(120% 90% at 50% 100%,#2a1f45 0%,#121838 45%,#050817 100%)"></div>'; };
 function sceneHub3d(opts) {
@@ -161,6 +161,7 @@ function sceneHub3d(opts) {
 }
 // 3D 판 미션(허브 THREE_D 와 짝) — 고른 단계부터 시작, 나가면 기지의 그 문 앞으로
 const MISSION_3D = {
+  basics: () => import('./scenes/basicsGame.js').then((m) => m.showBasicsGame),   // 프롤로그 부팅 훈련(보드 없음)
   led: () => import('./scenes/landingGame.js').then((m) => m.showLandingGame),
   buzzer: () => import('./scenes/beaconGame.js').then((m) => m.showBeaconGame),
   rgb: () => import('./scenes/energyGame.js').then((m) => m.showEnergyGame),
@@ -226,7 +227,7 @@ function boot() {
     return;
   }
   // v4 3D 게임 미리보기(?v4=led) — 착륙 유도등 단독으로(&stage=2 면 2단계 라이트 연주부터).
-  if (MISSION_3D[q.get('v4')]) {   // ?v4=led · ?v4=buzzer · ?v4=rgb · ?v4=cds · ?v4=pot · ?v4=button · ?v4=lamp · ?v4=bomb · ?v4=final (&stage=2 · 3) · ?v4=challenge
+  if (MISSION_3D[q.get('v4')]) {   // ?v4=basics · ?v4=led · ?v4=buzzer · ?v4=rgb · ?v4=cds · ?v4=pot · ?v4=button · ?v4=lamp · ?v4=bomb · ?v4=final (&stage=2 · 3) · ?v4=challenge
     MISSION_3D[q.get('v4')]().then((show) => show(app(), { stage: Math.max(1, Math.min(3, parseInt(q.get('stage') || '1', 10) || 1)), onExit: () => { location.search = ''; } }));
     return;
   }

@@ -225,8 +225,8 @@ function gate(id) {
 
 // ── 구역 랜드마크 (모두 정적 그룹에 들어가 합쳐진다. 움직이는 부분은 live 로 따로 돌려준다) ──
 const P = PALETTE;
-function crashPod(stat, live, at) {
-  // 바이저봇이 타고 온 탈출 캡슐 — 구덩이에 비스듬히 박혀 있다
+export function crashPod(stat, live, at) {
+  // 바이저봇이 타고 온 탈출 캡슐 — 구덩이에 비스듬히 박혀 있다(부팅 훈련 장면 scenes/boot.js 도 같은 캡슐을 쓴다 · 돌려주는 함수의 .warn = 고장 표시등)
   const g = new THREE.Group(); g.position.copy(at); g.rotation.set(0.32, 0.6, -0.18); g.position.y = -0.2; stat.add(g);
   g.add(mesh(lathe([[0, 0], [0.62, 0.12], [0.86, 0.55], [0.8, 1.05], [0.5, 1.45], [0, 1.6]], 48), vinyl(P.white)));
   const band = mesh(new THREE.TorusGeometry(0.86, 0.06, 12, 64), vinyl(P.mustard)); band.rotation.x = Math.PI / 2; band.position.y = 0.6; g.add(band);
@@ -238,7 +238,8 @@ function crashPod(stat, live, at) {
   const scorch = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false })); scorch.rotation.x = -Math.PI / 2; scorch.position.set(at.x, 0.02, at.z); scorch.userData.noAO = true; live.add(scorch);
   // 고장 표시등(천천히 깜빡이는 빨간 불) — 바이저봇이 막 깨어난 자리
   const warn = mesh(new THREE.SphereGeometry(0.09, 16, 12), lamp(P.led.red, 0.3), { cast: false }); g.updateMatrixWorld(true); warn.position.set(0, 1.62, 0).applyMatrix4(g.matrixWorld); live.add(warn);
-  return (t) => { warn.material.emissiveIntensity = Math.sin(t * 3) > 0.3 ? 3.4 : 0.3; };
+  const tick = (t) => { warn.material.emissiveIntensity = Math.sin(t * 3) > 0.3 ? 3.4 : 0.3; }; tick.warn = warn;
+  return tick;
 }
 function ledZone(stat, live, at) {
   const g = new THREE.Group(); g.position.copy(at); stat.add(g);
