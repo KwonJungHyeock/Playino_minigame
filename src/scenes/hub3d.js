@@ -13,7 +13,7 @@ import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curricu
 import { STORY, ACTS, PART_ROOMS } from '../content/v4story.js';
 import { bonus, BONUS } from '../app/bonus.js';
 
-const THREE_D = new Set(['led', 'buzzer', 'rgb', 'cds', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
+const THREE_D = new Set(['led', 'buzzer', 'rgb', 'cds', 'pot', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
 const PLANET_R = 11;   // 작은 행성 반지름(m) — 걸으면 지평선 너머에서 스팟이 솟는다(gfx3d/curve.js)
 const SPEED = 3.1, BOT_R = 0.32;
 const HOLD_T = 0.8;              // 꾹 누르는 시간(초) — 실수로 들어가지 않을 만큼, 기다림이 느껴지지 않을 만큼
@@ -368,7 +368,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     else lines.push(['진행', st.cleared ? '모두 통과' : st.passed ? `${st.passed} / ${st.total} 단계 통과` : st.played ? '도전 중' : `처음 · ${st.total}단계`]);
     return lines;
   }
-  const stageLabel = (id, i) => `${i + 1}단계 · ${STORY[id].stages[i]}`;
+  const stageLabel = (id, i) => `${i + 1}단계 · ${STORY[id].stageTitles?.[i] || STORY[id].stages[i]}`;   // 보이는 이름(기록 이름은 stages)
   function typeInto(elm, html, delay) {
     // 글자가 한 자씩 찍힌다(태그는 통째로)
     const parts = html.split(/(<[^>]+>[^<]*<\/[^>]+>)/).filter(Boolean);
