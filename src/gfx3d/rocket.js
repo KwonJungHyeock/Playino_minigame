@@ -16,6 +16,19 @@ function glow(size, color) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, opacity: 0.7 })); s.scale.setScalar(size); s.userData.noAO = true; return s;
 }
 
+/** 태양광 판: 파란 전지 칸 + 은빛 줄(한 장을 공유 — 무대 정리에서 해제하지 않는다) */
+let solar = null;
+function solarMat() {
+  if (solar) return solar;
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d');
+  x.fillStyle = '#c9d2e4'; x.fillRect(0, 0, 256, 128);
+  for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) { const gx = 6 + i * 41.5, gy = 6 + j * 39, g = x.createLinearGradient(gx, gy, gx + 38, gy + 36); g.addColorStop(0, '#3f6fd6'); g.addColorStop(0.55, '#1f3f9a'); g.addColorStop(1, '#2a56c0'); x.fillStyle = g; x.fillRect(gx, gy, 37.5, 35);
+    x.strokeStyle = 'rgba(190,215,255,.35)'; x.lineWidth = 1; x.beginPath(); x.moveTo(gx + 12.5, gy); x.lineTo(gx + 12.5, gy + 35); x.moveTo(gx + 25, gy); x.lineTo(gx + 25, gy + 35); x.stroke(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.userData.gfxShared = true;
+  solar = new THREE.MeshPhysicalMaterial({ map: t, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08, emissive: 0x1a3a8a, emissiveIntensity: 0.25 }); solar.userData.gfxShared = true;
+  return solar;
+}
+
 /** 로켓 얼굴(바이저 LED) — 표정 · 색 */
 function faceCanvas() {
   const c = document.createElement('canvas'); c.width = 512; c.height = 256; const x = c.getContext('2d');
@@ -47,7 +60,7 @@ const BUILD = {
   engine(M, S) { const e = new THREE.Group(); const bell = mesh(lathe([[0.2, 0.62], [0.32, 0.45], [0.5, 0.1], [0.54, 0.02]].map(([r, y]) => [r * S, y * S]), 48), vinyl(0x3d3e42, { roughness: 0.45, clearcoat: 0.3, side: THREE.DoubleSide })); e.add(bell); const ring = mesh(new THREE.TorusGeometry(0.52 * S, 0.035, 10, 48), M.gold); ring.rotation.x = Math.PI / 2; ring.position.y = 0.06 * S; e.add(ring); const r2 = mesh(new THREE.TorusGeometry(0.3 * S, 0.03, 10, 40), M.gold); r2.rotation.x = Math.PI / 2; r2.position.y = 0.5 * S; e.add(r2); return e; },
   fins(M, S, R, one) { const f = new THREE.Group(); for (let k = 0; k < (one ? 1 : 4); k++) { const a = (k / 4) * Math.PI * 2 + Math.PI / 4, h = new THREE.Group(); h.rotation.y = one ? 0 : a; const fin = mesh(roundedBox(0.13, 1.0 * S, 0.66 * S, 0.06, 3), M.coral); fin.position.set(0, 1.0 * S, 0.86 * S); fin.rotation.x = -0.22; h.add(fin); const tip = mesh(new THREE.SphereGeometry(0.075, 14, 10), M.gold); tip.position.set(0, 0.5 * S, 1.12 * S); h.add(tip); f.add(h); } return f; },
   cells(M, S, R, one) { const c = new THREE.Group(); [PALETTE.led.red, PALETTE.led.green, 0x4d8dff].forEach((col, i) => { const pod = new THREE.Group(); if (one) pod.position.set((i - 1) * 0.3 * S, 0, 0); else { const a = Math.PI + (i - 1) * 0.6; pod.position.set(Math.sin(a) * (R(1.95 * S) + 0.08), 1.95 * S, Math.cos(a) * (R(1.95 * S) + 0.08)); } c.add(pod); pod.add(mesh(new THREE.CapsuleGeometry(0.11 * S, 0.3 * S, 8, 20), lamp(col, 1.6))); const cap = mesh(roundedCylinder(0.1 * S, 0.06, 0.02, 0.02, 20), M.shell); cap.position.y = 0.2 * S; pod.add(cap); const ring = mesh(new THREE.TorusGeometry(0.112 * S, 0.018, 8, 24), M.gold); ring.rotation.x = Math.PI / 2; ring.position.y = -0.1 * S; pod.add(ring); }); return c; },
-  wings(M, S, R, one) { const w = new THREE.Group(); for (const s of one ? [1] : [-1, 1]) { const ox = one ? -0.58 * S : 0; const arm = mesh(roundedCylinder(0.035, 0.42 * S, 0.01, 0), M.grey); arm.rotation.z = s * Math.PI / 2; arm.position.set(s * 0.58 * S + ox, 2.45 * S, -0.1); w.add(arm); const pan = mesh(roundedBox(0.9 * S, 0.05, 0.46 * S, 0.02), vinyl(PALETTE.navy, { roughness: 0.2, clearcoat: 1, sheen: 0 })); pan.position.set(s * 1.3 * S + ox, 2.45 * S, -0.1); pan.rotation.set(-0.9, 0, s * 0.15); w.add(pan); const fr = mesh(roundedBox(0.94 * S, 0.06, 0.05, 0.02), M.gold); fr.position.set(s * 1.3 * S + ox, 2.45 * S - 0.17, 0.05); fr.rotation.set(-0.9, 0, s * 0.15); w.add(fr); } return w; },
+  wings(M, S, R, one) { const w = new THREE.Group(); for (const s of one ? [1] : [-1, 1]) { const ox = one ? -0.58 * S : 0; const arm = mesh(roundedCylinder(0.035, 0.42 * S, 0.01, 0), M.grey); arm.rotation.z = s * Math.PI / 2; arm.position.set(s * 0.58 * S + ox, 2.45 * S, -0.1); w.add(arm); const pan = mesh(roundedBox(0.9 * S, 0.05, 0.46 * S, 0.02), solarMat()); pan.position.set(s * 1.3 * S + ox, 2.45 * S, -0.1); pan.rotation.set(-0.9, 0, s * 0.15); w.add(pan); const fr = mesh(roundedBox(0.94 * S, 0.06, 0.05, 0.02), M.gold); fr.position.set(s * 1.3 * S + ox, 2.45 * S - 0.17, 0.05); fr.rotation.set(-0.9, 0, s * 0.15); w.add(fr); } return w; },
   nose(M, S) { const n = new THREE.Group(); const d = mesh(dome(0.4 * S, 32), M.red); d.position.y = 3.98 * S; d.scale.y = 0.95; n.add(d); const r = mesh(new THREE.TorusGeometry(0.4 * S, 0.03, 10, 40), M.gold); r.rotation.x = Math.PI / 2; r.position.y = 3.99 * S; n.add(r); return n; },
   antenna(M, S) { const a = new THREE.Group(); const rod = mesh(roundedCylinder(0.025, 0.55 * S, 0.01, 0), M.gold); rod.position.y = 4.32 * S; a.add(rod); const tip = mesh(new THREE.SphereGeometry(0.075 * S, 16, 12), new THREE.MeshBasicMaterial({ color: 0xff8a7a, toneMapped: false }), { cast: false }); tip.position.y = 4.92 * S; tip.name = 'AntTip'; a.add(tip); const dish = mesh(new THREE.SphereGeometry(0.12 * S, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2.4), M.shell); dish.rotation.x = Math.PI; dish.position.y = 4.55 * S; a.add(dish); return a; },
   /** 연료 탱크 = 동굴에서 찾은 연료 수정이 든 유리 캡슐 */
