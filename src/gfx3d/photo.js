@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { sfx } from '../app/sfx.js';
 import { student } from '../app/student.js';
 import { stars } from '../app/stars.js';
+import { journal } from '../app/journal.js';
 
 const V = THREE.Vector3;
 const CSS = `.hud:has(>.ph) .hud-safe,body:has(.ph) .fs-toggle,body:has(.ph) [id$="-skip"]{visibility:hidden}
@@ -64,6 +65,7 @@ export function createPhoto({ stage, hud, bot = null, actor = null, title, subje
   async function shoot() {
     sfx.click?.(); const src = stage.snapshot(); const fl = document.createElement('div'); fl.className = 'ph-flash'; ui.appendChild(fl); setTimeout(() => fl.remove(), 460);
     const url = await compose(src); if (!on) return; const d = new Date();
+    journal.add('photo', { room: journal.current, title }); journal.savePhoto(url, title);   // 탐사 보고서에 넣을 썸네일
     const v = document.createElement('div'); v.className = 'ph-view';
     v.innerHTML = `<div class="ph-card"><img alt="찍은 사진"><div class="row"><a download="visorbot-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.png">💾 사진 저장</a><button type="button" data-again>다시 찍기</button><button type="button" data-close>닫기</button></div></div>`;
     v.querySelector('img').src = url; v.querySelector('a').href = url; ui.appendChild(v);

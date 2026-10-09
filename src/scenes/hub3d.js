@@ -15,6 +15,7 @@ import { bonus, BONUS } from '../app/bonus.js';
 import { stars, STAR_ROOMS } from '../app/stars.js';
 import { PARTS, profile } from '../app/profile.js';
 import { student } from '../app/student.js';
+import { buildReport, reflect, QUESTIONS } from '../app/report.js';
 
 const THREE_D = new Set(['led', 'buzzer', 'rgb', 'cds', 'pot', 'button', 'lamp', 'bomb', 'final', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
 const PLANET_R = 11;   // 작은 행성 반지름(m) — 걸으면 지평선 너머에서 스팟이 솟는다(gfx3d/curve.js)
@@ -65,6 +66,15 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     .sty-stars{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 12px}.sty-stars span{padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.07);font:800 13px "Pretendard Variable",sans-serif;letter-spacing:1px}.sty-stars i{font-style:normal;color:rgba(255,255,255,.22)}.sty-stars i.on{color:var(--gold)}
     @media (max-width:560px){.hub3-tools button{height:44px;min-width:44px;padding:0 10px;font-size:15px}.hub3-tools{right:calc(max(16px,env(safe-area-inset-right)) + 58px)}.sty-row button{width:50px}}
     .hub3:has(.ph) .hub3-tools,.hub3:has(.ph) .hub3-hint{display:none}
+    /* 탐사 일지 창 */
+    .jr-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 12px}.jr-stats div{padding:9px 6px;border-radius:14px;background:rgba(255,255,255,.07);text-align:center}.jr-stats small{display:block;font:700 11px "Pretendard Variable",sans-serif;color:var(--sub)}.jr-stats b{display:block;margin-top:2px;font:700 19px "Fredoka","Pretendard Variable",sans-serif}
+    .jr-list{display:grid;gap:5px;margin:0 0 12px;max-height:min(34vh,260px);overflow:auto;padding-right:4px}.jr-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:7px 10px;border-radius:12px;background:rgba(255,255,255,.05);font:600 13px "Pretendard Variable",sans-serif}
+    .jr-row.done{background:rgba(95,240,160,.1)}.jr-row .g{display:inline-grid;place-items:center;min-width:22px;height:22px;margin-left:4px;padding:0 4px;border-radius:7px;font:800 12px "Fredoka",sans-serif;background:rgba(255,255,255,.1);color:#9aa2c8}.jr-row .g.on{background:var(--gold);color:#3a2a06}
+    .jr-row small{color:var(--sub);font-weight:600;margin-left:6px}
+    .jr-recent{margin:0 0 12px;font:600 12px/1.6 "Pretendard Variable",sans-serif;color:var(--sub)}.jr-recent em{font-style:normal;color:#9aa2c8;margin-right:6px}
+    .jr-end{margin:0 0 10px;padding:10px 14px;border-radius:14px;background:linear-gradient(90deg,rgba(255,210,90,.2),rgba(143,247,238,.12));font:400 17px "Jua","Pretendard Variable",sans-serif}
+    .rf-q{display:grid;gap:5px;margin:0 0 10px}.rf-q label{font:400 15px "Jua","Pretendard Variable",sans-serif}.rf-q textarea{width:100%;min-height:58px;resize:vertical;border-radius:12px;border:1.5px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;padding:8px 10px;font:500 14px/1.5 "Pretendard Variable",sans-serif;box-sizing:border-box}.rf-q textarea:focus{outline:none;border-color:var(--led)}
+    @media (max-width:560px){.jr-stats{grid-template-columns:repeat(2,1fr)}}
 
     /* 목표 칸 — 유리 상자 대신 바이저 꺾쇠 + 글자 */
     .hub3 .hud-obj.hud-glass{background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:8px 14px 8px 18px;transition:opacity .3s,transform .4s cubic-bezier(.16,1,.3,1)}
@@ -148,7 +158,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
       <div class="hub3-go-t"><b id="hub3-go-b">꾹 눌러 출발</b><span class="h3-kb"><span class="hud-key wide">스페이스</span>꾹 누르기</span><span class="h3-kb h3-pick" id="hub3-pick-k"></span><span class="h3-tp" id="hub3-pick-t"></span></div></div>
     <div class="hub3-hint off" id="hub3-hint"><span class="k"><span class="hud-key">←↑↓→</span> 또는 <span class="hud-key">WASD</span> 걷기 · 문 위에서 <span class="hud-key">스페이스</span> 꾹</span><span class="t">가고 싶은 곳을 누르면 걸어가요</span></div>
     <div class="hub3-iris" id="hub3-iris"></div>
-    <div class="hub3-tools" id="hub3-tools"><button type="button" id="hub3-style" aria-label="바이저봇 꾸미기">🎨 꾸미기 <b id="hub3-star-n"></b></button><button type="button" id="hub3-photo" aria-label="기념사진 찍기">📷</button></div>
+    <div class="hub3-tools" id="hub3-tools"><button type="button" id="hub3-style" aria-label="바이저봇 꾸미기">🎨 꾸미기 <b id="hub3-star-n"></b></button><button type="button" id="hub3-photo" aria-label="기념사진 찍기">📷</button><button type="button" id="hub3-log" aria-label="탐사 일지 · 보고서">📒 일지</button></div>
     <button class="hub3-skip" id="hub3-skip" type="button" hidden>인트로 건너뛰기 ⏭</button></section>`;
   const el = root.querySelector('.hub3'), host = root.querySelector('#hub3-stage'), hint = root.querySelector('#hub3-hint'), skipBtn = root.querySelector('#hub3-skip');
   const $ = (s) => root.querySelector(s);
@@ -556,6 +566,42 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
   }
   on($('#hub3-style'), 'click', styleWin);
   on($('#hub3-photo'), 'click', openPhoto);
+  on($('#hub3-log'), 'click', () => journalWin());
+
+  // ── 탐사 일지 · 돌아보기 · 보고서 PDF(app/report.js · reportPdf.js) ──
+  async function journalWin({ ending = false } = {}) {
+    if (S.busy && !ending) return; holdEnd(); S.busy = true; keys.clear();
+    for (;;) {
+      const R = buildReport(), wrote = QUESTIONS.filter((q) => (R.reflect[q.id] || '').trim()).length;
+      const rows = R.missions.map((m) => `<div class="jr-row${m.cleared ? ' done' : ''}"><span>${m.cleared ? '✔ ' : ''}${m.icon} ${m.name}<small>${m.attempts ? `${m.attempts}회 도전` : '아직'}${m.ms ? ` · ${Math.round(m.ms / 60000) || '<1'}분` : ''}</small></span><span>${m.stages.map((x) => `<i class="g${x.passed ? ' on' : ''}" title="${x.title}">${x.grade || '·'}</i>`).join('')}</span></div>`).join('');
+      const a = await hud.window(`<div class="hud-eye">탐사 일지 · ${student.label() || '대원'} × ${profile.name()}</div><h2>${ending ? '🎓 탐사 완료! 보고서를 만들어요' : '지금까지의 탐사'}</h2>
+        ${ending ? `<div class="jr-end">${profile.name()}: 우리가 한 일을 보고서로 남기자! 돌아보기를 쓰고 PDF 로 받아 선생님께 내 봐.</div>` : ''}
+        <div class="jr-stats"><div><small>플레이 시간</small><b>${R.playText}</b></div><div><small>통과 미션</small><b>${R.cleared}/${R.total}</b></div><div><small>로켓 부품</small><b>${R.parts}/${R.partsTotal}</b></div><div><small>별 조각</small><b>${R.stars}/${R.starsMax}</b></div></div>
+        <div class="jr-list">${rows}</div>
+        <div class="jr-recent">${R.recent.slice(0, 4).map((e) => `<div><em>${e.when}</em>${e.text}</div>`).join('') || '아직 활동 기록이 없어요 — 미션을 하면 여기에 쌓여요'}</div>
+        <div class="hud-row"><button class="hud-btn" data-act="reflect" type="button">✏️ 돌아보기 ${wrote}/${QUESTIONS.length}</button><button class="hud-btn" data-act="pdf" type="button">📄 보고서 PDF</button><span class="hud-sp"></span><button class="hud-btn main" data-act="ok" type="button"><span class="hud-key wide">스페이스</span>닫기</button></div>`, { keys: { Space: 'ok', Escape: 'ok' } });
+      if (done) return;
+      if (a === 'reflect') { await reflectWin(); if (done) return; continue; }
+      if (a === 'pdf') { await makePdf(); if (done) return; continue; }
+      break;
+    }
+    S.busy = false; S.near = null;
+  }
+  async function reflectWin() {
+    const v = reflect.get();
+    const w = hud.window(`<div class="hud-eye">돌아보기 · 활동지</div><h2>탐사를 돌아봐요</h2><p>쓴 답은 보고서 PDF 마지막 쪽에 실려요. 비워 두면 손으로 쓰는 빈 줄로 나와요.</p>
+      ${QUESTIONS.map((q, i) => `<div class="rf-q"><label for="rf-${q.id}">${i + 1}. ${q.q}</label><textarea id="rf-${q.id}" maxlength="400" data-q="${q.id}"></textarea></div>`).join('')}
+      <div class="hud-row"><span class="hud-sp"></span><button class="hud-btn main" data-act="ok" type="button">저장</button></div>`, { keys: { Escape: 'ok' } });
+    const win = hud.lastWindow;
+    win.querySelectorAll('textarea').forEach((t) => { t.value = v[t.dataset.q] || ''; t.addEventListener('input', () => reflect.set(t.dataset.q, t.value)); t.addEventListener('keydown', (e) => e.stopPropagation()); });
+    win.querySelector('textarea')?.focus({ preventScroll: true });
+    await w; if (!done) hud.toast('돌아보기를 저장했어요 ✏️', 'ok');
+  }
+  async function makePdf() {
+    hud.toast('📄 보고서를 만드는 중… (몇 초 걸려요)', '');
+    try { const { downloadReport } = await import('../app/reportPdf.js'); const r = await downloadReport(); if (!done) { hud.toast(`📄 ${r.name} 저장!`, 'ok'); sfx.perfect(); } }
+    catch (e) { console.error('[report]', e); if (!done) hud.toast('보고서를 만들지 못했어요 — 다시 눌러 주세요', 'bad'); }
+  }
 
   // ── 일시정지 ──
   async function pause() {
@@ -686,6 +732,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
         S.shot = { pos: CENTER.clone().add(new THREE.Vector3(4.2, 3.6, 7.6)), look: CENTER.clone().add(new THREE.Vector3(0, 2.7, 0)) }; bot.play('환호', { once: true }); bot.setExpression('웃음'); sfx.perfect();
         await hud.say('우리 진짜 행성을 탈출했어! 로켓은 정비해서 다시 세워 뒀어.', { mood: '웃음' });
         await hud.say('언제든 미션을 다시 하거나 발사 쇼를 또 보러 와. 넌 이제 진짜 메이커야!', { mood: '윙크' }); S.shot = null; bot.setExpression('기본');
+        await journalWin({ ending: true }); if (done) return; S.busy = true;   // 엔딩 뒤: 탐사 보고서(돌아보기 · PDF)
       } }
     if (newParts.length) {
       S.shot = { pos: CENTER.clone().add(new THREE.Vector3(4.2, 3.6, 7.6)), look: CENTER.clone().add(new THREE.Vector3(0, 2.7, 0)) };

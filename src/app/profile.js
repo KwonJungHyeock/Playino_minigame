@@ -2,6 +2,7 @@
 // 학생 이름 · 번호는 student.js(기록증 이름) 그대로. 모습을 실제 3D 모델에 입히는 건 gfx3d/style.js applyStyle.
 // 기본 칸(need 0)은 캐릭터 만들기에서 바로 고르고, 나머지는 별 조각(stars.js)으로 연다. '새 학생으로 시작'이면 함께 지운다(student.js).
 import { stars } from './stars.js';
+import { journal } from './journal.js';
 
 const KEY = 'eduino.v4.profile.v1', LOOK_KEY = 'eduino.v4.style.v1';
 export const DEFAULT_NAME = '바이저봇';
@@ -32,7 +33,7 @@ export const profile = {
   get: () => read(KEY),
   name: () => { const n = String(read(KEY).name || '').trim(); return n || DEFAULT_NAME; },
   created: () => !!read(KEY).at,
-  set({ name }) { const n = String(name || '').trim().slice(0, 8); write(KEY, { ...read(KEY), name: n || DEFAULT_NAME, at: read(KEY).at || Date.now() }); },
+  set({ name }) { const n = String(name || '').trim().slice(0, 8); write(KEY, { ...read(KEY), name: n || DEFAULT_NAME, at: read(KEY).at || Date.now() }); journal.add('profile', { name: n || DEFAULT_NAME }); },
   reset() { try { localStorage.removeItem(KEY); localStorage.removeItem(LOOK_KEY); } catch {} },
 };
 

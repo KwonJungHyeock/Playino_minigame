@@ -6,6 +6,7 @@
 import { progress } from './progress.js';
 import { results } from './results.js';
 import { esc } from './achievement.js';
+import { journal } from './journal.js';
 
 const KEY = 'eduino.student.v1';
 const ROUTE_KEY = 'eduino.route.v1';   // main.js 의 새로고침 복원 꼬리표(sessionStorage)
@@ -39,7 +40,8 @@ export function resetForNewStudent() {
   results.reset();
   if (deviceReady) progress.mark('setup');
   try { localStorage.removeItem(KEY); } catch (_) {}
-  try { localStorage.removeItem('eduino.v4.stars.v1'); localStorage.removeItem('eduino.v4.style.v1'); localStorage.removeItem('eduino.v4.profile.v1'); } catch (_) {}   // v4 별 조각 · 바이저봇 이름 · 꾸미기도 학생 것
+  try { localStorage.removeItem('eduino.v4.stars.v1'); localStorage.removeItem('eduino.v4.style.v1'); localStorage.removeItem('eduino.v4.profile.v1'); localStorage.removeItem('eduino.v4.reflect.v1'); } catch (_) {}
+  journal.reset();   // v4 탐사 일지 · 사진   // v4 별 조각 · 바이저봇 이름 · 꾸미기도 학생 것
   try { sessionStorage.removeItem(ROUTE_KEY); } catch (_) {}
 }
 

@@ -19,6 +19,7 @@ import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
 import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
+import { journal } from '../app/journal.js';
 
 const PIN = 5, LEAD = 1600, W_PERFECT = 110, W_GOOD = 200, PASS_ACC = 0.85;
 const C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392, A4 = 440, C5 = 523.25;
@@ -66,7 +67,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose(); journal.leave('buzzer');
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.noTone?.(PIN)?.catch?.(() => {});
     if (window.__beaconGame?.el === el) delete window.__beaconGame;
@@ -356,7 +357,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   const ease = (t) => t * t * (3 - 2 * t);
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); juice.watch(S); scn.update(dt);
+    S.t += dt; barks.watch(S); juice.watch(S); journal.watch(S, 'buzzer'); scn.update(dt);
     if (S.phase === 'intro') { S.introT += dt; const k = ease(Math.min(1, S.introT / INTRO)); cam.position.lerpVectors(introFrom.p, fitCam(), k); camT.lerpVectors(introFrom.t, camDef().t, k); }
     else { const k = 1 - Math.exp(-dt * 3.2); cam.position.lerp(fitCam(), k); camT.lerp(camDef().t, k); }
     cam.position.y += Math.sin(S.t * 0.6) * 0.002; cam.lookAt(camT);

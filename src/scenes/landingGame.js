@@ -20,6 +20,7 @@ import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
 import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
+import { journal } from '../app/journal.js';
 
 const W_PERFECT = 90, W_GOOD = 170, LEAD = 1450, PASS_ACC = 0.85;
 const PINS = [2, 3, 4];                 // 초록 · 노랑 · 빨강
@@ -85,7 +86,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose(); journal.leave('led');
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); song?.dispose(); land?.dispose(); stage?.dispose();
     PINS.forEach((p) => { if (board.connected) board.digital(p, false).catch(() => {}); });
   }
@@ -472,7 +473,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   const ease = (t) => t * t * (3 - 2 * t);
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); juice.watch(S); land.update(dt);
+    S.t += dt; barks.watch(S); juice.watch(S); journal.watch(S, 'led'); land.update(dt);
     if (S.phase === 'intro') { S.introT += dt; const k = ease(Math.min(1, S.introT / INTRO)); cam.position.lerpVectors(introFrom.p, fitCam(), k); camT.lerpVectors(introFrom.t, GAME_CAM.t, k); }
     else { const k = 1 - Math.exp(-dt * 3.6); cam.position.lerp(fitCam(), k); camT.lerp(camDef().t, k); }   // 프레임 수와 관계없이 같은 빠르기
     cam.position.y += Math.sin(S.t * 0.6) * 0.002; cam.lookAt(camT);

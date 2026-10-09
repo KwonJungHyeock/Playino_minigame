@@ -2,6 +2,7 @@
 // 단계 설명 창에 '🧪 자유 실험' 단추가 붙고(hud.sandbox = true 일 때 hud.window 가 넣는다), 누르면 창이 'free' 로 닫힌다.
 // 게임은 '원리 다시 보기' 처럼 받는다: if (a === 'free') { await sandbox.run(); if (!done) brief(); return; }
 // 게임이 주는 것: enter() 장면 준비 · frame(dt) 매 프레임 입력 → 장면, 판독 줄(html) 반환 · exit() 정리. 끝내기 단추 · Esc 로 나온다.
+import { journal } from '../app/journal.js';
 const CSS = `.sbx{position:absolute;left:50%;top:max(14px,env(safe-area-inset-top));transform:translateX(-50%);z-index:7;display:grid;gap:6px;justify-items:center;pointer-events:none;width:min(560px,calc(100% - 160px))}
 .sbx-bar{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 16px;border-radius:999px;background:rgba(10,14,40,.8);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(10px);color:#fff;font:700 14px "Pretendard Variable","Noto Sans KR",sans-serif;white-space:nowrap;pointer-events:auto}
 .sbx-bar b{font:400 17px "Jua","Pretendard Variable",sans-serif;color:#b5fff7}
@@ -17,10 +18,10 @@ body:has(.sbx) .hud-obj,body:has(.sbx) .hud-pause{opacity:0;pointer-events:none}
  * @param {{stage, hud, tip?:string, enter?:Function, frame?:(dt:number)=>string|void, exit?:Function}} o
  */
 export function createSandbox({ stage, hud, tip = '', enter, frame, exit }) {
-  let on = false, ui = null, st = null, offTick = null, resolve = null, last = '', acc = 0;
+  let on = false, ui = null, st = null, offTick = null, resolve = null, last = '', acc = 0, t0 = 0;
   const onKey = (e) => { if (on && e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); end(); } };
   function run() {
-    if (on) return Promise.resolve(); on = true; hud.sandbox = false;
+    if (on) return Promise.resolve(); on = true; hud.sandbox = false; t0 = performance.now();
     st = document.createElement('style'); st.textContent = CSS; hud.root.appendChild(st);
     ui = document.createElement('div'); ui.className = 'sbx';
     ui.innerHTML = `<div class="sbx-bar"><b>🧪 자유 실험</b><span>점수 없이 마음껏 — 움직이면 바로 반응해요</span><button type="button">끝내기 ✓</button></div><div class="sbx-read" aria-live="off"></div>${tip ? `<div class="sbx-tip">${tip}</div>` : ''}`;
@@ -32,7 +33,7 @@ export function createSandbox({ stage, hud, tip = '', enter, frame, exit }) {
     return new Promise((r) => { resolve = r; });
   }
   function teardown() { window.removeEventListener('keydown', onKey, true); offTick?.(); offTick = null; ui?.remove(); ui = null; st?.remove(); st = null; last = ''; hud.sandbox = true; }
-  function end() { if (!on) return; on = false; teardown(); exit?.(); const r = resolve; resolve = null; r?.(); }
+  function end() { if (!on) return; on = false; teardown(); journal.add('free', { room: journal.current, ms: Math.round(performance.now() - t0) }); exit?.(); const r = resolve; resolve = null; r?.(); }
   hud.sandbox = true;
   return { run, end, get active() { return on; }, dispose() { if (on) { on = false; teardown(); } hud.sandbox = false; resolve = null; } };
 }

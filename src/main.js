@@ -16,6 +16,7 @@ import { nav } from './app/nav.js';
 import { DEV_TOOLS } from './app/flags.js';
 import { student, studentChip } from './app/student.js';
 import { profile } from './app/profile.js';
+import { journal } from './app/journal.js';
 import { showTitle } from './scenes/title.js';
 import { mountFullscreen } from './app/fullscreen.js';
 
@@ -89,6 +90,7 @@ function sceneCreator() {
 function enterV4() {
   if (!profile.created()) { nav.push(sceneCreator); return; }
   if (!progress.isCleared('setup')) { nav.push(() => sceneSetup({ next: enterV4 })); return; }
+  journal.add('session');   // 탐사 일지: 기지에 들어온 날 · 횟수
   nav.restore([{ fn: sceneTitle }, { fn: () => sceneHub3d(), route: { name: 'hub3d' } }]);
 }
 // 로그인 뒤: 보드 연결을 이미 마친 기기(새 학생으로 바꾼 경우 등)는 연결 화면을 건너뛴다.

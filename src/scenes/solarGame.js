@@ -18,6 +18,7 @@ import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
 import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
+import { journal } from '../app/journal.js';
 
 const ADC = 0, LEAD = 1700, PASS_ACC = 0.85;
 const GAMES = [   // 2D 판과 같다
@@ -69,7 +70,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); window.removeEventListener('keyup', onKeyUp, true); window.removeEventListener('blur', release); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose(); journal.leave('cds');
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__solarGame?.el === el) delete window.__solarGame;
   }
@@ -417,7 +418,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); juice.watch(S);
+    S.t += dt; barks.watch(S); juice.watch(S); journal.watch(S, 'cds');
     // 빛: 2D 판처럼 부드럽게 따라간다(한 프레임에 18%)
     const want = S.forced != null ? Math.min(1, S.forced) : isDark() ? 0 : 1;
     S.light += (want - S.light) * (1 - Math.pow(0.82, Math.min(dt, 0.1) * 60));

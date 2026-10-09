@@ -1,4 +1,5 @@
 // results.js — 미니게임 결과 보관소(localStorage). 기록실·기록증이 여기서 읽는다.
+import { journal } from './journal.js';
 
 const KEY = 'eduino.results.v1';
 const EVT = 'eduino:results-change';
@@ -69,6 +70,8 @@ export const results = {
   record(roomId, payload) {
     if (!roomId) return null;
     const entry = entryOf(payload);
+    if (!entry.durationMs) entry.durationMs = journal.takePlayMs();   // 3D 미션은 '플레이 중' 시간을 일지 시계에서
+    journal.add('result', { room: roomId, stage: entry.summary, grade: entry.grade, acc: entry.accuracy, passed: entry.passed, ms: entry.durationMs });
     const prev = store[roomId];
     const improved = isBetter(entry, prev?.best);
 

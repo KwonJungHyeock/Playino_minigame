@@ -23,6 +23,7 @@ import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
 import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
+import { journal } from '../app/journal.js';
 
 const ADC = 0, LED_PIN = 13, PASS = 0.8;
 const ACTS = [   // 2D 판과 같다
@@ -76,7 +77,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose(); journal.leave('bomb');
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     ledOff();
     if (window.__reactorGame?.el === el) delete window.__reactorGame;
@@ -375,7 +376,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   let lastLed = null;
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); juice.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1), ms = step * 1000;
+    S.t += dt; barks.watch(S); juice.watch(S); journal.watch(S, 'bomb'); const step = S.pausedAt ? 0 : Math.min(dt, 0.1), ms = step * 1000;
     S.knob += (want() - S.knob) * (1 - Math.pow(0.7, step * 60));   // 2D 판처럼 한 프레임 30%
     scn.setKnob(S.knob);
     const v = Math.round(S.knob * 1023); $('#rea-v').textContent = v; $('#rea-cap').textContent = Math.round(S.knob * 100);

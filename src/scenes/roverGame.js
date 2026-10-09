@@ -21,6 +21,7 @@ import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
 import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
+import { journal } from '../app/journal.js';
 
 const ADC = 0, PASS_ACC = 0.8, LAG = 0.12;   // 3D 판 관성(난이도 측정 뒤 0.2 → 0.12초)
 const GAMES = [   // 2D 판과 같다
@@ -70,7 +71,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose(); journal.leave('pot');
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__roverGame?.el === el) delete window.__roverGame;
   }
@@ -367,7 +368,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); juice.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
+    S.t += dt; barks.watch(S); juice.watch(S); journal.watch(S, 'pot'); const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
     // 다이얼(2D 판처럼 한 프레임 32%) → 로버 추력(관성 0.3초)
     S.knob += (want() - S.knob) * (1 - Math.pow(0.68, step * 60));
     const lag = S.mode === 2 && assist.on(2) ? 0 : LAG; S.thrust += (S.knob - S.thrust) * (lag > 0 ? 1 - Math.exp(-step / lag) : 1);   // 도우미: 2단계 관성 끔

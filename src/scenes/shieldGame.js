@@ -20,6 +20,7 @@ import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
 import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
+import { journal } from '../app/journal.js';
 
 const PINS = [4, 5];
 const GAMES = [   // 2D 판(buttonGame · flagGame)과 같다
@@ -70,7 +71,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(hwTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose(); journal.leave('button');
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__shieldGame?.el === el) delete window.__shieldGame;
   }
@@ -413,7 +414,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); juice.watch(S); readout();
+    S.t += dt; barks.watch(S); juice.watch(S); journal.watch(S, 'button'); readout();
     if (S.phase === 'play' && !S.ended && !S.pausedAt) { if (S.mode === 1) stepCatch(Math.min(dt, 0.1)); else stepCommand(); }
     scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);
     const c = camGoal();

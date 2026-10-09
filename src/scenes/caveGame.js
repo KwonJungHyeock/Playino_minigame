@@ -21,6 +21,7 @@ import { createExplore } from '../gfx3d/explore.js';
 import { createPhoto } from '../gfx3d/photo.js';
 import { createSandbox } from '../gfx3d/sandbox.js';
 import { stars } from '../app/stars.js';
+import { journal } from '../app/journal.js';
 
 const ADC = 0, NEO = 6, HUE_MAX = 320, PASS = 0.8;
 const ACTS = [   // 2D 판과 같다
@@ -76,7 +77,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); clearInterval(neoTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
-    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose();
+    stopAmb?.(); juice?.dispose(); explore?.dispose(); photo?.dispose(); sandbox?.dispose(); journal.leave('lamp');
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.neoFill(NEO, 0, 0, 0).catch(() => {});
     if (window.__caveGame?.el === el) delete window.__caveGame;
@@ -367,7 +368,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; barks.watch(S); juice.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
+    S.t += dt; barks.watch(S); juice.watch(S); journal.watch(S, 'lamp'); const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
     S.cover += (want() - S.cover) * (1 - Math.pow(0.7, step * 60));   // 2D 판처럼 한 프레임 30%
     S.hue = S.cover * HUE_MAX; scn.setLantern(S.hue);
     const css = hueCss(S.hue); ctl.style.setProperty('--cv', css); $('#cav-sw').style.setProperty('--cv', css); $('#cav-h').textContent = Math.round(S.hue);
