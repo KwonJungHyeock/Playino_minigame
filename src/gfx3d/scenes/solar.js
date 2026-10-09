@@ -13,6 +13,7 @@ import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { ground } from './landing.js';
+import { partShowcase } from '../rocket.js';
 
 const P = PALETTE, V = THREE.Vector3;
 export const SUN_HEX = 0xffd24a, SHADE_HEX = 0x5d6bd8;
@@ -61,16 +62,8 @@ function fireflyDrone(s = 1) {
   return g;
 }
 
-/** 태양광 날개(보상 부품) — 기지 로켓의 'wings' 와 같은 모양 */
-function wingsPart() {
-  const g = new THREE.Group();
-  for (const s of [-1, 1]) {
-    const pan = mesh(roundedBox(0.7, 0.04, 0.4, 0.02), vinyl(P.navy, { roughness: 0.2, clearcoat: 1, sheen: 0 }), { cast: false }); pan.position.x = s * 0.48; pan.rotation.z = s * 0.15; g.add(pan);
-    const fr = mesh(roundedBox(0.72, 0.05, 0.04, 0.02), vinyl(P.mustard), { cast: false }); fr.position.set(s * 0.48, 0.05, 0); fr.rotation.z = s * 0.15; g.add(fr);
-  }
-  g.add(mesh(new THREE.SphereGeometry(0.12, 20, 14), lamp(SUN_HEX, 2.2), { cast: false }));
-  return g;
-}
+/** 보상 부품 — 로켓에 붙는 것과 같은 모양(gfx3d/rocket.js) */
+const wingsPart = () => partShowcase('wings', 0.8);
 
 export async function createSolarScene(stage) {
   const { scene, camera, renderer } = stage;

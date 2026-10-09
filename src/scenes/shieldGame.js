@@ -13,6 +13,7 @@ import { gradeOf, rand, clamp } from '../engine/utils.js';
 import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
+import { createBarks } from '../gfx3d/barks.js';
 
 const PINS = [4, 5];
 const GAMES = [   // 2D 판(buttonGame · flagGame)과 같다
@@ -55,6 +56,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   const el = root.querySelector('.shd'), host = root.querySelector('#shd-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#shd-skip'), padsEl = $('#shd-pads'), clockEl = $('#shd-clock'), readEl = $('#shd-read');
 
+  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, hwTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -62,6 +64,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(hwTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
+    stopAmb?.();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__shieldGame?.el === el) delete window.__shieldGame;
   }
@@ -92,6 +95,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   };
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
+  const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
 
   // ── 입력: 화면 단추 · 키 · 진짜 버튼(누르는 순간) ──
@@ -237,6 +241,12 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
     if (done || S.phase !== 'count') return;
     S.phase = 'play'; const now = performance.now(); S.spawnAt = now + 400; S.nextAt = now + 300;
   }
+  /** 1단계: 바이저봇이 그쪽으로 몸을 틀고 방패를 쑥 내민다(금빛이면 빙글) */
+  let blockT = 0;
+  function block(i, golden) {
+    const at = scn.genTop(i); actor.face(at).pose('cover').look(at); actor.hop(golden ? 3.2 : 2.2); if (golden) actor.spin();
+    clearTimeout(blockT); blockT = later(420, () => { actor.pose(null).face(camPos); later(380, () => { if (S.mode === 1) actor.face(null); }); });
+  }
   function progressGoal() { const game = GAMES[S.mode - 1]; hud.goal(S.mode === 1 ? `막은 점수 ${S.score} / ${game.target}` : `명령 ${S.score}점 / 목표 ${game.target} · 남은 ${game.count - S.idx}`, Math.min(1, S.score / game.target)); }
 
   // 1단계: 2D 두더지와 같은 흐름 — 구멍 = 왼쪽 · 오른쪽, 두더지 = 운석
@@ -250,7 +260,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
       const at = scn.meteorAt(i).add(new THREE.Vector3(0, 0.4, 0)); scn.zap(i, m.golden);
       sfx.note(560 + Math.min(10, S.combo) * 40 + (m.golden ? 220 : 0), 150); later(70, () => sfx.note(760 + (m.golden ? 240 : 0), 90));
       popAt(at, `+${gain}${S.combo >= 2 ? ` · ${S.combo}콤보` : ''}`, m.golden ? '#ffd25a' : '#8ff7ee');
-      actor.point(scn.genTop(i)).look(scn.genTop(i)); actor.hop(m.golden ? 3.2 : 2.2); if (m.golden) actor.spin(); later(380, () => actor.point(null));
+      block(i, m.golden);
       bot.setExpression(m.golden ? '하트' : '웃음');
       progressGoal();
       if (S.score >= game.target) endPlay(true);   // 목표 달성 즉시 통과(2D 판과 같음)
@@ -334,11 +344,11 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
       scn.setShield(0, true); scn.setShield(1, true);
       if (stageNo === 2) { scn.revealPart(); sfx.ok(); }
       await wait(500); if (done) return;
-      bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
+      bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('flex')); later(2600, () => actor.pose(null));
       await hud.banner(stageNo === 1 ? '운석 막기 성공!' : '방어막 훈련 통과!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(stageNo === 1 ? '기지가 무사해! 이제 관제 명령대로 방어막을 다뤄 보자.' : medal ? '방어막 노즈콘 획득! 기지 로켓에 달러 가자 🛡️' : '훈련 통과! 1단계도 통과하면 방어막 노즈콘을 받아.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림'); actor.squash(0.18);
+      bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('dizzy', 1.8));
       await hud.banner(stageNo === 1 ? '시간이 다 됐어' : '명령을 조금 놓쳤어', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say(stageNo === 1 ? '운석이 보이는 쪽을 바로 눌러 봐. 금빛 운석은 3점이야!' : '누르기 전에 방어막이 이미 켜져 있는지 먼저 봐!', { mood: '졸림' });
     }
@@ -360,7 +370,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; readout();
+    S.t += dt; barks.watch(S); readout();
     if (S.phase === 'play' && !S.ended && !S.pausedAt) { if (S.mode === 1) stepCatch(Math.min(dt, 0.1)); else stepCommand(); }
     scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);
     const c = camGoal();
@@ -373,7 +383,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   scn.show('all'); { const c = camGoal(); cam.position.copy(S.mode === 2 ? c.p : introFrom.p); camT.copy(S.mode === 2 ? c.t : introFrom.t); }
   await stage.warm(); if (done) return;   // 두 무대(명령 화면 · 깃발 포함)를 가림막 뒤에서 함께 컴파일
   scn.show(S.mode === 2 ? 'command' : 'catch');
-  stage.reveal();
+  stage.reveal(); stopAmb = sfx.ambient('base');   // 미션 환경음
   if (S.mode === 2) { introSkipped = true; skipBtn.hidden = true; S.phase = 'prep'; S.introT = INTRO; prep(); }
   else intro();
 }

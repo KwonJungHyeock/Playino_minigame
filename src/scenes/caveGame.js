@@ -3,7 +3,7 @@
 // 짜임새(docs/V4-MISSION-FORMAT.md): 도착 → 사연 → 결선(A0 조도 센서 + D6 RGB LED) → 바이저 강의(입력 → 처리 → 출력 · 가릴수록 색 · 값 비교) → 확인 퀴즈
 //   → 1막 수정 깨우기 → 2막 빛 따라가기 → 3막 어둠의 보스 → 보상(연료 수정) → 기지로.
 // 판정(2D 판 lampGame.js 와 같다): 손 그림자 0~1 → 색상 0~320°(HSV 0.95 · 1), 색 차이는 360° 원 위에서.
-//   1막 5라운드 · 0.8초 버티기 · 허용 38° → 18° · 6.5초 제한 / 2막 24초 · 18번 판정 · 허용 36° → 26° / 3막 봉인 5개 · 0.65초 · 22° · 34초. 통과 80%(엄격 등급).
+//   1막 5라운드 · 0.8초 버티기 · 허용 38° → 18° · 6.5초 제한 / 2막 24초 · 18번 판정 · 허용 36° → 26° / 3막(3D: 숨은 색 찾기) 봉인 5개 · 0.65초 · 22° · 40초. 통과 80%(엄격 등급).
 // 조작: 손 그림자 띠 끌기 · ←→(↑↓) · 보드의 조도 센서(A0)를 진짜 손으로 가리기(가릴수록 색이 보라 쪽으로). 보드 RGB LED(D6)도 같은 색.
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
@@ -14,12 +14,14 @@ import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
 import { comfort } from '../gfx3d/comfort.js';
+import { createAssist } from '../gfx3d/assist.js';
+import { createBarks } from '../gfx3d/barks.js';
 
 const ADC = 0, NEO = 6, HUE_MAX = 320, PASS = 0.8;
 const ACTS = [   // 2D 판과 같다
   { no: 1, mode: 'match', rounds: 5, holdNeed: 800, roundLimit: 6500, tol0: 38, tol1: 18 },
-  { no: 2, mode: 'track', dur: 24000, checks: 18, tol0: 36, tol1: 26 },
-  { no: 3, mode: 'spell', len: 5, holdNeed: 650, tol: 22, time: 34000 },
+  { no: 2, mode: 'track', dur: 24000, checks: 18, tol0: 40, tol1: 30 },   // 2D 판(36° → 26°)보다 조금 넓게 — 난이도 측정 기준
+  { no: 3, mode: 'spell', len: 5, holdNeed: 650, tol: 22, time: 40000 },   // 3D 판: 봉인 색이 숨어 있어 찾는 시간만큼 넉넉히(34 → 40초)
 ];
 const STAGE_NAME = STORY.lamp.stages, STAGE_TITLE = STORY.lamp.stageTitles;
 const gradeOf = (a) => utilGrade(a, 'strict');
@@ -61,6 +63,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   const el = root.querySelector('.cav'), host = root.querySelector('#cav-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#cav-skip'), ctl = $('#cav-ctl'), sl = $('#cav-sl'), holdEl = $('#cav-hold');
 
+  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null, neoTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -68,6 +71,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); clearInterval(neoTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
+    stopAmb?.();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.neoFill(NEO, 0, 0, 0).catch(() => {});
     if (window.__caveGame?.el === el) delete window.__caveGame;
@@ -92,6 +96,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   const S = { phase: 'intro', mode: startStage >= 2 ? Math.min(3, startStage) : 1, lesson: false, t: 0, introT: 0, pausedAt: 0, hits: 0, total: 0, combo: 0, maxCombo: 0, score: 0, ended: false, pass: false,
     manual: 0.12, sensor: null, cover: 0.12, hue: 0, m: null, tk: null, sp: null, hintT: 0, hinted: false, forced: null };
   const want = () => (S.forced != null ? S.forced : S.sensor != null ? S.sensor : S.manual);
+  const assist = createAssist();
   sl.addEventListener('input', () => { if (S.sensor == null) S.manual = clamp(+sl.value / 1000, 0, 1); });
   let baseline = 800, sensorV = null;
   function startSense() {
@@ -117,6 +122,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   };
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
+  const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
   const showMode = (n) => scn.show(n === 1 ? 'match' : n === 2 ? 'track' : 'spell');
 
@@ -203,9 +209,9 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
     if (n === 1) { scn.newMonster(randHue(null)); scn.monster(0, 0); } else if (n === 2) scn.resetWall(); else scn.bossSetup(Array.from({ length: act.len }, () => randHue(null)));
     const body = n === 1 ? `<p>어둠 몬스터의 <b>고리 색</b>이 약점이에요. 등불을 같은 색으로 맞추고 <b>잠깐 버티면</b> 몬스터가 흩어지고 수정이 깨어나요.</p><p>${act.rounds}마리 · 갈수록 정확해야 해요. 6.5초가 지나면 몬스터가 수정을 들고 숨어요. <b>80%</b> 이상이면 통과.</p>`
       : n === 2 ? `<p>색을 <b>계속 바꾸며</b> 도망치는 빛 무리! 등불 색을 무리 색에 계속 맞춰요.</p><p>${act.checks}번 판정 — 맞을 때마다 벽 수정이 하나씩 켜져요. <b>80%</b> 이상이면 통과.</p>`
-      : `<p>거대한 <b>어둠의 보스</b>! 몸의 <b>봉인 보석 ${act.len}개</b>를 순서대로 같은 색으로 비춰 풀어요(커진 보석이 지금 차례).</p><p>${act.time / 1000}초 안에 · <b>80%</b> 이상 풀면 통과.</p>`;
+      : `<p>거대한 <b>어둠의 보스</b>! 몸의 <b>봉인 보석 ${act.len}개</b>는 색이 <b>숨어 있어요</b>. 등불 색을 천천히 바꿔 보며 커진 보석이 <b>가장 밝게 반짝이는 색</b>을 찾아 버티면 봉인이 풀려요.</p><p>가까워지면 '삐' 소리도 나요. ${act.time / 1000}초 안에 · <b>80%</b> 이상 풀면 통과.</p>`;
     const a = await hud.window(`<div class="hud-eye">${n} / 3 막</div><h2>${STAGE_TITLE[n - 1]}</h2>${body}
-      <p>조작: <b>손 그림자 띠</b>를 끌거나 <span class="hud-key">←</span><span class="hud-key">→</span>. 센서가 있으면 진짜 손으로 가려요.</p>
+      <p>조작: <b>손 그림자 띠</b>를 끌거나 <span class="hud-key">←</span><span class="hud-key">→</span>. 센서가 있으면 진짜 손으로 가려요.</p>${assist.line(n, '색 허용 폭이 넓어졌어요')}
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
@@ -219,7 +225,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
     showMode(S.mode);
     if (act.mode === 'match') { S.m = { idx: -1, target: null, holdT: 0, roundT: 0 }; S.total = act.rounds; nextRound(); }
     else if (act.mode === 'track') { S.tk = { t: 0, checkIdx: 0, nextCheck: act.dur / act.checks }; S.total = act.checks; scn.resetWall(); }
-    else { S.sp = { seq: Array.from({ length: act.len }, (_, i) => randHue(i ? null : 30 + Math.random() * 40)), idx: 0, holdT: 0, t: 0 }; S.total = act.len; scn.bossSetup(S.sp.seq); }
+    else { S.sp = { seq: Array.from({ length: act.len }, (_, i) => randHue(i ? null : 30 + Math.random() * 40)), idx: 0, holdT: 0, t: 0, warm: false }; S.total = act.len; scn.bossSetup(S.sp.seq); }
     bot.setExpression('기본'); progressGoal(); bgm.setDuck(0);
     await hud.banner(STAGE_TITLE[S.mode - 1], 'MISSION START', { ms: 1400 });
     if (done || S.phase !== 'count') return;
@@ -240,7 +246,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   async function stepMatch(ms) {
     if (busy) return; const m = S.m, act = ACTS[0];
     m.roundT += ms;
-    const tol = lerp(act.tol0, act.tol1, act.rounds > 1 ? m.idx / (act.rounds - 1) : 0), inZone = hueDiff(S.hue, m.target) <= tol;
+    const tol = lerp(act.tol0, act.tol1, act.rounds > 1 ? m.idx / (act.rounds - 1) : 0) * assist.k(1), inZone = hueDiff(S.hue, m.target) <= tol;
     if (inZone) m.holdT += ms; else m.holdT = Math.max(0, m.holdT - ms * 0.85);
     scn.monster(clamp(m.roundT / act.roundLimit, 0, 1), clamp(m.holdT / act.holdNeed, 0, 1)); hint(inZone, m.target, ms);
     if (m.holdT >= act.holdNeed) {
@@ -254,7 +260,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   }
   function stepTrack(ms) {
     const tk = S.tk, act = ACTS[1]; tk.t += ms;
-    const tgt = trackTarget(tk.t, act.dur), tol = lerp(act.tol0, act.tol1, clamp(tk.t / act.dur, 0, 1)), inZone = hueDiff(S.hue, tgt) <= tol;
+    const tgt = trackTarget(tk.t, act.dur), tol = lerp(act.tol0, act.tol1, clamp(tk.t / act.dur, 0, 1)) * assist.k(2), inZone = hueDiff(S.hue, tgt) <= tol;
     scn.swarm(tk.t, tgt); hint(inZone, tgt, ms);
     if (tk.t >= tk.nextCheck && tk.checkIdx < act.checks) {
       const i = tk.checkIdx; tk.checkIdx++; tk.nextCheck = (tk.checkIdx + 1) * (act.dur / act.checks);
@@ -265,17 +271,18 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   }
   function stepSpell(ms) {
     const sp = S.sp, act = ACTS[2]; sp.t += ms;
-    const tgt = sp.seq[sp.idx], inZone = hueDiff(S.hue, tgt) <= act.tol;
+    const tgt = sp.seq[sp.idx], inZone = hueDiff(S.hue, tgt) <= act.tol * assist.k(3);
     if (inZone) sp.holdT += ms; else sp.holdT = Math.max(0, sp.holdT - ms * 0.8);
-    scn.bossTick(sp.idx, clamp(sp.holdT / act.holdNeed, 0, 1)); hint(inZone, tgt, ms);
+    const near = clamp(1 - hueDiff(S.hue, tgt) / 110, 0, 1); scn.bossTick(sp.idx, clamp(sp.holdT / act.holdNeed, 0, 1), near); hint(inZone, tgt, ms, true);
+    if (!inZone && near > 0.6 && !sp.warm) { sp.warm = true; sfx.pip?.(); } else if (near < 0.4) sp.warm = false;   // 가까워지면 '삐' — 찾는 맛
     if (sp.holdT >= act.holdNeed) { const i = sp.idx; good(scn.sealAt(i), `봉인 ${i + 1} 해제!`, hueCss(tgt)); scn.sealDone(i); sp.idx++; sp.holdT = 0; S.hintT = 0; S.hinted = false; if (sp.idx >= act.len) { endPlay(); return inZone; } }
     if (sp.t >= act.time) endPlay();
     return inZone;
   }
   /** 헤매면 바이저봇이 방향을 알려 준다(2D 판 말풍선과 같은 뜻) */
-  function hint(inZone, tgt, ms) {
+  function hint(inZone, tgt, ms, hidden = false) {
     if (inZone) { S.hintT = 0; return; } S.hintT += ms;
-    if (S.hintT > 2600 && !S.hinted) { S.hinted = true; hud.toast(tgt > S.hue ? '조금 더 가려 봐요 ▶' : '덜 가려 봐요 ◀', ''); }
+    if (S.hintT > (hidden ? 6000 : 2600) && !S.hinted) { S.hinted = true; hud.toast(hidden ? `봉인이 더 반짝이는 쪽으로 — ${tgt > S.hue ? '조금 더 가려 봐요 ▶' : '덜 가려 봐요 ◀'}` : tgt > S.hue ? '조금 더 가려 봐요 ▶' : '덜 가려 봐요 ◀', ''); }
   }
 
   function onKey(e) {
@@ -303,19 +310,21 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
     if (S.ended) return; S.ended = true; S.phase = 'land'; ctl.hidden = true;
     const n = S.mode, acc = S.hits / S.total, grade = gradeOf(acc), pass = acc >= PASS, pct = Math.round(acc * 100), last = n === 3;
     results.record('lamp', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[n - 1], metrics: [{ label: '적중', value: `${S.hits}/${S.total}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    const assistOn = assist.record(n, pass);
     if (roomCleared('lamp') && !medals.isCleared('lamp')) medals.mark('lamp');
     const medal = medals.isCleared('lamp');
     S.pass = pass; bgm.setDuck(1); actor.point(null).look(camPos);
     if (pass) {
       if (last) { scn.bossDefeat(); later(900, () => { scn.revealPart(); sfx.ok(); }); }
       await wait(last ? 1400 : 500); if (done) return;
-      bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
+      bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('dance')); later(2600, () => actor.pose(null));
       await hud.banner(n === 1 ? '수정이 깨어났어!' : n === 2 ? '빛 무리를 따라잡았어!' : '보스를 물리쳤어!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(n < 3 ? (n === 1 ? '이제 색을 바꾸며 도망치는 빛 무리를 쫓아가자!' : '동굴 깊은 곳에 보스가 있어. 마지막 힘을 내자!') : medal ? '연료 수정 획득! 기지 로켓에 달러 가자 🔦' : '보스 처치! 앞의 막도 통과하면 연료 수정을 받아.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림'); actor.squash(0.18);
+      bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('phew', 1.8));
       await hud.banner('빛이 조금 빗나갔어', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say('고리 색을 먼저 보고 손을 얼마나 가릴지 정해 봐. 색 띠를 보면 어디쯤인지 알 수 있어!', { mood: '졸림' });
+      if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 색을 조금 덜 정확해도 되게 했어. 다시 해 보자!', { mood: '윙크' }); }
     }
     if (done) return;
     S.phase = 'result';
@@ -335,7 +344,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
+    S.t += dt; barks.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
     S.cover += (want() - S.cover) * (1 - Math.pow(0.7, step * 60));   // 2D 판처럼 한 프레임 30%
     S.hue = S.cover * HUE_MAX; scn.setLantern(S.hue);
     const css = hueCss(S.hue); ctl.style.setProperty('--cv', css); $('#cav-sw').style.setProperty('--cv', css); $('#cav-h').textContent = Math.round(S.hue);
@@ -344,11 +353,11 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
     let inZone = false;
     if (S.phase === 'play' && !S.ended && !S.pausedAt) {
       const ms = step * 1000;
-      if (S.mode === 1) { stepMatch(ms); inZone = S.m && hueDiff(S.hue, S.m.target) <= lerp(ACTS[0].tol0, ACTS[0].tol1, S.m.idx / (ACTS[0].rounds - 1)); holdEl.style.width = `${clamp((S.m?.holdT || 0) / ACTS[0].holdNeed, 0, 1) * 100}%`; }
+      if (S.mode === 1) { stepMatch(ms); inZone = S.m && hueDiff(S.hue, S.m.target) <= lerp(ACTS[0].tol0, ACTS[0].tol1, S.m.idx / (ACTS[0].rounds - 1)) * assist.k(1); holdEl.style.width = `${clamp((S.m?.holdT || 0) / ACTS[0].holdNeed, 0, 1) * 100}%`; }
       else if (S.mode === 2) { inZone = stepTrack(ms); holdEl.style.width = `${(S.tk.t / ACTS[1].dur) * 100}%`; actor.point(() => scn.swarmAt(), R_ARM).look(() => scn.swarmAt(), 0.9); }
       else if (S.sp) { inZone = stepSpell(ms); holdEl.style.width = `${clamp(S.sp.holdT / ACTS[2].holdNeed, 0, 1) * 100}%`; actor.point(() => scn.sealAt(S.sp.idx), R_ARM).look(() => scn.sealAt(S.sp.idx), 0.9); }
       $('#cav-st').textContent = inZone ? '✨ 약점 색! 버텨요' : '약점 색을 찾아요';
-      const tg = S.mode === 1 ? S.m?.target : S.mode === 2 && S.tk ? trackTarget(S.tk.t, ACTS[1].dur) : S.sp?.seq[S.sp.idx], tgEl = $('#cav-tg');   // 색 도우미: 목표 위치 · 각도
+      const tg = S.mode === 1 ? S.m?.target : S.mode === 2 && S.tk ? trackTarget(S.tk.t, ACTS[1].dur) : null, tgEl = $('#cav-tg');   // 색 도우미: 목표 위치 · 각도(3막은 숨은 색 찾기 — 밝기가 단서라 표시 안 함)
       tgEl.hidden = !comfort.cvd || tg == null; if (!tgEl.hidden) { tgEl.style.setProperty('--k', (tg / HUE_MAX).toFixed(4)); tgEl.dataset.d = `목표 ${Math.round(tg)}°`; }
     }
     scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);
@@ -363,7 +372,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   { const c = camGoal(); cam.position.copy(S.mode > 1 ? c.p : introFrom.p); camT.copy(S.mode > 1 ? c.t : introFrom.t); }
   await stage.warm(); if (done) return;   // 세 막의 몬스터 · 보스 · 수정을 가림막 뒤에서 함께 컴파일
   showMode(S.mode); if (S.mode === 1) { scn.newMonster(randHue(null)); scn.monster(0, 0); }
-  stage.reveal();
+  stage.reveal(); stopAmb = sfx.ambient('cave');   // 미션 환경음
   if (S.mode > 1) { introSkipped = true; skipBtn.hidden = true; S.phase = 'prep'; S.introT = INTRO; prep(); }
   else intro();
 }

@@ -26,7 +26,7 @@ export function createActor(bot) {
     pose: null, poseW: 0, R: [0, 0], L: [0, 0], RT: null, LT: null, Ron: false, Lon: false,
     point: null, conduct: null,
     hop: 0, hopV: 0, sq: 0, sqV: 0, flinch: 0, spin: 0, spinA: 0,
-    walk: null, faceTo: null, held: null,
+    walk: null, faceTo: null, held: null, rt: null,
   };
   const saved = [];
   const tmp = new V(), tmp2 = new V(), q = new THREE.Quaternion();
@@ -56,6 +56,17 @@ export function createActor(bot) {
     if (S.point) { const p = typeof S.point === 'function' ? S.point() : S.point; if (p) { o.updateWorldMatrix(true, false); tmp.copy(p); o.worldToLocal(tmp); tmp.y -= 0.4; const e = Math.atan2(tmp.y, Math.max(0.05, Math.hypot(tmp.z, Math.abs(tmp.x)))), az = Math.atan2(tmp.x, tmp.z); const ax = -(Math.PI / 2 + THREE.MathUtils.clamp(e, -0.9, 0.65));   // 머리 위로는 올리지 않는다(헬멧에 가림)
       if (S.pointArm === 'L' || (S.pointArm !== 'R' && az > 0.15)) { LT = [ax, THREE.MathUtils.clamp(az + 0.3, -0.2, 1.3)]; RT = null; } else RT = [ax, THREE.MathUtils.clamp(az - 0.3, -1.3, 0.35)]; } }   // 목표가 있는 쪽 팔로 · 살짝 바깥으로
     if (S.conduct != null) { RT = [-(Math.PI / 2 + S.conduct), -0.75]; LT = [RT[0], 0.75]; }   // 두 팔로 지휘 · 옆으로 벌려 든다(헬멧에 가리지 않게)
+    // 짧은 몸짓 묶음(routine): 미션마다 다른 축하 · 실패 동작. 시간이 지나면 저절로 풀린다
+    if (S.rt) {
+      const r = S.rt; r.t += dt; const u = r.t / r.dur, w = Math.sin(Math.min(1, u) * Math.PI);
+      if (u >= 1) S.rt = null;
+      else if (r.kind === 'wave') { const a = Math.sin(r.t * 13) * 0.55; RT = [-1.25 + a, -0.95]; LT = [-1.25 - a, 0.95]; }          // 두 팔 번갈아 흔들기(유도 신호)
+      else if (r.kind === 'dance') { const a = Math.sin(r.t * 9); RT = [-0.9 + a * 0.5, -0.6 - a * 0.5]; LT = [-0.9 - a * 0.5, 0.6 - a * 0.5]; if (n.Hips) { save(n.Hips, 'z'); n.Hips.rotation.z += Math.sin(r.t * 9) * 0.18 * w; } }
+      else if (r.kind === 'cheer') { RT = [-1.45, -1.15]; LT = [-1.45, 1.15]; if (r.t < dt * 1.5) { S.hopV = 4.2; S.spin = 1; } }   // 만세 + 뛰며 한 바퀴
+      else if (r.kind === 'flex') { RT = [-0.35, -1.45]; LT = [-0.35, 1.45]; if (n.Spine) { save(n.Spine, 'x'); n.Spine.rotation.x -= 0.18 * w; } }   // 가슴 펴고 두 팔 쫙
+      else if (r.kind === 'dizzy') { if (n.Head) { save(n.Head, 'z'); n.Head.rotation.z += Math.sin(r.t * 11) * 0.32 * (1 - u); } if (n.Spine) { save(n.Spine, 'z'); n.Spine.rotation.z += Math.sin(r.t * 7) * 0.12 * (1 - u); } RT = [-0.25, -0.5]; LT = [-0.25, 0.5]; }   // 빙글빙글 어지러움
+      else if (r.kind === 'phew') { RT = [-0.6, -0.15]; LT = [-0.6, 0.15]; if (n.Spine) { save(n.Spine, 'x'); n.Spine.rotation.x += 0.3 * w; } if (r.t < dt * 1.5) S.sq = 0.22; }   // 털썩 · 휴
+    }
     // 포즈가 있으면 그 값으로 섞어 들어가고, 없어지면 마지막 값에서 클립으로 섞여 나온다
     S.poseW += ((RT || LT ? 1 : 0) - S.poseW) * k(9);
     if (RT) { S.R[0] += (RT[0] - S.R[0]) * k(12); S.R[1] += (RT[1] - S.R[1]) * k(12); S.Ron = true; }
@@ -103,6 +114,8 @@ export function createActor(bot) {
     flinch() { S.flinch = 1; return actor; },
     spin() { S.spin = 1; return actor; },
     squash(a = 0.2) { S.sq = a; S.sqV = 0; return actor; },
+    /** 짧은 몸짓 묶음: 'wave' 손 흔들기 · 'dance' 춤 · 'cheer' 만세 점프 · 'flex' 짠 · 'dizzy' 어지러움 · 'phew' 털썩 */
+    routine(kind, dur = 1.6) { S.rt = { kind, t: 0, dur }; return actor; },
     /** 걸어가기 — 다 오면 풀린다. speed m/초 */
     walkTo(to, { speed = 2.2 } = {}) { return new Promise((res) => { if (S.walk) S.walk.res(); S.walk = { to: to.clone(), speed, res }; }); },
     get walking() { return !!S.walk; },

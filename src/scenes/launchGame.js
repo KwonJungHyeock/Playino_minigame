@@ -3,7 +3,7 @@
 // 짜임새(docs/V4-MISSION-FORMAT.md): 도착 → 사연(부품 점검) → 결선(A0 · D6 · D5 · D4) → 바이저 강의(부품 묶기 · 순서 · 버튼 큐) → 확인 퀴즈
 //   → 1막 발사대 조명 → 2막 교신 멜로디 → 3막 카운트다운 → 탑승 · 발사(진짜 탈출은 세 막 모두 통과했을 때) → 기지로.
 // 판정(2D 판 finaleShow.js 와 같다): 1막 5라운드 · 0.75초 버티기 · 허용 26° · 7초 제한(다이얼 → 색상 0~320°) / 2막 따라 치기 길이 5 · 실수 2번까지
-//   / 3막 큐 8번 · 1.5초에 한 바퀴 · 0.78~0.96 구간. 통과 80%(엄격 등급). 보너스 '부스터 날개'가 있으면 2 · 3막 실수 한 번을 막아 준다.
+//   / 3막 큐 8번 · 1.5초에 한 바퀴 · 0.78~0.96 구간 — 3D 판은 큐를 넣는 순간 다이얼 압력도 띠(±13%) 안이어야 한다(두 손 종합). 통과 80%(엄격 등급). 보너스 '부스터 날개'가 있으면 2 · 3막 실수 한 번을 막아 준다.
 // 조작: 1막 다이얼(끌기 · ←→ · 가변저항) / 2막 음표 단추 7개(1~7 키) / 3막 큐 단추(스페이스 · 보드 버튼 D4).
 import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
@@ -15,16 +15,21 @@ import { progress as medals } from '../app/progress.js';
 import { roomCleared, roomStages } from '../content/curriculum.js';
 import { STORY, PART_ROOMS } from '../content/v4story.js';
 import { comfort } from '../gfx3d/comfort.js';
+import { student } from '../app/student.js';
+import { createAssist } from '../gfx3d/assist.js';
+import { createBarks } from '../gfx3d/barks.js';
 
 const ADC = 0, NEO = 6, BUZZ = 5, BTN = 4, PASS = 0.8, HUE_MAX = 320;
 const NOTES = [['도', 262], ['레', 294], ['미', 330], ['파', 349], ['솔', 392], ['라', 440], ['시', 494]];
-const COLOR = { rounds: 5, hold: 750, limit: 7000, tol: 26 }, MELODY = { target: 5, lives: 2 }, CUE = { cues: 8, speed: 1 / 1500, low: 0.78, high: 0.96 };   // 2D 판과 같다
+const COLOR = { rounds: 5, hold: 750, limit: 7000, tol: 26 }, MELODY = { target: 5, lives: 2 }, CUE = { cues: 8, speed: 1 / 1500, low: 0.76, high: 0.97, pHalf: 0.18 };   // 3D 판 두 손 막: 2D 판(0.78~0.96)보다 큐 구간 · 압력 띠 넉넉히(난이도 측정 기준)   // 2D 판과 같다
 const STAGE_NAME = STORY.final.stages, STAGE_TITLE = STORY.final.stageTitles;
 const gradeOf = (a) => utilGrade(a, 'strict');
 const starsOf = (g) => ({ S: 3, A: 2, B: 1 }[g] || 0);
 const LESSON_KEY = 'eduino.v4.lesson.v1';
 const hueDiff = (a, b) => { const d = Math.abs(((a - b) % 360 + 360) % 360); return Math.min(d, 360 - d); };
 const CHECK_NAME = ['엔진', '연료', '동력', '통신', '방어막'];
+/** 3막(3D 판 종합): 엔진 압력 목표 — 천천히 오르내린다. 다이얼로 붙잡은 채 큐를 넣어야 한다(두 손) */
+const pressureAt = (t) => 0.5 + 0.22 * Math.sin(t / 2600) + 0.08 * Math.sin(t / 1100 + 1);
 
 export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
@@ -46,6 +51,8 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     .lch-dial .knob{position:absolute;inset:14%;border-radius:50%;background:radial-gradient(circle at 50% 34%,#fffaf0,#e9e2d2 68%,#cfc5ad);box-shadow:0 7px 0 #a99f86,0 16px 26px rgba(8,10,30,.45);transform:rotate(var(--a,0deg))}
     .lch-dial .knob::after{content:'';position:absolute;left:50%;top:9%;width:12%;height:30%;margin-left:-6%;border-radius:999px;background:#e5765a;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
     .lch-dial .cap{position:absolute;inset:36%;border-radius:50%;background:var(--cv,#ffd24a);box-shadow:inset 0 -4px 0 rgba(0,0,0,.2),0 0 18px var(--cv,#ffd24a);pointer-events:none}
+    .lch-dial .zone{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from calc(225deg + var(--z0,0) * 270deg),rgba(255,210,90,.95) 0 calc(var(--zw,0.2) * 270deg),transparent 0);-webkit-mask:radial-gradient(circle,transparent 61%,#000 62%);mask:radial-gradient(circle,transparent 61%,#000 62%);pointer-events:none}
+    .lch-cue.two{right:auto;left:50%;margin-left:-73px}.lch-cue.two:not(.on){transform:translateY(20px)}
     .lch-dial .tg{position:absolute;inset:-10px;transform:rotate(var(--t,0deg));pointer-events:none}.lch-dial .tg::before{content:'';position:absolute;left:50%;top:0;margin-left:-8px;border:8px solid transparent;border-top:13px solid #fff;filter:drop-shadow(0 1px 0 #1c2140)}
     .lch-pads{left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:clamp(6px,1.6vw,12px)}.lch-pads:not(.on){transform:translate(-50%,20px)}
     .lch-pad{position:relative;width:clamp(42px,11vw,64px);height:clamp(42px,11vw,64px);border-radius:50%;border:0;padding:0;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;
@@ -60,18 +67,19 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     .lch-cue i{position:absolute;inset:14%;border-radius:50%;display:grid;place-items:center;font:400 clamp(20px,5vw,26px)/1 var(--f-display);color:#fff;font-style:normal;text-shadow:0 2px 0 rgba(0,0,0,.25);background:radial-gradient(circle at 50% 30%,#ff9a8a,#e5453a 62%,#a92a22);box-shadow:inset 0 -6px 0 rgba(0,0,0,.2)}
     .lch-cue.down{transform:translateY(5px);box-shadow:0 2px 0 #a99f86,0 8px 14px rgba(8,10,30,.4)}.lch-cue.in i{box-shadow:inset 0 -6px 0 rgba(0,0,0,.2),0 0 0 4px #ffd25a,0 0 30px #ffd25a}
     .lch-cue em{position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);white-space:nowrap;font:700 12px var(--f-ui);color:#c9d0ea;font-style:normal}
-    @media (max-width:640px){.lch-read{right:calc(max(20px,env(safe-area-inset-right)) + 150px);padding:8px 12px 10px}.lch-read code{font-size:11px;white-space:normal}.lch-cue em{display:none}.lch-read.up{right:auto;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 186px)}
+    @media (max-width:640px){.lch-cue.two{left:auto;margin-left:0;right:calc(max(20px,env(safe-area-inset-right)) + 142px)}.lch-read.two{right:auto;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 150px)}.lch-read{right:calc(max(20px,env(safe-area-inset-right)) + 150px);padding:8px 12px 10px}.lch-read code{font-size:11px;white-space:normal}.lch-cue em{display:none}.lch-read.up{right:auto;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 186px)}
       .lch-read.mel{right:auto;bottom:calc(max(18px,env(safe-area-inset-bottom)) + 92px)}}
     @media (pointer:coarse){.lch-pad em{display:none}}</style>
     <section class="lch" aria-label="발사 쇼"><div class="lch-stage" id="lch-stage"></div><button class="lch-skip" id="lch-skip" type="button">인트로 건너뛰기 ⏭</button>
       <div class="lch-read" id="lch-read" hidden><code id="lch-c1"></code><code id="lch-c2"></code><small id="lch-st"></small></div>
-      <div class="lch-ctl lch-dial" id="lch-dial" role="slider" aria-label="조명 색 다이얼" aria-valuemin="0" aria-valuemax="1023" tabindex="0"><div class="ring"></div><i class="tg" id="lch-tg" hidden></i><div class="knob"></div><div class="cap"></div></div>
+      <div class="lch-ctl lch-dial" id="lch-dial" role="slider" aria-label="조명 색 다이얼" aria-valuemin="0" aria-valuemax="1023" tabindex="0"><div class="ring"></div><i class="zone" id="lch-zone" hidden></i><i class="tg" id="lch-tg" hidden></i><div class="knob"></div><div class="cap"></div></div>
       <div class="lch-ctl lch-pads" id="lch-pads">${NOTES.map((n, i) => `<button class="lch-pad" type="button" data-i="${i}" style="--c:${NOTE_CSS[i]}" aria-label="${n[0]} 음"><i>${n[0]}</i><em>${i + 1}</em></button>`).join('')}</div>
       <button class="lch-ctl lch-cue" id="lch-cue" type="button" aria-label="카운트다운 큐"><i>큐!</i><em>스페이스 · 보드 버튼</em></button></section>`;
   const el = root.querySelector('.lch'), host = root.querySelector('#lch-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#lch-skip'), readEl = $('#lch-read'), dialEl = $('#lch-dial'), knobEl = dialEl.querySelector('.knob'), padsEl = $('#lch-pads'), pads = [...padsEl.querySelectorAll('.lch-pad')], cueEl = $('#lch-cue');
   const c1 = $('#lch-c1'), c2 = $('#lch-c2'), stEl = $('#lch-st');
 
+  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null, btnTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -79,6 +87,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); clearInterval(btnTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
+    stopAmb?.();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     neoOff();
     if (window.__launchGame?.el === el) delete window.__launchGame;
@@ -109,6 +118,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   const S = { phase: 'intro', mode: startStage >= 2 ? Math.min(3, startStage) : 1, lesson: false, t: 0, introT: 0, pausedAt: 0, hits: 0, total: 0, combo: 0, maxCombo: 0, score: 0, ended: false, pass: false,
     manual: 0.5, sensor: null, forced: null, knob: 0.5, col: null, mel: null, cue: null, shield: hasBooster ? 1 : 0, view: 'show', launchY: 0 };
   const want = () => (S.forced != null ? S.forced : S.sensor != null ? S.sensor : S.manual);
+  const assist = createAssist(), AK = () => assist.k(S.mode);   // 도우미: 허용 폭 · 판정 창 1.3배
   const setManual = (v) => { S.manual = clamp(v, 0, 1); };
   let dragId = null;
   const angleOf = (e) => { const r = dialEl.getBoundingClientRect(), a = Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * 180 / Math.PI; return clamp((a + 135) / 270, 0, 1); };
@@ -137,16 +147,18 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   const introFrom = { p: new THREE.Vector3(5.5, 1.6, 4.5), t: new THREE.Vector3(0.6, 4.2, -1.2) };
   const camGoal = () => {
     const a = cam.aspect, tall = a < 1, fov = tall ? 58 : 40; if (cam.fov !== fov) { cam.fov = fov; cam.updateProjectionMatrix(); }
+    if (S.view === 'launch' && scn.rocketY > 85) { const r = scn.rocket.position; return { p: new THREE.Vector3(r.x + 5.5, r.y + 7, r.z + (tall ? 16 : 12)), t: new THREE.Vector3(r.x, r.y - 16, r.z) }; }   // 궤도: 로켓 너머로 둥근 붉은 행성
     if (S.view === 'launch') { const ry = scn.rocketY, cy = Math.min(ry, 34); return { p: new THREE.Vector3(1.8, cy + 2.2, tall ? 16 : 12.5), t: new THREE.Vector3(0.6, Math.min(ry, 600) + 3.0, -1.2) }; }   // 34m 까지 따라 오르다 멈추고, 우주로 멀어지는 로켓을 올려다본다
     const C = S.lesson ? CAMS.lesson : CAMS[S.view] || CAMS.show, k = tall ? 1.6 : a < 1.25 ? 1 + (1.25 - a) * 1.2 : 1;
     return { p: C.p.clone().sub(C.t).multiplyScalar(k).add(C.t).add(new THREE.Vector3(0, tall ? 0.8 : 0, 0)), t: C.t.clone().add(new THREE.Vector3(0, tall ? -0.3 : 0, 0)) };
   };
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
+  const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
   let shake = 0;
   const MODE = ['color', 'melody', 'cue'];
-  function setCtl(n) { dialEl.classList.toggle('on', n === 1); padsEl.classList.toggle('on', n === 2); cueEl.classList.toggle('on', n === 3); readEl.classList.toggle('mel', n === 2); }
+  function setCtl(n) { dialEl.classList.toggle('on', n === 1 || n === 3); padsEl.classList.toggle('on', n === 2); cueEl.classList.toggle('on', n === 3); cueEl.classList.toggle('two', n === 3); readEl.classList.toggle('two', n === 3); $('#lch-zone').hidden = n !== 3; readEl.classList.toggle('mel', n === 2); }
 
   // ── 인트로 ──
   const INTRO = 6;
@@ -237,8 +249,8 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     if (n === 1) { scn.setChecks(0); scn.setFace(40, 'smile'); }
     const body = n === 1 ? `<p>로켓 얼굴 빛이 <b>원하는 무대 색</b>이에요. 다이얼로 조명탑 색을 같게 맞추고 <b>잠깐 버티면</b> 발사탑 점검등이 하나씩 초록으로 켜져요.</p><p>${COLOR.rounds}번 · 한 번에 7초. <b>80%</b> 이상이면 통과.</p>`
       : n === 2 ? `<p>관제가 <b>음 신호</b>를 보내요. 잘 듣고 보고(음표등이 켜져요) <b>똑같은 순서</b>로 음표 단추를 눌러요. 한 번 맞히면 한 음씩 길어져요.</p><p>길이 ${MELODY.target} 까지 가면 성공 · 실수는 ${MELODY.lives}번까지 괜찮아요.</p>`
-      : `<p>발사대 바닥을 도는 <b>빛 점</b>이 <b style="color:#ffd25a">금색 구간</b>에 올 때 <b>큐!</b> 단추(스페이스 · 보드 버튼)를 눌러요.</p><p>${CUE.cues}번 — 맞을 때마다 카운트다운 숫자가 줄고 엔진이 달아올라요. <b>80%</b> 이상이면 발사!</p>`;
-    const shieldLine = S.shield && n > 1 ? '<p>🚀 <b>부스터 보호막</b>: 실수 한 번을 막아 줘요.</p>' : '';
+      : `<p><b>두 손 미션!</b> 한 손은 <b>다이얼</b>로 엔진 압력을 금색 띠 안에 붙잡고(띠가 천천히 움직여요), 다른 손은 발사대 바닥을 도는 <b>빛 점</b>이 <b style="color:#ffd25a">금색 구간</b>에 올 때 <b>큐!</b> 단추(스페이스 · 보드 버튼)를 눌러요.</p><p>${CUE.cues}번 — 맞을 때마다 카운트다운 숫자가 줄고 엔진이 달아올라요. <b>80%</b> 이상이면 발사!</p>`;
+    const shieldLine = (S.shield && n > 1 ? '<p>🚀 <b>부스터 보호막</b>: 실수 한 번을 막아 줘요.</p>' : '') + assist.line(n, n === 2 ? '기회가 한 번 더 생겼어요' : '판정 폭이 넓어졌어요');
     const a = await hud.window(`<div class="hud-eye">${n} / 3 막</div><h2>${STAGE_TITLE[n - 1]}</h2>${body}${shieldLine}
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
@@ -252,8 +264,8 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     Object.assign(S, { phase: 'count', hits: 0, combo: 0, maxCombo: 0, score: 0, ended: false, pass: false, pausedAt: 0 });
     scn.show(MODE[n - 1]); S.view = n === 3 ? 'cue' : 'show';
     if (n === 1) { S.col = { idx: 0, hold: 0, roundT: 0, target: 40 }; S.total = COLOR.rounds; scn.setChecks(0); newColor(); }
-    else if (n === 2) { S.mel = { seq: [], inIdx: 0, lives: MELODY.lives, phase: 'show', best: 0 }; S.total = MELODY.target; }
-    else { S.cue = { idx: 0, pos: 0, judged: false }; S.total = CUE.cues; scn.setCount(CUE.cues); scn.setHeat(0); }
+    else if (n === 2) { S.mel = { seq: [], inIdx: 0, lives: MELODY.lives + (assist.on(2) ? 1 : 0), phase: 'show', best: 0 }; S.total = MELODY.target; }
+    else { S.cue = { idx: 0, pos: 0, judged: false, t: 0, inP: false }; S.total = CUE.cues; scn.setCount(CUE.cues); scn.setHeat(0); }
     bot.setExpression('기본'); progressGoal(); bgm.setDuck(0);
     await hud.banner(STAGE_TITLE[n - 1], 'SHOW START', { ms: 1400 });
     if (done || S.phase !== 'count') return;
@@ -274,7 +286,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   // 1막: 색 맞추기(2D 판과 같은 뽑기 · 판정)
   function newColor() { const c = S.col; let t; do { t = Math.floor(Math.random() * HUE_MAX); } while (Math.abs(t - c.target) < 60); c.target = t; c.hold = 0; c.roundT = 0; scn.setFace(t, 'smile'); actor.point(() => scn.rocketFace()).look(() => scn.rocketFace()); }
   function stepColor(ms) {
-    const c = S.col, hue = S.knob * HUE_MAX, near = hueDiff(hue, c.target) <= COLOR.tol;
+    const c = S.col, hue = S.knob * HUE_MAX, near = hueDiff(hue, c.target) <= COLOR.tol * AK();
     c.roundT += ms; if (near) c.hold += ms; else c.hold = Math.max(0, c.hold - ms * 0.8);
     dialEl.style.setProperty('--hold', `${clamp(c.hold / COLOR.hold, 0, 1) * 75}%`); scn.setFace(c.target, near ? 'wow' : 'smile');
     if (c.hold >= COLOR.hold) { const i = c.idx; S.hits++; good(scn.towerChecks(i), `${CHECK_NAME[i]} 점검 ✓`); scn.check(i); actor.look(() => scn.towerChecks(i)); c.idx++; if (c.idx >= COLOR.rounds) { endPlay(); return; } newColor(); }
@@ -308,14 +320,17 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   function press() {
     const c = S.cue; scn.press(); pressPose(); cueEl.classList.add('down'); later(120, () => cueEl.classList.remove('down'));
     if (S.mode !== 3 || S.phase !== 'play' || !c || c.judged) return; c.judged = true;
-    const ok = c.pos >= CUE.low && c.pos <= CUE.high, at = scn.cueAt(Math.min(1, c.pos), 1.0);
+    const mid = (CUE.low + CUE.high) / 2, hw = (CUE.high - CUE.low) / 2 * AK(), timing = Math.abs(c.pos - mid) <= hw, ok = timing && c.inP, at = scn.cueAt(Math.min(1, c.pos), 1.0);   // 때도 맞고 압력도 띠 안이어야
     if (ok || useShield()) { S.hits++; good(at, ok ? 'PERFECT!' : '부스터!', '#ffd25a'); cueHit(); }
-    else bad(at, c.pos < CUE.low ? '너무 빨라요!' : '너무 늦었어요!');
+    else bad(at, !timing ? (c.pos < mid ? '너무 빨라요!' : '너무 늦었어요!') : '압력이 안 맞아요!');
     later(520, () => nextCue());
   }
   function cueHit() { const left = CUE.cues - S.hits; scn.setCount(Math.max(0, left)); scn.setHeat(S.hits / CUE.cues * 0.55); scn.puff(10, 0.6); }
   function stepCue(ms) {
-    const c = S.cue; if (c.judged) return;
+    const c = S.cue; c.t += ms; const pc = pressureAt(c.t); c.inP = Math.abs(S.knob - pc) <= CUE.pHalf * AK();
+    const zone = $('#lch-zone'); const ph = CUE.pHalf * AK(); zone.style.setProperty('--z0', clamp(pc - ph, 0, 1).toFixed(4)); zone.style.setProperty('--zw', (Math.min(1, pc + ph) - Math.max(0, pc - ph)).toFixed(4));
+    scn.setHeat((0.2 + S.hits / CUE.cues * 0.5) * (c.inP ? 1 : 0.35 + Math.abs(Math.sin(S.t * 18)) * 0.3));   // 압력이 빠지면 엔진이 털털
+    if (c.judged) return;
     c.pos += ms * CUE.speed; scn.setCue(c.pos); cueEl.classList.toggle('in', c.pos >= CUE.low && c.pos <= CUE.high);
     if (c.pos >= 1) { c.judged = true; if (useShield()) { S.hits++; good(scn.cueAt(1, 1.0), '부스터!', '#ffd25a'); cueHit(); } else bad(scn.cueAt(1, 1.0), '놓쳤어요!'); later(420, () => nextCue()); }
   }
@@ -324,7 +339,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   function onKey(e) {
     if (e.code === 'Escape' && ['play', 'count'].includes(S.phase) && !S.pausedAt) { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
     if (S.phase !== 'play' && S.phase !== 'count' || S.pausedAt) return;
-    if (S.mode === 1 && S.sensor == null) { const d = { ArrowRight: 0.04, ArrowUp: 0.04, ArrowLeft: -0.04, ArrowDown: -0.04 }[e.code]; if (d) { e.preventDefault(); setManual(S.manual + d); } }   // 2D 판과 같은 한 칸
+    if ((S.mode === 1 || S.mode === 3) && S.sensor == null && e.code.startsWith('Arrow')) { const d = { ArrowRight: 0.04, ArrowUp: 0.04, ArrowLeft: -0.04, ArrowDown: -0.04 }[e.code]; if (d) { e.preventDefault(); setManual(S.manual + d); } }   // 2D 판과 같은 한 칸
     else if (S.mode === 2) { const m = /^(?:Digit|Numpad)([1-7])$/.exec(e.code); if (m && !e.repeat) { e.preventDefault(); padIn(+m[1] - 1); } }
     else if (S.mode === 3 && e.code === 'Space' && !e.repeat) { e.preventDefault(); e.stopImmediatePropagation(); press(); }
   }
@@ -347,19 +362,21 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     if (S.ended) return; S.ended = true; S.phase = 'land'; setCtl(0); readEl.hidden = true; scn.setCue(-1); neoOff();
     const n = S.mode, acc = S.total ? S.hits / S.total : 0, grade = gradeOf(acc), pass = acc >= PASS, pct = Math.round(acc * 100), last = n === 3;
     results.record('final', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[n - 1], metrics: [{ label: '성공', value: `${S.hits}/${S.total}` }, { label: '정확도', value: `${pct}%` }] });
+    const assistOn = assist.record(n, pass);
     if (roomCleared('final') && !medals.isCleared('final')) medals.mark('final');
     const medal = medals.isCleared('final');
     S.pass = pass; bgm.setDuck(1); actor.point(null).conduct(null).pose(null).look(camPos);
     if (pass) {
       await wait(400); if (done) return;
-      bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); scn.setFace(0, 'smile');
+      bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); scn.setFace(0, 'smile'); later(700, () => actor.routine('cheer'));
       await hud.banner(n === 1 ? '조명 점검 완료!' : n === 2 ? '관제 교신 성공!' : '카운트다운 완료!', 'SHOW CLEAR', { ms: 1700 });
       if (last) { if (done) return; await ending(medal); return; }
       await hud.say(n === 1 ? '발사탑이 초록불로 가득해! 이제 관제와 교신하자.' : '관제가 발사를 허락했어! 마지막 카운트다운이야.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림'); actor.squash(0.18);
+      bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('phew', 1.8));
       await hud.banner('조금 흔들렸어', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say(n === 1 ? '로켓 얼굴 색을 보고 다이얼을 천천히 돌려 봐. 색이 같아지면 멈추고 버텨!' : n === 2 ? '음표등 색과 순서를 같이 기억해 봐. 소리 높이도 힌트야!' : '빛 점이 금색 구간에 들어가는 순간을 미리 기다렸다가 눌러 봐!', { mood: '졸림' });
+      if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 판정을 넉넉하게 했어. 다시 해 보자!', { mood: '윙크' }); }
     }
     if (done) return;
     showResult(n, grade, pct, pass);
@@ -368,7 +385,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     S.phase = 'result'; const last = n === 3;
     const choice = hud.result({
       title: escaped ? '행성 탈출 성공!' : pass ? (n === 1 ? '조명 점검 성공!' : n === 2 ? '교신 성공!' : '시험 점화 성공!') : '조금만 더!',
-      sub: escaped ? '바이저봇과 함께 붉은 행성을 떠났어요 — 진짜 메이커가 됐어요!' : pass ? (last ? '앞의 막도 통과하면 진짜로 발사해요.' : `${n + 1}막으로 가요.`) : `80% 이상이면 통과예요.${last ? '' : ' 다음 막으로 넘어가도 괜찮아요.'}`,
+      sub: escaped ? `${student.label() ? `${student.label()} 메이커, ` : ''}바이저봇과 함께 붉은 행성을 떠났어요 — 진짜 메이커가 됐어요!` : pass ? (last ? '앞의 막도 통과하면 진짜로 발사해요.' : `${n + 1}막으로 가요.`) : `80% 이상이면 통과예요.${last ? '' : ' 다음 막으로 넘어가도 괜찮아요.'}`,
       grade, stats: [[n === 1 ? '점검' : n === 2 ? '교신 길이' : '큐', `${S.hits}/${S.total}`], ['정확도', `${pct}%`], ['최고 콤보', `${S.maxCombo}`]], primary: last ? '기지로' : `${n + 1}막으로`, secondary: '다시 하기',
     });
     hud.lightStars(starsOf(grade));
@@ -392,10 +409,11 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     await scn.board(actor); if (done) return;
     scn.setFace(0, 'wow'); sfx.ok(); await wait(700); if (done) return; scn.setFace(0, 'smile');
     await hud.countdown(3, { onTick: () => { sfx.click?.(); scn.puff(16, 0.8); scn.setHeat(0.7); } }); if (done) return;
-    scn.party(); scn.launch(true); scn.setCount(null); S.view = 'launch'; shake = 1.2; sfx.launch?.(); tone(523, 600);
+    scn.party(); scn.launch(true); scn.setCount(null); S.view = 'launch'; shake = 1.2; sfx.launch?.(); sfx.roar(6500); tone(523, 600);
     await wait(2600); if (done) return;
     await hud.banner('행성 탈출!', 'MISSION COMPLETE', { ms: 2600 }); if (done) return;
-    await hud.say('함께해 줘서 고마워! 우리 이제 진짜 메이커야 🚀', { mood: '웃음' }); if (done) return;
+    await hud.say(`${student.label() ? `${student.get()?.name || ''}, ` : ''}함께해 줘서 고마워! 우리 이제 진짜 메이커야 🚀`, { mood: '웃음' }); if (done) return;
+    await hud.say('저기 봐, 우리가 고친 기지가 있던 붉은 행성이야. 언제든 다시 놀러 가자!', { mood: '윙크' }); if (done) return;
     showResult(n, grade, pct, true, true);
   }
 
@@ -403,16 +421,16 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; const step = S.pausedAt ? 0 : Math.min(dt, 0.1), ms = step * 1000;
+    S.t += dt; barks.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1), ms = step * 1000;
     S.knob += (want() - S.knob) * (1 - Math.pow(0.7, step * 60));   // 2D 판처럼 한 프레임 30%
     const hue = S.knob * HUE_MAX; scn.setFlood(hue);
-    if (S.mode === 1 || S.lessonDemo) { const css = hueCss(hue), v = Math.round(S.knob * 1023); dialEl.style.setProperty('--cv', css); knobEl.style.setProperty('--a', `${-135 + S.knob * 270}deg`); dialEl.setAttribute('aria-valuenow', v);
+    if (S.mode === 1 || S.mode === 3 || S.lessonDemo) { const css = S.mode === 3 ? '#ffd25a' : hueCss(hue), v = Math.round(S.knob * 1023); dialEl.style.setProperty('--cv', css); knobEl.style.setProperty('--a', `${-135 + S.knob * 270}deg`); dialEl.setAttribute('aria-valuenow', v);
       if (S.mode === 1 || S.lesson) { c1.innerHTML = `<span class="f">analogRead</span>(A0) → <b>${v}</b>`; c2.innerHTML = `<span class="f">map</span>(v, 0, 1023, 0, 320) → <b>${Math.round(hue)}</b>°`; const tg = S.col?.target; const cvd = comfort.cvd && tg != null && S.mode === 1; stEl.innerHTML = `지금 <span class="lch-sw" style="background:${css}"></span>${cvd ? ` ${Math.round(hue)}°` : ''}${tg != null && S.mode === 1 ? ` 목표 <span class="lch-sw" style="background:${hueCss(tg)}"></span>${cvd ? ` ${tg}°` : ''} <i>${hueDiff(hue, tg) <= COLOR.tol ? '딱 맞아 — 버텨!' : cvd ? (tg > hue ? '오른쪽으로 ▶' : '◀ 왼쪽으로') : '로켓 얼굴 색으로'}</i>` : ''}`;
         const tgEl = $('#lch-tg'); tgEl.hidden = !cvd; if (cvd) tgEl.style.setProperty('--t', `${-135 + (tg / HUE_MAX) * 270}deg`); }
-      if (S.phase === 'play' || S.lesson) { const c = hueColor(hue); neo([c.r, c.g, c.b].map((x) => Math.round(Math.pow(x, 1 / 2.2) * 255))); } }
+      if ((S.phase === 'play' || S.lesson) && S.mode !== 3) { const c = hueColor(hue); neo([c.r, c.g, c.b].map((x) => Math.round(Math.pow(x, 1 / 2.2) * 255))); } }
     if (S.mode === 2 && S.phase === 'play' && !c1.dataset.m2) { c1.dataset.m2 = 1; c1.innerHTML = '<span class="f">for</span> (i = 0; i &lt; 길이; i++) 따라 치기'; }
     if (S.mode !== 2) delete c1.dataset.m2;
-    if (S.mode === 3 && S.phase === 'play' && S.cue) { c1.innerHTML = `<span class="f">digitalRead</span>(4) → <b>${cueEl.classList.contains('down') ? 'HIGH' : 'LOW'}</b>`; c2.innerHTML = `count → <b>${Math.max(0, CUE.cues - S.hits)}</b>`; stEl.innerHTML = `빛 점이 <i>${S.cue.pos >= CUE.low && S.cue.pos <= CUE.high ? '금색 구간 — 지금!' : '도는 중'}</i>`; }
+    if (S.mode === 3 && S.phase === 'play' && S.cue) { c1.innerHTML = `<span class="f">digitalRead</span>(4) → <b>${cueEl.classList.contains('down') ? 'HIGH' : 'LOW'}</b>`; c1.innerHTML += ` · <span class="f">analogRead</span>(A0) → <b>${Math.round(S.knob * 1023)}</b>`; c2.innerHTML = `count → <b>${Math.max(0, CUE.cues - S.hits)}</b>`; stEl.innerHTML = `압력 <i>${S.cue.inP ? '✓ 좋아' : S.knob < pressureAt(S.cue.t) ? '▲ 더 올려' : '▼ 내려'}</i> · 빛 점 <i>${S.cue.pos >= CUE.low && S.cue.pos <= CUE.high ? '금색 — 지금!' : '도는 중'}</i>`; }
     if (S.phase === 'play' && !S.ended && !S.pausedAt) { if (S.mode === 1) stepColor(ms); else if (S.mode === 3) stepCue(ms); }
     if (S.mode === 3 && S.phase === 'play') actor.look(() => scn.cueAt(Math.min(1, S.cue?.pos || 0), 0.4), 0.8);
     readEl.style.setProperty('--lc', S.mode === 1 ? hueCss(hue) : S.mode === 2 ? '#8ff7ee' : '#ffd25a');
@@ -429,7 +447,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   { const c = camGoal(); cam.position.copy(S.mode > 1 ? c.p : introFrom.p); camT.copy(S.mode > 1 ? c.t : introFrom.t); }
   await stage.warm(); if (done) return;   // 세 막의 조명 · 음표등 · 큐 고리를 가림막 뒤에서 함께 컴파일
   scn.show(MODE[S.mode - 1]); S.view = S.mode === 3 ? 'cue' : 'show';
-  stage.reveal();
+  stage.reveal(); stopAmb = sfx.ambient('launch');   // 미션 환경음
   if (S.mode > 1) { introSkipped = true; skipBtn.hidden = true; S.phase = 'prep'; S.introT = INTRO; prep(); }
   else intro();
 }

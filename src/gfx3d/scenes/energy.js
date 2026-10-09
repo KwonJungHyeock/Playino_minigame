@@ -12,6 +12,7 @@ import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { ground } from './landing.js';
+import { partShowcase } from '../rocket.js';
 
 const P = PALETTE, V = THREE.Vector3;
 export const CH_HEX = [0xff4d4d, 0x2ee86a, 0x4d8dff];          // 빨강 · 초록 · 파랑 빛(허브 에너지 셀 구역 · 로켓 셀 부품과 같은 색)
@@ -84,13 +85,8 @@ function cellModel() {
   return g;
 }
 
-/** 에너지 셀 보상 부품 — 기지 로켓의 'cells' 와 같은 세 색 캡슐 */
-function cellsPart() {
-  const g = new THREE.Group();
-  CH_HEX.forEach((c, i) => { const pod = mesh(new THREE.CapsuleGeometry(0.11, 0.3, 8, 20), lamp(c, 2.2), { cast: false }); pod.position.set((i - 1) * 0.26, 0, 0); g.add(pod); });
-  const band = mesh(roundedBox(0.8, 0.08, 0.26, 0.04), vinyl(P.mustard), { cast: false }); g.add(band);
-  return g;
-}
+/** 보상 부품 — 로켓에 붙는 것과 같은 모양(gfx3d/rocket.js) */
+const cellsPart = () => partShowcase('cells', 0.8);
 
 /** 선반: 셀 3칸 받침 */
 function rack(at, label) {

@@ -8,6 +8,7 @@ import { roundedBox, roundedCylinder, dome, mesh } from '../shapes.js';
 import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 import { placeKit } from '../kits.js';
+import { partShowcase } from '../rocket.js';
 
 const P = PALETTE;
 export const KILL_Y = -9;          // 이 아래로 떨어지면 체크포인트로
@@ -109,15 +110,8 @@ function balloon(color) {
 }
 
 /** 부스터 날개(보너스 부품) — 기지 로켓의 'booster' 와 같은 모양(한 쪽) */
-export function boosterPart() {
-  const g = new THREE.Group();
-  const pod = mesh(new THREE.CapsuleGeometry(0.16, 0.55, 8, 24), vinyl(P.mustard)); g.add(pod);
-  const band = mesh(new THREE.TorusGeometry(0.165, 0.025, 10, 32), vinyl(P.coral)); band.rotation.x = Math.PI / 2; band.position.y = 0.1; g.add(band);
-  const noz = mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.14, 24, 1, true), vinyl(P.charcoal, { side: THREE.DoubleSide })); noz.position.y = -0.42; g.add(noz);
-  const fin = mesh(roundedBox(0.04, 0.32, 0.3, 0.02), vinyl(P.coral)); fin.position.set(0, -0.2, 0.2); g.add(fin);
-  const glow = mesh(new THREE.SphereGeometry(0.08, 16, 12), lamp(P.cyan, 2.6), { cast: false }); glow.position.y = -0.5; g.add(glow);
-  return g;
-}
+/** 부스터 날개(보너스 부품) — 로켓에 붙는 것과 같은 모양(gfx3d/rocket.js) */
+export const boosterPart = () => partShowcase('booster', 0.9);
 
 export async function createCourse(stage) {
   const { scene, renderer } = stage;

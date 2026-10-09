@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { vinyl, gloss, lamp, PALETTE } from '../materials.js';
 import { roundedBox, roundedCylinder, dome, lathe, mesh } from '../shapes.js';
+import { createRocket } from '../rocket.js';
 import { placeKit } from '../kits.js';
 import { habDome, hangar, dish, tanks } from '../props.js';
 import { addSpaceSky } from '../sky.js';
@@ -88,44 +89,9 @@ function bake(group) {
 }
 
 // ── 가운데 발사대 + 조립 중인 탈출 로켓 ──
-const GHOST = () => new THREE.MeshBasicMaterial({ color: PALETTE.cyan, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
 
-function rocketKit() {
-  const g = new THREE.Group(); g.name = 'EscapeRocket';
-  const ghostMat = GHOST(), parts = {};
-  // 부품 하나 = 단단한 본체 + 같은 모양의 청사진 홀로그램. setPart 로 둘 중 하나를 보인다.
-  const part = (key, build) => {
-    const solid = build(); const ghost = solid.clone(true);
-    ghost.traverse((m) => { if (m.isMesh) { m.material = ghostMat; m.castShadow = false; m.receiveShadow = false; } }); ghost.userData.noAO = true;
-    g.add(solid, ghost); parts[key] = { solid, ghost, k: -1 };
-  };
-  const S = 1.3;   // 기존 견본 로켓보다 크게 — 기지 어디서나 보이는 목표물
-  const body = mesh(lathe([[0, 0.55], [0.5, 0.6], [0.72, 1.15], [0.76, 2.25], [0.62, 3.35], [0.34, 4.05], [0, 4.35]].map(([r, y]) => [r * S, y * S]), 64), vinyl(PALETTE.white)); g.add(body);
-  const belt = mesh(new THREE.TorusGeometry(0.75 * S, 0.06, 12, 72), vinyl(PALETTE.mustard)); belt.rotation.x = Math.PI / 2; belt.position.y = 1.95 * S; g.add(belt);
-  const win = mesh(new THREE.SphereGeometry(0.26 * S, 32, 20), gloss()); win.scale.set(1, 1, 0.4); win.position.set(0, 2.8 * S, 0.66 * S); g.add(win);
-  const winRim = mesh(new THREE.TorusGeometry(0.26 * S, 0.035, 10, 48), vinyl(PALETTE.grey)); winRim.position.set(0, 2.8 * S, 0.7 * S); g.add(winRim);
-
-  part('engine', () => { const e = new THREE.Group(); const bell = mesh(lathe([[0.18, 0.62], [0.3, 0.45], [0.48, 0.12], [0.52, 0.04]].map(([r, y]) => [r * S, y * S]), 48), vinyl(PALETTE.charcoal, { roughness: 0.4, side: THREE.DoubleSide })); e.add(bell); const ring = mesh(new THREE.TorusGeometry(0.5 * S, 0.035, 10, 48), vinyl(PALETTE.orange)); ring.rotation.x = Math.PI / 2; ring.position.y = 0.1 * S; e.add(ring); return e; });
-  part('fins', () => { const f = new THREE.Group(); for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2 + Math.PI / 4, h = new THREE.Group(); h.rotation.y = a; const fin = mesh(roundedBox(0.13, 1.05 * S, 0.72 * S, 0.05), vinyl(PALETTE.coral)); fin.position.set(0, 1.05 * S, 0.84 * S); fin.rotation.x = -0.2; h.add(fin); f.add(h); } return f; });
-  part('cells', () => { const c = new THREE.Group(); [PALETTE.led.red, PALETTE.led.green, 0x4d8dff].forEach((col, i) => { const a = Math.PI / 2 + (i - 1) * 0.7 + Math.PI, pod = mesh(new THREE.CapsuleGeometry(0.12 * S, 0.34 * S, 8, 20), lamp(col, 1.6)); pod.position.set(Math.sin(a) * 0.8 * S, 1.95 * S, Math.cos(a) * 0.8 * S); c.add(pod); }); return c; });
-  part('wings', () => { const w = new THREE.Group(); for (const s of [-1, 1]) { const arm = mesh(roundedCylinder(0.04, 0.5 * S, 0.01, 0), vinyl(PALETTE.steel)); arm.rotation.z = s * Math.PI / 2; arm.position.set(s * 0.62 * S, 2.45 * S, 0); w.add(arm); const pan = mesh(roundedBox(0.95 * S, 0.05, 0.5 * S, 0.02), vinyl(PALETTE.navy, { roughness: 0.2, clearcoat: 1, sheen: 0 })); pan.position.set(s * 1.38 * S, 2.45 * S, 0); pan.rotation.z = s * 0.15; w.add(pan); const fr = mesh(roundedBox(0.98 * S, 0.06, 0.04, 0.02), vinyl(PALETTE.mustard)); fr.position.set(s * 1.38 * S, 2.45 * S + s * 0.07, 0); fr.rotation.z = s * 0.15; w.add(fr); } return w; });
-  part('nose', () => { const n = mesh(dome(0.4 * S, 32), vinyl(PALETTE.red)); n.position.y = 3.98 * S; n.scale.y = 0.95; return n; });
-  part('antenna', () => { const a = new THREE.Group(); const rod = mesh(roundedCylinder(0.025, 0.55 * S, 0.01, 0), vinyl(PALETTE.steel)); rod.position.y = 4.32 * S; a.add(rod); const tip = mesh(new THREE.SphereGeometry(0.07 * S, 16, 12), lamp(PALETTE.coral, 2.5), { cast: false }); tip.position.y = 4.9 * S; a.add(tip); return a; });
-  part('fuel', () => { const f = new THREE.Group(); const tank = mesh(new THREE.CapsuleGeometry(0.2 * S, 0.7 * S, 8, 24), vinyl(PALETTE.white)); tank.position.set(-0.82 * S, 1.3 * S, -0.2 * S); f.add(tank); const glow = mesh(new THREE.CapsuleGeometry(0.12 * S, 0.5 * S, 8, 16), lamp(PALETTE.mint, 2.2), { cast: false }); glow.position.set(-0.82 * S, 1.3 * S, -0.02 * S); glow.scale.z = 0.6; f.add(glow); return f; });
-  // 보너스 칸: 몸통 양옆 부스터 두 개(도전 챌린지 보상 — 8개 부품과 따로)
-  part('booster', () => { const b = new THREE.Group(); for (const s of [-1, 1]) { const a = new THREE.Group(); a.position.set(s * 0.9 * S, 0.78 * S, 0.32 * S); b.add(a);
-    a.add(mesh(new THREE.CapsuleGeometry(0.17 * S, 0.62 * S, 8, 24), vinyl(PALETTE.mustard)));
-    const band = mesh(new THREE.TorusGeometry(0.175 * S, 0.03, 10, 32), vinyl(PALETTE.coral)); band.rotation.x = Math.PI / 2; band.position.y = 0.12 * S; a.add(band);
-    const noz = mesh(new THREE.CylinderGeometry(0.1 * S, 0.16 * S, 0.16 * S, 24, 1, true), vinyl(PALETTE.charcoal, { side: THREE.DoubleSide })); noz.position.y = -0.48 * S; a.add(noz);
-    const strap = mesh(roundedBox(0.3 * S, 0.06 * S, 0.12 * S, 0.02), vinyl(PALETTE.steel)); strap.position.set(-s * 0.15 * S, 0.3 * S, 0); a.add(strap); }
-    return b; });
-  part('core', () => { const r = mesh(new THREE.TorusGeometry(0.76 * S, 0.07, 14, 72), lamp(PALETTE.cyan, 2.6), { cast: false }); r.rotation.x = Math.PI / 2; r.position.y = 1.32 * S; return r; });
-
-  /** k: 0 = 아직(흐린 청사진) · 0~1 = 조립 중(단계 일부 통과, 밝은 청사진) · 1 = 장착 */
-  const setPart = (key, k) => { const p = parts[key]; if (!p) return; p.k = k; p.solid.visible = k >= 1; p.ghost.visible = k < 1; };
-  g.userData = { parts, setPart, ghostMat };
-  return g;
-}
+/** 허브 발사대의 탈출 로켓 — 마지막 발사 쇼와 같은 한 벌(gfx3d/rocket.js). 기지 어디서나 보이게 조금 크게 */
+function rocketKit() { return createRocket({ S: 1.3 }); }
 
 function launchPad() {
   const g = new THREE.Group(); g.name = 'LaunchPad';

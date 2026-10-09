@@ -10,13 +10,14 @@ import { roundedBox, roundedCylinder, dome, lathe, mesh } from '../shapes.js';
 import { placeKit } from '../kits.js';
 import { loadRobot } from '../robot.js';
 import { createParticles, createConfetti } from '../fx.js';
+import { createRocket } from '../rocket.js';
 
 const V = THREE.Vector3;
 export const PAD = new V(0.6, 0, -1.2);
 const PAD_R = 3.0, DECK = 0.3, S = 1.15, PLANET_R = 600;
 export const NOTE_HEX = [0xff5a5a, 0xff9a3a, 0xffd23a, 0x5ff07a, 0x4fd6ff, 0x6f7bff, 0xc77dff];
 export const NOTE_CSS = NOTE_HEX.map((h) => `#${h.toString(16).padStart(6, '0')}`);
-export const CUE_LOW = 0.78, CUE_HIGH = 0.96;
+export const CUE_LOW = 0.76, CUE_HIGH = 0.97;   // launchGame CUE 와 같게
 const TOWER = new V(PAD.x - 2.25, 0, PAD.z - 0.55), ARM_Y = 3.35;
 const BOT_AT = new V(-2.75, 0, 1.05), BOT_YAW = 1.15, CONSOLE_AT = new V(-2.1, 0, 1.4);
 /** 2D 판과 같은 색: HSV(h, 1, 1) */
@@ -27,74 +28,6 @@ let glowTex = null;
 function glow(size, color) {
   if (!glowTex) { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); const g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,.4)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); glowTex = new THREE.CanvasTexture(c); }
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, opacity: 0.7 })); s.scale.setScalar(size); s.userData.noAO = true; return s;
-}
-
-/** 로켓 얼굴(바이저 LED) — 표정 · 색 */
-function faceCanvas() {
-  const c = document.createElement('canvas'); c.width = 512; c.height = 256; const x = c.getContext('2d');
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  let last = '';
-  function draw(mood, css) {
-    const key = mood + css; if (key === last) return; last = key;
-    x.clearRect(0, 0, 512, 256); x.strokeStyle = x.fillStyle = css; x.lineWidth = 24; x.lineCap = x.lineJoin = 'round'; x.shadowColor = css; x.shadowBlur = 20;
-    for (const cx of [168, 344]) {
-      x.beginPath();
-      if (mood === 'wow') { x.arc(cx, 120, 34, 0, Math.PI * 2); x.stroke(); }
-      else if (mood === 'sleep') { x.moveTo(cx - 38, 128); x.lineTo(cx + 38, 128); x.stroke(); }
-      else { x.arc(cx, 132, 40, Math.PI * 1.1, Math.PI * 1.9); x.stroke(); }
-    }
-    x.beginPath();
-    if (mood === 'wow') { x.ellipse(256, 200, 26, 30, 0, 0, Math.PI * 2); x.fill(); }
-    else if (mood === 'sleep') { x.moveTo(230, 200); x.lineTo(282, 200); x.stroke(); }
-    else { x.moveTo(206, 180); x.quadraticCurveTo(256, 236, 306, 180); x.closePath(); x.fill(); }
-    tex.needsUpdate = true;
-  }
-  return { tex, draw };
-}
-
-const GHOST = () => new THREE.MeshBasicMaterial({ color: PALETTE.cyan, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
-
-/** 탈출 로켓(바이저봇 재질) + 부품 9칸(8개 + 보너스) */
-function rocketModel() {
-  const g = new THREE.Group(); g.name = 'VisorRocket';
-  const M = { shell: TOY.shell(), dark: TOY.dark(), gold: TOY.gold(), goldD: TOY.goldDeep(), coral: TOY.coral(), red: TOY.red(), grey: TOY.grey(), visor: TOY.visor() };
-  const prof = [[0, 0.55], [0.5, 0.6], [0.72, 1.15], [0.76, 2.25], [0.62, 3.35], [0.34, 4.05], [0, 4.35]].map(([r, y]) => [r * S, y * S]);
-  const body = mesh(lathe(prof, 64), M.shell); g.add(body);
-  const R = (y) => { for (let i = 1; i < prof.length; i++) if (y <= prof[i][1]) { const [r0, y0] = prof[i - 1], [r1, y1] = prof[i]; return r0 + (r1 - r0) * (y - y0) / (y1 - y0); } return 0; };
-  for (const y of [1.45, 3.0]) { const s = mesh(new THREE.TorusGeometry(R(y * S) + 0.004, 0.014, 6, 72), M.dark, { cast: false }); s.rotation.x = Math.PI / 2; s.position.y = y * S; g.add(s); }
-  const belt = mesh(new THREE.TorusGeometry(R(1.95 * S) + 0.01, 0.06, 12, 72), M.gold); belt.rotation.x = Math.PI / 2; belt.position.y = 1.95 * S; g.add(belt);
-  // 얼굴: 금 테 + 검은 바이저 + LED + 반사광
-  const fy = 2.75 * S, fz = R(fy) - 0.24;
-  const bez = mesh(new THREE.SphereGeometry(0.5, 40, 28), M.gold); bez.scale.set(1.12, 0.66, 0.5); bez.position.set(0, fy, fz - 0.02); g.add(bez);
-  const visor = mesh(new THREE.SphereGeometry(0.5, 40, 28), M.visor, { cast: false }); visor.scale.set(1.05, 0.6, 0.54); visor.position.set(0, fy, fz); g.add(visor);
-  const face = faceCanvas();
-  const facePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.46), new THREE.MeshBasicMaterial({ map: face.tex, transparent: true, toneMapped: false, depthWrite: false })); facePlane.position.set(0, fy - 0.01, fz + 0.275); g.add(facePlane);
-  const shine = new THREE.Mesh(new THREE.CircleGeometry(0.04, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, toneMapped: false })); shine.position.set(-0.3, fy + 0.12, fz + 0.26); shine.scale.set(1.8, 0.7, 1); g.add(shine);
-  // 탑승문(발사탑 쪽 = -x): 흰 문 + 금 테 + 문등
-  const hatch = new THREE.Group(); hatch.position.set(-R(ARM_Y) - 0.005, ARM_Y + 0.35, 0); hatch.rotation.y = -Math.PI / 2; g.add(hatch);
-  const door = mesh(roundedBox(0.42, 0.6, 0.05, 0.08, 3), M.grey); hatch.add(door);
-  const dRim = mesh(new THREE.TorusGeometry(0.3, 0.02, 8, 40), M.gold); dRim.scale.set(0.78, 1.08, 1); dRim.position.z = 0.02; hatch.add(dRim);
-  const hatchMat = new THREE.MeshBasicMaterial({ color: 0xffd25a, toneMapped: false }); const hl = mesh(new THREE.SphereGeometry(0.035, 12, 8), hatchMat, { cast: false }); hl.position.set(0, 0.36, 0.04); hatch.add(hl);
-
-  const ghostMat = GHOST(), parts = {};
-  const part = (key, build) => { const solid = build(); const ghost = solid.clone(true); ghost.traverse((m) => { if (m.isMesh) { m.material = ghostMat; m.castShadow = false; m.receiveShadow = false; } }); ghost.userData.noAO = true; g.add(solid, ghost); parts[key] = { solid, ghost, k: -1 }; };
-  part('engine', () => { const e = new THREE.Group(); const bell = mesh(lathe([[0.2, 0.62], [0.32, 0.45], [0.5, 0.1], [0.54, 0.02]].map(([r, y]) => [r * S, y * S]), 48), vinyl(0x3d3e42, { roughness: 0.45, clearcoat: 0.3, side: THREE.DoubleSide })); e.add(bell); const ring = mesh(new THREE.TorusGeometry(0.52 * S, 0.035, 10, 48), M.gold); ring.rotation.x = Math.PI / 2; ring.position.y = 0.06 * S; e.add(ring); const r2 = mesh(new THREE.TorusGeometry(0.3 * S, 0.03, 10, 40), M.gold); r2.rotation.x = Math.PI / 2; r2.position.y = 0.5 * S; e.add(r2); return e; });
-  part('fins', () => { const f = new THREE.Group(); for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2 + Math.PI / 4, h = new THREE.Group(); h.rotation.y = a; const fin = mesh(roundedBox(0.13, 1.0 * S, 0.66 * S, 0.06, 3), M.coral); fin.position.set(0, 1.0 * S, 0.86 * S); fin.rotation.x = -0.22; h.add(fin); const tip = mesh(new THREE.SphereGeometry(0.075, 14, 10), M.gold); tip.position.set(0, 0.5 * S, 1.12 * S); h.add(tip); f.add(h); } return f; });
-  part('cells', () => { const c = new THREE.Group(); [PALETTE.led.red, PALETTE.led.green, 0x4d8dff].forEach((col, i) => { const a = Math.PI + (i - 1) * 0.6, pod = new THREE.Group(); pod.position.set(Math.sin(a) * (R(1.95 * S) + 0.08), 1.95 * S, Math.cos(a) * (R(1.95 * S) + 0.08)); c.add(pod); pod.add(mesh(new THREE.CapsuleGeometry(0.11 * S, 0.3 * S, 8, 20), lamp(col, 1.6))); const cap = mesh(roundedCylinder(0.1 * S, 0.06, 0.02, 0.02, 20), M.shell); cap.position.y = 0.2 * S; pod.add(cap); }); return c; });
-  part('wings', () => { const w = new THREE.Group(); for (const s of [-1, 1]) { const arm = mesh(roundedCylinder(0.035, 0.42 * S, 0.01, 0), M.grey); arm.rotation.z = s * Math.PI / 2; arm.position.set(s * 0.58 * S, 2.45 * S, -0.1); w.add(arm); const pan = mesh(roundedBox(0.9 * S, 0.05, 0.46 * S, 0.02), vinyl(PALETTE.navy, { roughness: 0.2, clearcoat: 1, sheen: 0 })); pan.position.set(s * 1.3 * S, 2.45 * S, -0.1); pan.rotation.set(-0.9, 0, s * 0.15); w.add(pan); const fr = mesh(roundedBox(0.94 * S, 0.06, 0.05, 0.02), M.gold); fr.position.set(s * 1.3 * S, 2.45 * S - 0.17, 0.05); fr.rotation.set(-0.9, 0, s * 0.15); w.add(fr); } return w; });
-  part('nose', () => { const n = new THREE.Group(); const d = mesh(dome(0.4 * S, 32), M.red); d.position.y = 3.98 * S; d.scale.y = 0.95; n.add(d); const r = mesh(new THREE.TorusGeometry(0.4 * S, 0.03, 10, 40), M.gold); r.rotation.x = Math.PI / 2; r.position.y = 3.99 * S; n.add(r); return n; });
-  part('antenna', () => { const a = new THREE.Group(); const rod = mesh(roundedCylinder(0.025, 0.55 * S, 0.01, 0), M.gold); rod.position.y = 4.32 * S; a.add(rod); const tip = mesh(new THREE.SphereGeometry(0.075 * S, 16, 12), new THREE.MeshBasicMaterial({ color: 0xff8a7a, toneMapped: false }), { cast: false }); tip.position.y = 4.92 * S; tip.name = 'AntTip'; a.add(tip); return a; });
-  part('fuel', () => { const f = new THREE.Group(); f.position.set(0.66 * S, 1.3 * S, -0.5 * S); const tank = mesh(new THREE.CapsuleGeometry(0.2 * S, 0.62 * S, 8, 24), M.shell); f.add(tank); const glw = mesh(new THREE.CapsuleGeometry(0.11 * S, 0.44 * S, 8, 16), lamp(PALETTE.mint, 2.2), { cast: false }); glw.position.z = 0.12; glw.scale.z = 0.5; glw.position.x = 0.1; f.add(glw); for (const y of [-0.22, 0.22]) { const b = mesh(new THREE.TorusGeometry(0.205 * S, 0.025, 8, 28), M.gold); b.rotation.x = Math.PI / 2; b.position.y = y * S; f.add(b); } return f; });
-  part('booster', () => { const b = new THREE.Group(); for (const s of [-1, 1]) { const a = new THREE.Group(); a.position.set(s * 0.92 * S, 0.8 * S, 0.3 * S); b.add(a); a.add(mesh(new THREE.CapsuleGeometry(0.17 * S, 0.6 * S, 8, 24), M.gold)); const band = mesh(new THREE.TorusGeometry(0.175 * S, 0.03, 10, 32), M.coral); band.rotation.x = Math.PI / 2; band.position.y = 0.12 * S; a.add(band); const noz = mesh(new THREE.CylinderGeometry(0.1 * S, 0.15 * S, 0.14 * S, 24, 1, true), vinyl(0x3d3e42, { side: THREE.DoubleSide })); noz.position.y = -0.46 * S; a.add(noz); } return b; });
-  part('core', () => { const r = mesh(new THREE.TorusGeometry(R(1.32 * S) + 0.06, 0.06, 14, 72), lamp(PALETTE.cyan, 2.6), { cast: false }); r.rotation.x = Math.PI / 2; r.position.y = 1.32 * S; return r; });
-  const setPart = (key, k) => { const p = parts[key]; if (!p) return; p.k = k; p.solid.visible = k >= 1; p.ghost.visible = k < 1; };
-  // 불꽃(엔진 아래, 처음엔 꺼짐)
-  const flameMat = new THREE.MeshBasicMaterial({ color: 0xffb04a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
-  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.42 * S, 2.2, 28, 1, true), flameMat); flame.rotation.x = Math.PI; flame.position.y = -1.05; flame.userData.noAO = true; g.add(flame);
-  const flameIn = new THREE.Mesh(new THREE.ConeGeometry(0.24 * S, 1.3, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff2c8, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); flameIn.rotation.x = Math.PI; flameIn.position.y = -0.6; flameIn.userData.noAO = true; g.add(flameIn);
-  const flameGlow = glow(3.2, 0xff9a3a); flameGlow.position.y = -0.2; flameGlow.material.opacity = 0; g.add(flameGlow);
-  g.userData = { parts, setPart, ghostMat, face, flame, flameIn, flameGlow, hatchMat, hatch, M, R };
-  return g;
 }
 
 /** 발사대: 짙은 원판 + 금 고리 + 화염 홈 · 발사탑(흰 기둥 · 금 마디 · 점검등 5 · 엘리베이터 · 다리) */
@@ -205,7 +138,7 @@ export async function createLaunchScene(stage) {
   const pad = padModel(M); pad.position.copy(PAD); root.add(pad);
   const tower = towerModel(M); tower.position.copy(TOWER); tower.rotation.y = -0.24; root.add(tower);   // 다리(+x)가 로켓을 향하게
   const T = tower.userData;
-  const rocket = rocketModel(); const ROCKET_AT = new V(PAD.x, DECK, PAD.z); rocket.position.copy(ROCKET_AT); root.add(rocket);
+  const rocket = createRocket(); const ROCKET_AT = new V(PAD.x, DECK, PAD.z); rocket.position.copy(ROCKET_AT); root.add(rocket);   // 허브 발사대와 같은 한 벌(gfx3d/rocket.js)
   const RK = rocket.userData;
   const floods = [[-3.5, -0.3], [4.1, 0.1]].map(([x, z]) => { const f = floodModel(M); f.position.set(x, 0, z); root.add(f); const hd = f.userData.head; hd.rotation.order = 'YXZ'; hd.rotation.y = Math.atan2(PAD.x - x, PAD.z - z); hd.rotation.x = -0.2; const sl = new THREE.SpotLight(0xffffff, 0, 12, 0.36, 0.5, 1.0); sl.position.set(x, 1.8, z); sl.target.position.set(PAD.x, 2.0, PAD.z); root.add(sl, sl.target); f.userData.light = sl; return f; });
   const NOTE_AT = NOTE_HEX.map((_, k) => { const a = Math.PI * (0.3 + (k / 6) * 0.4); return new V(PAD.x - Math.cos(a) * (PAD_R + 0.7), 0, PAD.z + Math.sin(a) * (PAD_R + 0.7) * 0.8); });

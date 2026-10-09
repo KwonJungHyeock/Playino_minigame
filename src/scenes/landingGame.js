@@ -13,6 +13,8 @@ import { results } from '../app/results.js';
 import { gradeOf } from '../engine/utils.js';
 import { progress as medals } from '../app/progress.js';   // 이 파일 안의 progress() 는 HUD 진행 막대라 이름을 갈라 둔다
 import { roomCleared } from '../content/curriculum.js';
+import { createAssist } from '../gfx3d/assist.js';
+import { createBarks } from '../gfx3d/barks.js';
 
 const W_PERFECT = 90, W_GOOD = 170, LEAD = 1450, PASS_ACC = 0.85;
 const PINS = [2, 3, 4];                 // 초록 · 노랑 · 빨강
@@ -70,6 +72,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
       <div class="lnd-pads" id="lnd-pads" hidden>${[0, 1, 2].map((i) => `<button class="lnd-pad" type="button" data-lane="${i}" style="--c:${LANE_CSS[i]}" aria-label="${LANE_NAME[i]} 유도등 (${i + 1})"><i>${i + 1}</i><b>${['낮은 음', '중간 음', '높은 음'][i]}</b></button>`).join('')}</div></section>`;
   const el = root.querySelector('.lnd'), host = root.querySelector('#lnd-stage'), skipBtn = root.querySelector('#lnd-skip'), padsEl = root.querySelector('#lnd-pads');
 
+  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
   let stage = null, land = null, hud = null, song = null, offTick = null, done = false;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -77,6 +80,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
+    stopAmb?.();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); song?.dispose(); land?.dispose(); stage?.dispose();
     PINS.forEach((p) => { if (board.connected) board.digital(p, false).catch(() => {}); });
   }
@@ -110,6 +114,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     const C = camDef(); return C.p.clone().sub(C.t).multiplyScalar(k).add(C.t);
   };
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
+  const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   const RING_TOP = new THREE.Vector3(PAD.x, 0.25, PAD.z + TARGET_R), COMBO_AT = new THREE.Vector3(PAD.x + TARGET_R + 0.75, 0.6, PAD.z);
 
   // 판정 고리(가운데) + 다가오는 신호 고리
@@ -137,6 +142,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
 
   // ── 진행 상태 ──
   const S = { phase: 'intro', mode: startStage === 2 ? 2 : 1, t: 0, introT: 0, t0: 0, pausedAt: 0, beats: [], hits: 0, seen: 0, combo: 0, maxCombo: 0, score: 0, wobble: 0, shipY: startStage === 2 ? SHIP_REST : START_ALT, ended: false, pass: false, landT: 0, reveal: 0 };
+  const assist = createAssist(), wGood = () => W_GOOD * assist.k(S.mode);   // 도우미: 판정 창 1.3배
   const playNow = () => (S.pausedAt || performance.now()) - S.t0;
 
   // ── 인트로: 궤도에서 착륙장으로 내려오는 카메라 + 바이저봇 대화 ──
@@ -260,7 +266,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     for (const b of S.beats) { if (b.judged) continue; const d = Math.abs(now - b.target); if (d < bestD) { bestD = d; best = b; } }
     if (!best || bestD >= 340) return;
     best.judged = true; S.seen++;
-    if (bestD <= W_GOOD) {
+    if (bestD <= wGood()) {
       const perfect = bestD <= W_PERFECT;
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo); S.score += (perfect ? 100 : 60) + S.combo * 5; S.hits++;
       perfect ? sfx.perfect() : sfx.ok(); signal(perfect ? 0 : 1); gesture(() => { actor.pose('up').look(shipAt, 0.8); if (perfect) actor.hop(2.4); }); judgePop(perfect ? 'PERFECT' : 'GOOD', perfect ? '#5ff0a0' : '#ffd25a');
@@ -307,7 +313,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     for (const b of S.beats) { if (b.judged) continue; const d = Math.abs(now - b.target); if (d < bestD) { bestD = d; best = b; } }
     if (!best || bestD >= 340) return;
     best.judged = true; S.seen++;
-    if (bestD <= W_GOOD && best.color === i) {
+    if (bestD <= wGood() && best.color === i) {
       const perfect = bestD <= W_PERFECT;
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo); S.score += (perfect ? 100 : 60) + S.combo * 5; S.hits++;
       sfx.note(best.freq, 320, 0.2); signal(i); song.hit(best.i, perfect);
@@ -327,6 +333,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     if (S.ended) return; S.ended = true; S.phase = 'land'; padsEl.hidden = true;
     const acc = S.hits / S.beats.length, grade = gradeOf(acc), pass = acc >= PASS_ACC, pct = Math.round(acc * 100);
     results.record('led', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[1], metrics: [{ label: '적중', value: `${S.hits}/${S.beats.length}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    const assistOn = assist.record(S.mode, pass);
     if (roomCleared('led') && !medals.isCleared('led')) medals.mark('led');   // 1단계도 통과했다면 메달 → 기지 로켓에 엔진 노즐
     const medal = medals.isCleared('led');
     S.pass = pass; S.landT = 0; bgm.setDuck(1); hud.combo(0, 0, 0);
@@ -335,13 +342,14 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     if (pass) {
       // 화물칸이 열리고 엔진 노즐이 떠오른다
       engine.visible = true; engine.position.set(PAD.x, SHIP_REST + 0.9, PAD.z); engine.scale.setScalar(0.01); S.reveal = 0.001; sfx.ok();
-      await wait(900); actor.point(null).look(camPos); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
+      await wait(900); actor.point(null).look(camPos); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('wave')); later(2600, () => actor.pose(null));
       await hud.banner('화물칸 열림!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(medal ? '엔진 노즐 획득! 기지 로켓에 달러 가자 🚀' : '화물칸이 열렸어! 1단계도 통과하면 엔진 노즐이야.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림');
+      bot.setExpression('졸림'); later(500, () => actor.routine('phew', 1.8));
       await hud.banner('암호가 조금 엇갈렸어', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say('멜로디를 들으면서 다시 해볼까? 색만 맞추면 돼.', { mood: '졸림' });
+      if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 박자 판정을 넉넉하게 했어. 다시 해 보자!', { mood: '윙크' }); }
     }
     if (done) return;
     S.phase = 'result';
@@ -387,6 +395,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     const acc = S.hits / S.beats.length, grade = gradeOf(acc), pass = acc >= PASS_ACC, pct = Math.round(acc * 100);
     // 단계 이름은 2D 판(ledGame) 1단계와 같은 '타이밍 쇼' 로 남긴다 — results 는 이름으로 단계를 가르므로, 다르면 방이 3단계로 세어져 메달이 안 나온다
     results.record('led', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[0], metrics: [{ label: '적중', value: `${S.hits}/${S.beats.length}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    const assistOn = assist.record(S.mode, pass);
     if (roomCleared('led') && !medals.isCleared('led')) medals.mark('led');   // 2단계를 이미 통과했다면 이번 판으로 메달
     S.pass = pass; S.landT = 0; bgm.setDuck(1); hud.combo(0, 0, 0);
     if (pass) {
@@ -394,9 +403,10 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
       await hud.banner('착륙 성공!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say('보급선이 내려왔어! 화물칸을 열어 엔진 부품을 꺼내자.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림');
+      bot.setExpression('졸림'); later(500, () => actor.routine('phew', 1.8));
       await hud.banner('다시 접근 중…', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say('조금 흔들렸어. 박자를 들으면서 다시 해볼까?', { mood: '졸림' });
+      if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 박자 판정을 넉넉하게 했어. 다시 해 보자!', { mood: '윙크' }); }
     }
     if (done) return;
     S.phase = 'result';
@@ -414,7 +424,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   const ease = (t) => t * t * (3 - 2 * t);
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; land.update(dt);
+    S.t += dt; barks.watch(S); land.update(dt);
     if (S.phase === 'intro') { S.introT += dt; const k = ease(Math.min(1, S.introT / INTRO)); cam.position.lerpVectors(introFrom.p, fitCam(), k); camT.lerpVectors(introFrom.t, GAME_CAM.t, k); }
     else { const k = 1 - Math.exp(-dt * 3.6); cam.position.lerp(fitCam(), k); camT.lerp(camDef().t, k); }   // 프레임 수와 관계없이 같은 빠르기
     cam.position.y += Math.sin(S.t * 0.6) * 0.002; cam.lookAt(camT);
@@ -436,14 +446,14 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     target.material.opacity = playing || S.phase === 'count' ? 0.55 + Math.sin(S.t * 8) * 0.15 : 0;
     let k = 0;
     if (playing) for (const b of S.beats) {
-      if (b.judged || k >= pool.length) continue; const d = b.target - now; if (d > LEAD || d < -W_GOOD) continue;
-      const m = pool[k++], r = TARGET_R + (Math.max(d, -W_GOOD) / LEAD) * (OUT_R - TARGET_R), near = Math.abs(d) < W_GOOD;
+      if (b.judged || k >= pool.length) continue; const d = b.target - now; if (d > LEAD || d < -wGood()) continue;
+      const m = pool[k++], r = TARGET_R + (Math.max(d, -wGood()) / LEAD) * (OUT_R - TARGET_R), near = Math.abs(d) < wGood();
       m.visible = true; m.scale.setScalar(r); m.material.opacity = near ? 0.95 : 0.35 + 0.5 * (1 - d / LEAD); m.material.color.setHex(near ? 0xffffff : 0x8ff7ee);
     }
     for (; k < pool.length; k++) pool[k].visible = false;
     if (playing) { const c = toScreen(COMBO_AT); hud.combo(S.combo, c.x, c.y); }
     if (playing && !S.pausedAt) {
-      for (const b of S.beats) if (!b.judged && now - b.target > W_GOOD) { b.judged = true; S.seen++; miss(); progress(); }
+      for (const b of S.beats) if (!b.judged && now - b.target > wGood()) { b.judged = true; S.seen++; miss(); progress(); }
       if (now > S.beats[S.beats.length - 1].target + 800) endPlay();
     }
   });
@@ -460,7 +470,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
     song.update(dt, playing ? now : S.phase === 'brief' || S.phase === 'count' ? S.preNow : song.playhead, playing);
     if (playing) { const c = toScreen(COMBO_AT); hud.combo(S.combo, c.x, c.y); }
     if (playing && !S.pausedAt) {
-      for (const b of S.beats) if (!b.judged && now - b.target > W_GOOD) { b.judged = true; S.seen++; miss2(b.color, b.i); progress2(); }
+      for (const b of S.beats) if (!b.judged && now - b.target > wGood()) { b.judged = true; S.seen++; miss2(b.color, b.i); progress2(); }
       if (now > S.beats[S.beats.length - 1].target + 800) endPlay2();
     }
     // 보상: 엔진 노즐이 화물칸에서 솟아올라 천천히 돈다
@@ -475,7 +485,7 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
   if (S.mode === 2) { ship.position.y = SHIP_REST; cam.position.copy(fitCam()); camT.copy(MUSIC_CAM.t); }
   else { cam.position.copy(introFrom.p); camT.copy(introFrom.t); }
   await stage.warm(); if (done) return;   // 셰이더 · 텍스처를 가림막 뒤에서 미리 — 첫 장면이 멈칫하지 않게
-  stage.reveal();
+  stage.reveal(); stopAmb = sfx.ambient('base');   // 미션 환경음
   if (S.mode === 2) { introSkipped = true; skipBtn.hidden = true; S.phase = 'prep'; S.introT = INTRO; prep(); }   // 허브에서 2단계로 바로 들어온 경우
   else intro();
 }

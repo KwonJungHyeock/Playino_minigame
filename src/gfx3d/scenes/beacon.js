@@ -10,6 +10,7 @@ import { habDome, tanks, dish } from '../props.js';
 import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 import { ground } from './landing.js';
+import { partShowcase } from '../rocket.js';
 
 export const LANE_HEX = [0x2ee86a, 0x5ac9ff, 0xffc84a];         // 2D 판 레인색(초록 · 하늘 · 노랑)과 같은 계열
 export const LANE_CSS = ['#2ee86a', '#5ac9ff', '#ffc84a'];
@@ -64,14 +65,8 @@ function satellite() {
   return g;
 }
 
-/** 통신 안테나(보상 부품) — 기지 로켓의 'antenna' 와 같은 모양 */
-function antennaPart() {
-  const g = new THREE.Group();
-  const rod = mesh(roundedCylinder(0.035, 0.7, 0.012, 0), vinyl(PALETTE.steel), { cast: false }); g.add(rod);
-  const ring = mesh(new THREE.TorusGeometry(0.11, 0.02, 10, 32), vinyl(PALETTE.mustard), { cast: false }); ring.rotation.x = Math.PI / 2; ring.position.y = 0.25; g.add(ring);
-  const tip = mesh(new THREE.SphereGeometry(0.1, 20, 14), lamp(PALETTE.coral, 2.5), { cast: false }); tip.position.y = 0.78; g.add(tip);
-  return g;
-}
+/** 보상 부품 — 로켓에 붙는 것과 같은 모양(gfx3d/rocket.js) */
+const antennaPart = () => partShowcase('antenna', 0.8);
 
 export async function createBeaconScene(stage) {
   const { scene, camera, renderer } = stage;

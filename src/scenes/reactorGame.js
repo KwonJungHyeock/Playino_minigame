@@ -3,7 +3,7 @@
 //   돔 위 경고등(D13 LED)이 목표에 가까울수록 빨리 깜빡인다(맞으면 계속 켜짐). 바이저봇은 핸들 받침대에서 두 손으로 큰 핸들을 돌린다.
 // 짜임새(docs/V4-MISSION-FORMAT.md): 도착 → 사연 → 결선(A0 가변저항 + D13 LED) → 바이저 강의(다이얼 값 · 가까울수록 빨리 · 맞으면 켜기) → 확인 퀴즈
 //   → 1막 제어봉 내리기 → 2막 압력 맞추기 → 3막 폭주 붙잡기 → 보상(동력 코어) → 기지로.
-// 판정(2D 판 bombGame.js 와 같다): 1막 6라운드 · 0.8초 버티기 · 구간 ±10% → ±5% · 6초 제한 / 2막 6라운드 · 0.9초 · ±7% → ±3.5% · 4.8초
+// 판정(2D 판 bombGame.js 바탕): 1막 6라운드 · 0.8초 버티기 · 구간 ±10% → ±5% · 6초 제한 / 2막(3D: 숨은 띠) 6라운드 · 0.9초 · ±8% → ±4.5% · 7초
 //   / 3막 24초 동안 18번 판정 · 허용 ±10% → ±7%. 다이얼은 한 프레임 30% 씩 따라온다. 통과 80%(엄격 등급). 기록 이름은 2D 판 단계 이름(STORY.bomb.stages).
 // 조작: 다이얼 끌어 돌리기 · ←→(↑↓) 로 조금씩 · 보드의 가변저항(A0)을 진짜로 돌려도 된다. 보드 LED(D13)도 같이 깜빡인다.
 import { sfx } from '../app/sfx.js';
@@ -15,12 +15,14 @@ import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
 import { comfort } from '../gfx3d/comfort.js';
+import { createAssist } from '../gfx3d/assist.js';
+import { createBarks } from '../gfx3d/barks.js';
 
 const ADC = 0, LED_PIN = 13, PASS = 0.8;
 const ACTS = [   // 2D 판과 같다
   { no: 1, mode: 'match', rounds: 6, holdNeed: 800, roundLimit: 6000, half0: 0.10, half1: 0.05 },
-  { no: 2, mode: 'match', rounds: 6, holdNeed: 900, roundLimit: 4800, half0: 0.07, half1: 0.035 },
-  { no: 3, mode: 'track', dur: 24000, checks: 18, tol0: 0.10, tol1: 0.07 },
+  { no: 2, mode: 'match', hidden: true, rounds: 6, holdNeed: 900, roundLimit: 7000, half0: 0.08, half1: 0.045 },   // 3D 판: 띠를 숨긴다 — 경고등 깜빡임 · 삐 소리 · 노심 열기로만 찾기(그래서 시간 · 폭을 조금 넉넉히)
+  { no: 3, mode: 'track', dur: 24000, checks: 18, tol0: 0.14, tol1: 0.105 },   // 2D 판(±10% → ±7%)보다 넓게 — 난이도 측정 기준(초보 통과 0% → 28%, 도우미 86%)
 ];
 const STAGE_NAME = STORY.bomb.stages, STAGE_TITLE = STORY.bomb.stageTitles;
 const gradeOf = (a) => utilGrade(a, 'strict');
@@ -60,6 +62,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   const el = root.querySelector('.rea'), host = root.querySelector('#rea-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#rea-skip'), readEl = $('#rea-read'), dialEl = $('#rea-dial'), knobEl = dialEl.querySelector('.knob'), ledEl = $('#rea-led');
 
+  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -67,6 +70,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
+    stopAmb?.();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     ledOff();
     if (window.__reactorGame?.el === el) delete window.__reactorGame;
@@ -91,6 +95,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   const S = { phase: 'intro', mode: startStage >= 2 ? Math.min(3, startStage) : 1, lesson: false, t: 0, introT: 0, pausedAt: 0, hits: 0, total: 0, combo: 0, maxCombo: 0, score: 0, ended: false, pass: false,
     manual: 0.5, sensor: null, forced: null, knob: 0.5, m: null, tk: null, busy: false, led: false, ledPh: 0, per: 720, inZone: false, hintT: 0, hinted: false, onWheel: true, demo: null, left: 0 };
   const want = () => (S.forced != null ? S.forced : S.sensor != null ? S.sensor : S.manual);
+  const assist = createAssist();
   function setManual(v) { S.manual = clamp(v, 0, 1); }
   let dragId = null;
   const angleOf = (e) => { const r = dialEl.getBoundingClientRect(), a = Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * 180 / Math.PI; return clamp((a + 135) / 270, 0, 1); };
@@ -122,6 +127,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   };
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
+  const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   const popAt = (v, text, color) => { const p = toScreen(v); hud.pop(text, color, p.x, p.y); };
   let shake = 0;
 
@@ -205,12 +211,12 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   async function brief() {
     const n = S.mode, act = ACTS[n - 1];
     hud.goal(`${n}막 · ${STAGE_TITLE[n - 1]}`); scn.show(SHOW[n - 1]); resetProps(n); scn.setHeat(0.85);
-    if (act.mode === 'match') scn.setBand(0.5, act.half0); else scn.setBand(trackTarget(0, act.dur), act.tol0, 'track');
+    if (act.mode === 'match') scn.setBand(0.5, act.half0, act.hidden ? 'hidden' : 'match'); else scn.setBand(trackTarget(0, act.dur), act.tol0, 'track');
     const body = n === 1 ? `<p>원자로 뒤 <b>제어봉 6개</b>를 내려 열을 식혀요. 계기판 <b style="color:#5ff0a0">초록 띠</b>에 바늘을 넣고 <b>잠깐 버티면</b> 제어봉 하나가 쑥 내려가요.</p><p>갈수록 띠가 좁아져요. 6초 안에 못 맞추면 김이 뿜어 나와요. <b>80%</b> 이상이면 통과.</p>`
-      : n === 2 ? `<p>압력이 올라간 <b>탱크 6개</b>의 밸브를 잠가요. 띠가 <b>훨씬 좁고</b> 시간도 4.8초뿐 — 더 정밀하게!</p><p>경고등이 <b>계속 켜지면</b> 딱 맞은 거예요. <b>80%</b> 이상이면 통과.</p>`
+      : n === 2 ? `<p>압력 계기판이 고장 나서 <b>초록 띠가 안 보여요!</b> 돔 위 <b>경고등 깜빡임</b>과 <b>삐 소리</b>가 빨라지는 쪽으로 다이얼을 돌려 숨은 압력을 찾아요.</p><p>경고등이 <b>계속 켜지면</b> 찾은 거예요 — 그대로 버티면 탱크 밸브가 잠겨요. 탱크 6개 · 한 번에 7초. <b>80%</b> 이상이면 통과.</p>`
       : `<p>노심이 폭주해요! <b style="color:#ffd24a">노란 띠</b>가 계속 움직여요 — 24초 동안 바늘을 띠 안에 붙잡아요.</p><p>${act.checks}번 판정 — 맞을 때마다 받침 둘레 에너지 고리가 한 칸씩 켜져요. <b>80%</b> 이상이면 통과.</p>`;
     const a = await hud.window(`<div class="hud-eye">${n} / 3 막</div><h2>${STAGE_TITLE[n - 1]}</h2>${body}
-      <p>조작: 화면 <b>다이얼</b>을 돌리거나 <span class="hud-key">←</span><span class="hud-key">→</span>. 가변저항이 있으면 진짜로 돌려요.</p>
+      <p>조작: 화면 <b>다이얼</b>을 돌리거나 <span class="hud-key">←</span><span class="hud-key">→</span>. 가변저항이 있으면 진짜로 돌려요.</p>${assist.line(n)}
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
@@ -243,8 +249,8 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
     const m = S.m, act = ACTS[S.mode - 1], i = m.idx + 1; m.idx = i;
     if (i >= act.rounds) { endPlay(); return; }
     let c; do { c = 0.12 + Math.random() * 0.76; } while (Math.abs(c - m.center) < 0.24);   // 2D 판과 같은 뽑기
-    m.center = c; m.half = lerp(act.half0, act.half1, i / (act.rounds - 1)); m.holdT = 0; m.roundT = 0; S.hintT = 0; S.hinted = false;
-    scn.setBand(m.center, m.half); scn.setHold(0);
+    m.center = c; m.half = lerp(act.half0, act.half1, i / (act.rounds - 1)) * assist.k(S.mode); m.holdT = 0; m.roundT = 0; S.hintT = 0; S.hinted = false;
+    scn.setBand(m.center, m.half, act.hidden ? 'hidden' : 'match'); scn.setHold(0);
   }
   async function stepMatch(ms) {
     const m = S.m, act = ACTS[S.mode - 1]; if (S.busy) return;
@@ -256,7 +262,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
     const i = m.idx, at = S.mode === 1 ? scn.rodAt(i) : scn.tankTop(i);
     if (m.holdT >= act.holdNeed) {
       S.busy = true; good(at, S.mode === 1 ? '제어봉 잠금!' : '밸브 잠금!'); if (S.mode === 1) scn.rod(i, true); else scn.valve(i, true);
-      scn.mood('calm', 900); sendLed(true);
+      scn.mood('calm', 900); sendLed(true); if (act.hidden) scn.setBand(m.center, m.half);   // 찾으면 숨은 띠를 잠깐 보여 준다
       await wait(650); if (done) return; S.busy = false; dialEl.style.setProperty('--hold', '0%'); if (S.phase === 'play' && !S.ended) nextRound();
     } else if (m.roundT > act.roundLimit) {
       S.busy = true; bad(at, '너무 느려요!'); if (S.mode === 1) scn.rod(i, false); else scn.valve(i, false); scn.mood('hot', 1200); actor.look(() => at);
@@ -265,7 +271,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   }
   function stepTrack(ms) {
     const tk = S.tk, act = ACTS[2]; tk.t += ms;
-    const tgt = trackTarget(tk.t, act.dur), tol = lerp(act.tol0, act.tol1, clamp(tk.t / act.dur, 0, 1)), within = Math.abs(S.knob - tgt) <= tol;
+    const tgt = trackTarget(tk.t, act.dur), tol = lerp(act.tol0, act.tol1, clamp(tk.t / act.dur, 0, 1)) * assist.k(3), within = Math.abs(S.knob - tgt) <= tol;
     S.inZone = within; scn.setBand(tgt, tol, 'track'); dialEl.style.setProperty('--hold', `${(tk.t / act.dur) * 75}%`);
     const left = Math.max(0, Math.ceil((act.dur - tk.t) / 1000)); if (left !== S.left) { S.left = left; progressGoal(); if (left <= 5 && left > 0) sfx.click?.(); }
     if (tk.t >= tk.nextCheck && tk.checkIdx < act.checks) {
@@ -305,19 +311,21 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
     if (S.ended) return; S.ended = true; S.phase = 'land'; dialEl.hidden = true; readEl.hidden = true; S.inZone = false; ledOff();
     const n = S.mode, acc = S.hits / S.total, grade = gradeOf(acc), pass = acc >= PASS, pct = Math.round(acc * 100), last = n === 3;
     results.record('bomb', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[n - 1], metrics: [{ label: '안정', value: `${S.hits}/${S.total}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    const assistOn = assist.record(n, pass);
     if (roomCleared('bomb') && !medals.isCleared('bomb')) medals.mark('bomb');
     const medal = medals.isCleared('bomb');
     S.pass = pass; bgm.setDuck(1); scn.setHold(0); S.onWheel = false; actor.pose(null).look(camPos);
     if (pass) {
       if (last) { scn.calm(); later(1000, () => { scn.revealPart(); sfx.ok(); }); } else { scn.setHeat(0.35); scn.mood('happy', 2500); }
       await wait(last ? 1500 : 500); if (done) return;
-      bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
+      bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('flex')); later(2600, () => actor.pose(null));
       await hud.banner(n === 1 ? '제어봉 잠금 완료!' : n === 2 ? '압력이 내려갔어!' : '원자로가 진정됐어!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(n < 3 ? (n === 1 ? '조금 식었어! 이번엔 압력 탱크 밸브를 더 정밀하게 잠그자.' : '거의 다 왔어. 마지막으로 폭주하는 노심을 붙잡자!') : medal ? '동력 코어 획득! 로켓에 달면 드디어 출발 준비 끝이야 ⚛️' : '진정 성공! 앞의 막도 통과하면 동력 코어를 받아.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림'); actor.squash(0.18); scn.mood('hot', 2500);
+      bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('dizzy', 1.8)); scn.mood('hot', 2500);
       await hud.banner('원자로가 아직 뜨거워', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say(n === 3 ? '띠가 움직이는 방향을 보고 미리 따라가 봐. 경고등이 계속 켜져 있으면 잘하고 있는 거야!' : '경고등이 빨라지는 쪽으로 돌리다가, 계속 켜지면 손을 멈추고 버텨 봐!', { mood: '졸림' });
+      if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 목표 폭을 넓혔어. 다시 해 보자!', { mood: '윙크' }); }
     }
     if (done) return;
     S.phase = 'result';
@@ -339,7 +347,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   let lastLed = null;
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; const step = S.pausedAt ? 0 : Math.min(dt, 0.1), ms = step * 1000;
+    S.t += dt; barks.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1), ms = step * 1000;
     S.knob += (want() - S.knob) * (1 - Math.pow(0.7, step * 60));   // 2D 판처럼 한 프레임 30%
     scn.setKnob(S.knob);
     const v = Math.round(S.knob * 1023); $('#rea-v').textContent = v; $('#rea-cap').textContent = Math.round(S.knob * 100);
@@ -350,7 +358,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
     let dist = 1, inZone = false;
     if (demo) { dist = Math.abs(S.knob - S.demo.c); inZone = dist <= S.demo.h; }
     else if (live && S.mode < 3 && S.m) { dist = Math.abs(S.knob - S.m.center); inZone = dist <= S.m.half; }
-    else if (live && S.tk) { const act = ACTS[2], tgt = trackTarget(S.tk.t, act.dur); dist = Math.abs(S.knob - tgt); inZone = dist <= lerp(act.tol0, act.tol1, clamp(S.tk.t / act.dur, 0, 1)); }
+    else if (live && S.tk) { const act = ACTS[2], tgt = trackTarget(S.tk.t, act.dur); dist = Math.abs(S.knob - tgt); inZone = dist <= lerp(act.tol0, act.tol1, clamp(S.tk.t / act.dur, 0, 1)) * assist.k(3); }
     if ((live || demo) && !S.pausedAt) {
       if (inZone) S.led = true;
       else { S.per = blinkMs(dist); S.ledPh += ms; if (S.ledPh >= S.per) { S.ledPh = 0; S.led = !S.led; if (S.led) sfx.note(lerp(330, 760, 1 - clamp(dist / 0.42, 0, 1)), 60); } }
@@ -378,7 +386,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   { const c = camGoal(); cam.position.copy(S.mode > 1 ? c.p : introFrom.p); camT.copy(S.mode > 1 ? c.t : introFrom.t); }
   await stage.warm(); if (done) return;   // 세 막의 제어봉 · 탱크 · 고리를 가림막 뒤에서 함께 컴파일
   scn.show(SHOW[S.mode - 1]);
-  stage.reveal();
+  stage.reveal(); stopAmb = sfx.ambient('reactor');   // 미션 환경음
   if (S.mode > 1) { introSkipped = true; skipBtn.hidden = true; S.phase = 'prep'; S.introT = INTRO; prep(); }
   else intro();
 }

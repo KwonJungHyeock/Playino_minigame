@@ -152,7 +152,7 @@ export function createBriefing({ rocket }) {
     else if (kind === 'rocket') {
       o = new THREE.Group();
       const ghosts = new Set(Object.values(rocket.userData.parts).map((p) => p.ghost));
-      rocket.children.forEach((ch) => { if (!ghosts.has(ch)) { const k = ch.clone(true); k.visible = true; o.add(k); } });
+      rocket.children.forEach((ch) => { if (!ghosts.has(ch) && !ch.userData.fx) { const k = ch.clone(true); k.visible = true; o.add(k); } });
     } else {
       const p = rocket.userData.parts[kind]; if (!p) return null;
       o = p.solid.clone(true); o.visible = true;

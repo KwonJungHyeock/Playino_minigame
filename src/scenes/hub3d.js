@@ -197,7 +197,8 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     base.rocket.userData.setPart('booster', bonus.has('booster') || (partsPreview ?? 0) >= PART_ROOMS.length ? 1 : 0);   // 보너스 칸
     const n = partsDone();
     hud.root.querySelector('.hud-obj-t small').textContent = `로켓 부품 ${n} / ${PART_ROOMS.length}`;
-    hud.goal(`다음 목적지 · ${STORY[next].name}`, n / PART_ROOMS.length);
+    if (progress.isCleared('final')) { hud.goal('행성 탈출 성공 · 모든 미션 완료 🎓', 1); base.rocket.userData.face?.draw('wow', '#8ef7ed'); }   // 졸업한 기지: 로켓도 활짝
+    else hud.goal(`다음 목적지 · ${STORY[next].name}`, n / PART_ROOMS.length);
   }
   const gateOf = (id) => base.gates.find((x) => x.id === id);
   const prevActOf = (id) => ACTS[CHAPTERS[Math.max(0, CHAPTERS.findIndex((c) => c.id === ROOMS[id].chapter) - 1)].id];
@@ -631,7 +632,12 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
 
   async function celebrate(newParts, newOthers) {
     S.busy = true; hud.action('');
-    for (const id of newOthers) { const s = STORY[id]; if (id === 'basics') await hud.say(`${s.reward}를 얻었어! 이제 기지 구역에 들어갈 수 있어.`, { mood: '웃음' }); }
+    for (const id of newOthers) { const s = STORY[id]; if (id === 'basics') await hud.say(`${s.reward}를 얻었어! 이제 기지 구역에 들어갈 수 있어.`, { mood: '웃음' });
+      if (id === 'final') {   // 후일담: 행성 탈출을 해낸 뒤 처음 돌아온 기지
+        S.shot = { pos: CENTER.clone().add(new THREE.Vector3(4.2, 3.6, 7.6)), look: CENTER.clone().add(new THREE.Vector3(0, 2.7, 0)) }; bot.play('환호', { once: true }); bot.setExpression('웃음'); sfx.perfect();
+        await hud.say('우리 진짜 행성을 탈출했어! 로켓은 정비해서 다시 세워 뒀어.', { mood: '웃음' });
+        await hud.say('언제든 미션을 다시 하거나 발사 쇼를 또 보러 와. 넌 이제 진짜 메이커야!', { mood: '윙크' }); S.shot = null; bot.setExpression('기본');
+      } }
     if (newParts.length) {
       S.shot = { pos: CENTER.clone().add(new THREE.Vector3(4.2, 3.6, 7.6)), look: CENTER.clone().add(new THREE.Vector3(0, 2.7, 0)) };
       PART_ROOMS.forEach((id) => { if (newParts.includes(id)) base.rocket.userData.setPart(STORY[id].part, 0.5); });

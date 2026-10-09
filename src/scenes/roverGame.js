@@ -14,11 +14,13 @@ import { gradeOf as utilGrade, clamp, lerp } from '../engine/utils.js';
 import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
+import { createAssist } from '../gfx3d/assist.js';
+import { createBarks } from '../gfx3d/barks.js';
 
-const ADC = 0, PASS_ACC = 0.8, LAG = 0.2;
+const ADC = 0, PASS_ACC = 0.8, LAG = 0.12;   // 3D 판 관성(난이도 측정 뒤 0.2 → 0.12초)
 const GAMES = [   // 2D 판과 같다
   { no: 1, mode: 'match', rounds: 6, holdNeed: 850, roundLimit: 5200, half0: 0.11, half1: 0.052 },
-  { no: 2, mode: 'track', dur: 26000, checks: 20, tol0: 0.12, tol1: 0.085 },
+  { no: 2, mode: 'track', dur: 26000, checks: 20, tol0: 0.16, tol1: 0.12 },   // 관성 때문에 2D 판(±12% → ±8.5%)보다 넓게 — 난이도 측정 기준
 ];
 const STAGE_NAME = STORY.pot.stages, STAGE_TITLE = STORY.pot.stageTitles;   // 기록 이름(2D 판과 같게) · 보이는 이름
 const gradeOf = (a) => utilGrade(a, 'strict');
@@ -55,6 +57,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   const el = root.querySelector('.rov'), host = root.querySelector('#rov-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#rov-skip'), readEl = $('#rov-read'), dialEl = $('#rov-dial'), knobEl = dialEl.querySelector('.knob');
 
+  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -62,6 +65,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
+    stopAmb?.();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__roverGame?.el === el) delete window.__roverGame;
   }
@@ -86,6 +90,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   const S = { phase: 'intro', mode: startStage === 2 ? 2 : 1, lesson: false, t: 0, introT: 0, pausedAt: 0, hits: 0, total: 0, combo: 0, maxCombo: 0, score: 0, ended: false, pass: false,
     manual: 0.5, sensor: null, knob: 0.5, thrust: 0.5, m: null, tk: null, busy: false, view: 'jump' };
   const want = () => (S.sensor != null ? S.sensor : S.manual);
+  const assist = createAssist();
   function setManual(v) { S.manual = clamp(v, 0, 1); }
   // 다이얼 끌기: 손잡이 중심 기준 각도(-135°~+135°)
   let dragId = null;
@@ -110,6 +115,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
     return { p: new THREE.Vector3(r.x + ahead * 0.35 - 0.8, r.y + 2.6, r.z + 7.2), t: new THREE.Vector3(r.x + ahead, r.y + 0.4, r.z) };
   }
   const toScreen = (v) => { const p = v.clone().project(cam), rr = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * rr.width, y: (-p.y * 0.5 + 0.5) * rr.height }; };
+  const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   function setView(v) { S.view = v; scn.show(v === 'ride' ? 'ride' : 'jump'); const c = camGoal(); cam.position.copy(c.p); camT.copy(c.t); }
   const popAt = (text, color) => { const p = toScreen(scn.roverTop()); hud.pop(text, color, p.x, p.y); };
 
@@ -200,7 +206,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
         <p>넓은 협곡일수록 큰 힘, 갈수록 띠가 좁아져요. 5초 안에 못 맞추면 구조 다리로 건너요. 협곡 ${game.rounds}개 중 <b>80%</b> 이상 성공하면 통과.</p>`
       : `<p>길이 오르내려요. <b>오르막은 세게, 내리막은 약하게</b> — 계기판 초록 띠를 따라가요. 너무 세면 미끄러지고, 약하면 헛바퀴!</p>
         <p>관문 ${game.checks}개를 지날 때 추력이 맞으면 초록 불. 앞길이 보이니 미리 돌려요. <b>80%</b> 이상이면 통과.</p>`}
-      <p>조작: 화면 <b>다이얼</b>을 돌리거나 <span class="hud-key">←</span><span class="hud-key">→</span>. 가변저항이 있으면 진짜로 돌려요. <b>로버는 힘이 0.3초 늦게 붙어요.</b></p>
+      <p>조작: 화면 <b>다이얼</b>을 돌리거나 <span class="hud-key">←</span><span class="hud-key">→</span>. 가변저항이 있으면 진짜로 돌려요. <b>로버는 힘이 조금 늦게 붙어요.</b></p>${assist.line(n, n === 2 ? '허용 폭이 넓어지고 로버 힘이 바로 붙어요' : '초록 띠가 넓어졌어요')}
       <div class="hud-row"><button class="hud-btn" data-act="lesson" type="button">💡 원리 다시 보기</button><span class="hud-sp"></span><button class="hud-btn main" data-act="go" type="button"><span class="hud-key wide">스페이스</span>시작</button></div>`, { keys: { Space: 'go', Enter: 'go' } });
     if (done) return;
     if (a === 'lesson') { await lesson(); if (!done) brief(); return; }
@@ -229,7 +235,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
     const m = S.m, game = GAMES[0], i = m.idx + 1; m.idx = i;
     if (i >= game.rounds) { endPlay(); return; }
     let c; do { c = 0.12 + Math.random() * 0.76; } while (Math.abs(c - m.center) < 0.22);
-    m.center = c; m.half = lerp(game.half0, game.half1, i / (game.rounds - 1)); m.holdT = 0; m.roundT = 0;
+    m.center = c; m.half = lerp(game.half0, game.half1, i / (game.rounds - 1)) * assist.k(1); m.holdT = 0; m.roundT = 0;
     scn.setBand(m.center, m.half); scn.gap(1.0 + c * 3.2);
   }
   async function stepMatch(dt) {
@@ -238,6 +244,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
     const inZone = Math.abs(S.thrust - m.center) <= m.half;
     if (inZone) m.holdT += ms; else m.holdT = Math.max(0, m.holdT - ms * 0.85);
     dialEl.style.setProperty('--hold', `${Math.min(1, m.holdT / game.holdNeed) * 75}%`);
+    if (inZone) m.hintT = 0; else if ((m.hintT = (m.hintT || 0) + ms) > 2600 && !m.hinted) { m.hinted = true; hud.toast(S.thrust < m.center ? '조금 더 세게 ▶' : '◀ 조금 약하게', ''); }   // 헤매면 방향 힌트(다른 미션과 같은 방식)
     bot.setExpression(inZone ? '웃음' : '기본');
     if (m.holdT >= game.holdNeed) {
       S.busy = true; good(m.half < 0.07 ? 'PERFECT!' : 'NICE!'); bot.setExpression('하트');
@@ -253,7 +260,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   function stepTrack(dt) {
     const tk = S.tk, game = GAMES[1], ms = dt * 1000;
     tk.t += ms;
-    const tgt = trackTarget(tk.t, game.dur), tol = lerp(game.tol0, game.tol1, clamp(tk.t / game.dur, 0, 1)), d = S.thrust - tgt;
+    const tgt = trackTarget(tk.t, game.dur), tol = lerp(game.tol0, game.tol1, clamp(tk.t / game.dur, 0, 1)) * assist.k(2), d = S.thrust - tgt;
     const st = d > tol ? 'fast' : d < -tol ? 'slow' : 'ok';
     scn.setBand(tgt, tol); scn.ride(ROAD_V * tk.t / 1000, st);
     if (st !== lastState) { lastState = st; bot.setExpression(st === 'fast' ? '놀람' : st === 'slow' ? '졸림' : '웃음'); if (st === 'fast') actor.flinch(); }
@@ -289,6 +296,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
     if (S.ended) return; S.ended = true; S.phase = 'land'; dialEl.hidden = true; readEl.hidden = true;
     const stageNo = S.mode, acc = S.hits / S.total, grade = gradeOf(acc), pass = acc >= PASS_ACC, pct = Math.round(acc * 100);
     results.record('pot', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[stageNo - 1], metrics: [{ label: '적중', value: `${S.hits}/${S.total}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    const assistOn = assist.record(stageNo, pass);
     if (roomCleared('pot') && !medals.isCleared('pot')) medals.mark('pot');
     const medal = medals.isCleared('pot');
     S.pass = pass; bgm.setDuck(1); scn.ride(S.tk ? ROAD_V * S.tk.t / 1000 : 0, 'ok');
@@ -296,13 +304,14 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
     if (pass) {
       if (stageNo === 2) { scn.revealPart(); sfx.ok(); }
       await wait(500); if (done) return;
-      bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.2); later(900, () => actor.pose('wide')); later(2600, () => actor.pose('carry'));
+      bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.2); later(700, () => actor.routine('cheer')); later(2600, () => actor.pose('carry'));
       await hud.banner(stageNo === 1 ? '협곡 돌파!' : '질주 성공!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(stageNo === 1 ? '힘 조절 완벽해! 이제 오르내리는 길을 달려 보자.' : medal ? '추력 지느러미 획득! 기지 로켓에 달러 가자 🛞' : '질주 성공! 1단계도 통과하면 추력 지느러미를 받아.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림'); actor.squash(0.18);
+      bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('dizzy', 1.8));
       await hud.banner('힘 조절이 조금 어긋났어', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say(stageNo === 1 ? '로버는 힘이 늦게 붙어. 띠에 가까워지면 다이얼을 조금 일찍 멈춰 봐!' : '언덕이 보이면 미리 돌려 봐. 오르막 전에 세게, 꼭대기 전에 약하게!', { mood: '졸림' });
+      if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 띠를 넓히고 로버 힘이 바로 붙게 했어. 다시 해 보자!', { mood: '윙크' }); }
     }
     if (done) return;
     S.phase = 'result';
@@ -322,10 +331,10 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
+    S.t += dt; barks.watch(S); const step = S.pausedAt ? 0 : Math.min(dt, 0.1);
     // 다이얼(2D 판처럼 한 프레임 32%) → 로버 추력(관성 0.3초)
     S.knob += (want() - S.knob) * (1 - Math.pow(0.68, step * 60));
-    S.thrust += (S.knob - S.thrust) * (1 - Math.exp(-step / LAG));
+    const lag = S.mode === 2 && assist.on(2) ? 0 : LAG; S.thrust += (S.knob - S.thrust) * (lag > 0 ? 1 - Math.exp(-step / lag) : 1);   // 도우미: 2단계 관성 끔
     scn.setThrust(S.thrust);
     const v = Math.round(S.knob * 1023); $('#rov-v').textContent = v; $('#rov-m').textContent = mapTo(v); $('#rov-cap').textContent = Math.round(S.knob * 100);
     knobEl.style.setProperty('--a', `${-135 + S.knob * 270}deg`); dialEl.setAttribute('aria-valuenow', v);
@@ -345,7 +354,7 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   { const c = camGoal(); cam.position.copy(S.mode === 2 ? c.p : introFrom.p); camT.copy(S.mode === 2 ? c.t : introFrom.t); }
   await stage.warm(); if (done) return;   // 두 무대를 가림막 뒤에서 함께 컴파일
   scn.show(S.view === 'ride' ? 'ride' : 'jump'); if (S.mode === 1) scn.gap(2.2);
-  stage.reveal();
+  stage.reveal(); stopAmb = sfx.ambient('base');   // 미션 환경음
   if (S.mode === 2) { introSkipped = true; skipBtn.hidden = true; S.phase = 'prep'; S.introT = INTRO; prep(); }
   else intro();
 }

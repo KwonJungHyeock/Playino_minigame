@@ -12,6 +12,7 @@ import { gradeOf } from '../engine/utils.js';
 import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
+import { createBarks } from '../gfx3d/barks.js';
 
 const ADC = 0, LEAD = 1700, PASS_ACC = 0.85;
 const GAMES = [   // 2D 판과 같다
@@ -55,6 +56,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   const el = root.querySelector('.sol'), host = root.querySelector('#sol-stage'), $ = (s) => root.querySelector(s);
   const skipBtn = $('#sol-skip'), readEl = $('#sol-read'), padEl = $('#sol-pad'), vEl = $('#sol-v'), barEl = $('#sol-bar'), stEl = $('#sol-st');
 
+  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null, senseTimer = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -62,6 +64,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); clearInterval(senseTimer); window.removeEventListener('keydown', onKey, true); window.removeEventListener('keyup', onKeyUp, true); window.removeEventListener('blur', release); bgm.setDuck(1);
+    stopAmb?.();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (window.__solarGame?.el === el) delete window.__solarGame;
   }
@@ -111,6 +114,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   }
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
+  const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   function setView(v) { S.view = v; scn.show(v); const c = camGoal(); cam.position.copy(c.p); camT.copy(c.t); wasDark = null; actor.face(null).point(null).pose(v === 'flight' ? 'fly' : null).look(v === 'flight' ? null : sensorTop, 0.8); }
 
   // ── 빛 상태(가리기 단추 · 스페이스 · 진짜 센서) ──
@@ -327,12 +331,12 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     if (pass) {
       await wait(500); if (done) return;
       if (stageNo === 2) { setView('station'); scn.revealPart(); sfx.ok(); }
-      actor.look(camPos).face(camPos); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
+      actor.look(camPos).face(camPos); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('cheer')); later(2600, () => actor.pose(null));
       await hud.banner(stageNo === 1 ? '신호 연결!' : '비행 성공!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(stageNo === 1 ? '드론들이 깨어났어! 이제 한 대를 직접 날려 보자.' : medal ? '태양광 날개 획득! 기지 로켓에 달러 가자 ☀️' : '비행 성공! 1단계도 통과하면 태양광 날개를 받아.', { mood: '웃음' });
     } else {
       if (stageNo === 2) setView('station');
-      actor.look(camPos); bot.setExpression('졸림'); actor.squash(0.18);
+      actor.look(camPos); bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('phew', 1.8));
       await hud.banner('빛이 조금 엇갈렸어', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say(stageNo === 1 ? '구슬이 고리에 닿는 순간을 노려 봐. 조금 일찍 눌러도 괜찮아!' : '살짝살짝 끊어 누르면 높이를 맞추기 쉬워.', { mood: '졸림' });
     }
@@ -354,7 +358,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt;
+    S.t += dt; barks.watch(S);
     // 빛: 2D 판처럼 부드럽게 따라간다(한 프레임에 18%)
     const want = S.forced != null ? Math.min(1, S.forced) : isDark() ? 0 : 1;
     S.light += (want - S.light) * (1 - Math.pow(0.82, Math.min(dt, 0.1) * 60));
@@ -372,7 +376,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   if (S.mode === 2) { S.view = 'flight'; const c = camGoal(); cam.position.copy(c.p); camT.copy(c.t); } else { cam.position.copy(introFrom.p); camT.copy(introFrom.t); }
   scn.show('all'); await stage.warm(); if (done) return;   // 2단계 비행 무대도 가림막 뒤에서 미리 컴파일 — 넘어갈 때 멈칫하지 않게
   scn.show(S.view);
-  stage.reveal();
+  stage.reveal(); stopAmb = sfx.ambient('base');   // 미션 환경음
   if (S.mode === 2) { introSkipped = true; skipBtn.hidden = true; S.phase = 'prep'; S.introT = INTRO; prep(); }
   else intro();
 }

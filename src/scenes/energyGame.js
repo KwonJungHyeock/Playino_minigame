@@ -14,6 +14,7 @@ import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
 import { comfort } from '../gfx3d/comfort.js';
+import { createBarks } from '../gfx3d/barks.js';
 
 const NEO = 6, PASS_ACC = 0.85, MAXD = Math.sqrt(3 * 255 * 255);
 const TARGETS = [   // 2D 판과 같은 목표 색
@@ -74,6 +75,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   const skipBtn = $('#eng-skip'), ctl = $('#eng-ctl'), goBtn = $('#eng-go'), resoEl = $('#eng-reso');
   const sliders = [...root.querySelectorAll('.eng-sl')].map((l) => ({ l, input: l.querySelector('input'), out: l.querySelector('b') }));
 
+  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -81,6 +83,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
+    stopAmb?.();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.neoFill(NEO, 0, 0, 0).catch(() => {});
     window.removeEventListener('eduino:comfort', onComfort);
@@ -119,6 +122,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   };
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
+  const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
 
   // ── 빛 섞기(장면 · 조종판 · 보드를 한 번에) ──
   const css = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
@@ -339,11 +343,11 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     actor.point(null).pose(null).face(camPos).look(camPos);
     if (pass) {
       if (stageNo === 2) { scn.revealPart(); sfx.ok(); }
-      await wait(600); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
+      await wait(600); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('flex')); later(2600, () => actor.pose(null));
       await hud.banner(stageNo === 1 ? '셀 충전!' : '에너지 가득!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(stageNo === 1 ? '빛 하나로 셀을 채웠어! 이제 빛을 섞어야 하는 셀이야.' : medal ? '에너지 셀 획득! 기지 로켓에 달러 가자 🔋' : '에너지 가득! 1단계도 통과하면 에너지 셀을 받아.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림'); actor.squash(0.18);
+      bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('dizzy', 1.8));
       await hud.banner('셀이 덜 찼어', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say('견본 구슬과 셀 빛을 나란히 보면서 다시 해 볼까? 셀이 공명하면 거의 다 온 거야.', { mood: '졸림' });
     }
@@ -365,7 +369,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   const ease = (t) => t * t * (3 - 2 * t), bufSize = new THREE.Vector2();
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);
+    S.t += dt; barks.watch(S); scn.update(dt); stage.renderer.getDrawingBufferSize(bufSize); scn.setScale(bufSize.y);
     if (S.phase === 'intro') { S.introT += dt; const k = ease(Math.min(1, S.introT / INTRO)); cam.position.lerpVectors(introFrom.p, fitCam(), k); camT.lerpVectors(introFrom.t, camDef().t, k); }
     else { const k = 1 - Math.exp(-dt * 3.2); cam.position.lerp(fitCam(), k); camT.lerp(camDef().t, k); }
     cam.position.y += Math.sin(S.t * 0.6) * 0.002; cam.lookAt(camT);
@@ -376,7 +380,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   if (S.mode === 2) { cam.position.copy(fitCam()); camT.copy(camDef().t); }
   else { cam.position.copy(introFrom.p); camT.copy(introFrom.t); }
   await stage.warm(); if (done) return;
-  stage.reveal();
+  stage.reveal(); stopAmb = sfx.ambient('base');   // 미션 환경음
   if (S.mode === 2) { introSkipped = true; skipBtn.hidden = true; S.phase = 'prep'; S.introT = INTRO; prep(); }
   else intro();
 }

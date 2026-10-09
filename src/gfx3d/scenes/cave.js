@@ -10,6 +10,7 @@ import { roundedCylinder, dome, mesh } from '../shapes.js';
 import { placeKit } from '../kits.js';
 import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
+import { partShowcase } from '../rocket.js';
 
 const V = THREE.Vector3;
 export const HUE_MAX = 320;
@@ -72,14 +73,8 @@ function crystalCluster(s = 1) {
   return g;
 }
 
-/** 연료 수정(보상 부품) — 기지 로켓 'fuel' 과 같은 민트 결정 + 흰 받침 + 금 테 */
-function fuelPart() {
-  const g = new THREE.Group();
-  const c = mesh(new THREE.OctahedronGeometry(0.2, 0), new THREE.MeshPhysicalMaterial({ color: 0x5fe0b8, emissive: 0x5fe0b8, emissiveIntensity: 1.6, roughness: 0.1, clearcoat: 1, flatShading: true }), { cast: false }); c.scale.y = 1.6; g.add(c);
-  const base = mesh(roundedCylinder(0.18, 0.06, 0.02, 0.02, 24), TOY.shell(), { cast: false }); base.position.y = -0.36; g.add(base);
-  const ring = mesh(new THREE.TorusGeometry(0.18, 0.02, 8, 32), TOY.gold(), { cast: false }); ring.rotation.x = Math.PI / 2; ring.position.y = -0.3; g.add(ring);
-  return g;
-}
+/** 보상 부품 — 로켓에 붙는 것과 같은 모양(gfx3d/rocket.js) */
+const fuelPart = () => partShowcase('fuel', 0.8);
 
 export async function createCaveScene(stage) {
   const { scene, camera, renderer } = stage;
@@ -151,10 +146,11 @@ export async function createCaveScene(stage) {
   function wallCrystal(i, ok, hue) { const c = wallC[i]; if (!c) return; const u = c.userData; if (ok) { hueColor(hue, u.mat.emissive); u.mat.emissiveIntensity = 2.2; u.halo.material.color.copy(u.mat.emissive); u.halo.material.opacity = 0.6; burst(c.position.clone().setY(0.5), u.mat.emissive.getHex(), 14); } else { u.mat.emissive.setHex(0x553344); u.mat.emissiveIntensity = 0.4; } }
   function resetWall() { wallC.forEach((c) => { c.userData.mat.emissiveIntensity = 0.05; c.userData.halo.material.opacity = 0; }); }
   /** 3막: 봉인 색들 · 지금 풀 차례 · 버틴 정도 */
-  let sealHues = [], sealIdx = 0, sealHold = 0;
-  function bossSetup(hues) { sealHues = hues; sealIdx = 0; bossState = 'live'; boss.visible = true; boss.scale.setScalar(2.4); seals.forEach((g, k) => { hueColor(hues[k], sealMats[k].emissive); sealMats[k].emissiveIntensity = 0.35; g.visible = true; }); }
-  function bossTick(idx, hold) { sealIdx = idx; sealHold = hold; }
-  function sealDone(i) { const g = seals[i]; sealMats[i].emissiveIntensity = 3; const at = g.getWorldPosition(new V()); burst(at, sealMats[i].emissive.getHex(), 26); later(g); }
+  // 3막(3D 판): 봉인 색은 숨어 있다 — 등불 색이 가까워질수록 지금 봉인이 밝게 반짝인다(밝기 단서라 색약도 찾을 수 있다)
+  let sealHues = [], sealCols = [], sealIdx = 0, sealHold = 0, sealNear = 0;
+  function bossSetup(hues) { sealHues = hues; sealCols = hues.map((h) => hueColor(h)); sealIdx = 0; sealNear = 0; bossState = 'live'; boss.visible = true; boss.scale.setScalar(2.4); seals.forEach((g, k) => { sealMats[k].emissive.setHex(0x3a3d55); sealMats[k].emissiveIntensity = 0.25; g.visible = true; g.scale.setScalar(1); }); }
+  function bossTick(idx, hold, near = 0) { sealIdx = idx; sealHold = hold; sealNear = near; }
+  function sealDone(i) { const g = seals[i]; if (sealCols[i]) sealMats[i].emissive.copy(sealCols[i]); sealMats[i].emissiveIntensity = 3; const at = g.getWorldPosition(new V()); burst(at, sealMats[i].emissive.getHex(), 26); later(g); }
   function later(g) { g.userData.pop = 1; }
   function bossDefeat() { bossState = 'poof'; bossT = 0; burst(boss.position.clone().setY(1.2), 0xffffff, 60); }
   function revealPart() { reveal = 0.001; part.visible = true; part.scale.setScalar(0.01); }
@@ -189,8 +185,9 @@ export async function createCaveScene(stage) {
     // 3막 보스
     if (boss.visible) {
       const u = boss.userData; u.ring.rotation.z = t * 0.8; u.ringMat.opacity = 0.4; u.ringGlow.material.opacity = 0.12;
-      if (sealHues.length) { hueColor(sealHues[Math.min(sealIdx, sealHues.length - 1)], u.ringMat.color); u.ringGlow.material.color.copy(u.ringMat.color); }
-      seals.forEach((g, k) => { const cur = k === sealIdx && bossState === 'live'; g.rotation.y = t * 2; g.scale.setScalar(k < sealIdx ? 0.01 : cur ? 1.25 + sealHold * 0.5 + Math.sin(t * 8) * 0.06 : 1); if (k < sealIdx) g.visible = false; sealMats[k].emissiveIntensity = k < sealIdx ? 0 : cur ? 0.6 + sealHold * 2.4 : 0.3; });
+      u.ringMat.color.setHex(0xb8c0ff); u.ringGlow.material.color.setHex(0x8f9cff);   // 고리도 답을 알려 주지 않는다
+      seals.forEach((g, k) => { const cur = k === sealIdx && bossState === 'live'; g.rotation.y = t * 2; g.scale.setScalar(k < sealIdx ? 0.01 : cur ? 1.25 + sealNear * 0.35 + sealHold * 0.5 + Math.sin(t * (8 + sealNear * 14)) * 0.06 : 1); if (k < sealIdx) g.visible = false;
+        if (cur && sealCols[k]) { sealMats[k].emissive.setHex(0x3a3d55).lerp(sealCols[k], Math.min(1, sealNear * 1.3)); sealMats[k].emissiveIntensity = 0.12 + sealNear * sealNear * 1.6 + sealHold * 2.2; } else if (k >= sealIdx) { sealMats[k].emissive.setHex(0x3a3d55); sealMats[k].emissiveIntensity = 0.25; } });
       u.body.scale.set(1 + Math.sin(t * 2) * 0.03, 1 - Math.sin(t * 2) * 0.02 - sealIdx * 0.03, 1); u.eyes.forEach((e) => { e.scale.y = 1.3 - sealHold * 0.6; });
       if (bossState === 'poof') { bossT += dt; const k = Math.min(1, bossT / 0.9); boss.scale.setScalar(Math.max(0.01, 2.4 * (1 - k))); if (k >= 1) boss.visible = false; }
     }

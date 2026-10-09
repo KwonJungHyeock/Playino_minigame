@@ -107,3 +107,7 @@ const r = await L.done;   // { right, total, firstTry, skipped }
 - [ ] 휴대폰 390px · 터치에서 겹치는 것이 없다 / 키보드만으로도 끝까지 간다
 - [ ] 다시 들어와도 메모리가 쌓이지 않는다(`renderer.info.memory`)
 - [ ] 기록 이름이 2D 판과 같다(메달 판정)
+- [ ] 색으로만 맞추는 판이면 색 도우미(`comfort.cvd`)에 위치 · 숫자 단서가 있다 / 흔들림 · 번쩍임은 `comfort.shake()` · `blinkMin()` 을 거친다
+- [ ] 따라가기 · 정밀 막은 난이도 시뮬레이션으로 초보 통과율을 확인했다(목표: 초보 30~70% · 숙련 95%↑) · 도우미(`createAssist`)를 붙였다
+- [ ] 바이저봇 한마디(`createBarks` + `barks.watch(S)`) · 미션 고유 축하 · 실패 몸짓(`actor.routine`)이 있다
+- [ ] 보상 부품은 `partShowcase(key)` — 로켓에 붙는 것과 같은 모양 / 환경음(`sfx.ambient`)은 cleanup 에서 끈다

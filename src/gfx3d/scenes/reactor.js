@@ -11,6 +11,7 @@ import { placeKit } from '../kits.js';
 import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { comfort } from '../comfort.js';
+import { partShowcase } from '../rocket.js';
 
 const V = THREE.Vector3;
 export const R_AT = new V(0.9, 0, -1.3);
@@ -132,15 +133,8 @@ function tankModel(M) {
   return g;
 }
 
-/** 동력 코어(보상 부품) — 기지 로켓 'core' 와 같은 하늘색 빛 고리 + 금 받침 + 흰 속알 */
-function corePart() {
-  const g = new THREE.Group();
-  const ring = mesh(new THREE.TorusGeometry(0.3, 0.06, 16, 48), lamp(0x8ff7ee, 2.6), { cast: false }); g.add(ring);
-  const ring2 = mesh(new THREE.TorusGeometry(0.3, 0.025, 10, 48), TOY.gold(), { cast: false }); ring2.rotation.x = Math.PI / 2; g.add(ring2);
-  const ball = mesh(new THREE.SphereGeometry(0.13, 24, 16), TOY.shell(), { cast: false }); g.add(ball);
-  g.add(glow(1.4, 0x8ff7ee));
-  return g;
-}
+/** 보상 부품 — 로켓에 붙는 것과 같은 모양(gfx3d/rocket.js) */
+const corePart = () => partShowcase('core', 0.8);
 
 /** 바이저봇이 돌리는 큰 핸들: 흰 받침 + 짙은 기둥 + 흰 바퀴 테 + 금 살 + 산호 손잡이 */
 function wheelStand(M) {
@@ -240,6 +234,7 @@ export async function createReactorScene(stage) {
     U.needle.rotation.z = gaugeAng(knob) - Math.PI / 2;
     const bk = `${bandC.toFixed(3)}|${bandH.toFixed(3)}`;
     if (bk !== bandKey) { bandKey = bk; const a0 = gaugeAng(Math.min(1, bandC + bandH)), a1 = gaugeAng(Math.max(0, bandC - bandH)); U.bandM.geometry.dispose(); U.bandM.geometry = new THREE.RingGeometry(0.29, 0.4, 24, 1, a0, Math.max(0.01, a1 - a0)); }
+    U.bandM.visible = bandKind !== 'hidden';   // 2막: 띠를 숨긴다
     U.bandMat.color.setHex(bandKind === 'track' ? 0xffd24a : 0x5ff0a0).multiplyScalar(1.15 + Math.sin(t * 7) * 0.2);
     const hk = Math.round(hold * 60);
     if (hk !== holdKey) { holdKey = hk; U.holdM.geometry.dispose(); U.holdM.geometry = new THREE.RingGeometry(0.205, 0.235, 48, 1, gaugeAng(0) - Math.max(0.001, hold) * Math.PI * 1.5, Math.max(0.001, hold) * Math.PI * 1.5); }

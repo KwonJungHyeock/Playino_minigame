@@ -12,6 +12,8 @@ import { gradeOf } from '../engine/utils.js';
 import { progress as medals } from '../app/progress.js';
 import { roomCleared } from '../content/curriculum.js';
 import { STORY } from '../content/v4story.js';
+import { createAssist } from '../gfx3d/assist.js';
+import { createBarks } from '../gfx3d/barks.js';
 
 const PIN = 5, LEAD = 1600, W_PERFECT = 110, W_GOOD = 200, PASS_ACC = 0.85;
 const C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392, A4 = 440, C5 = 523.25;
@@ -51,6 +53,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
       <div class="bcn-pads" id="bcn-pads" hidden>${[0, 1, 2].map((i) => `<button class="bcn-pad" type="button" data-lane="${i}" style="--c:${LANE_CSS[i]}" aria-label="${['낮은', '중간', '높은'][i]} 음 신호"><i>${i + 1}</i><em>${'DFJ'[i]}</em><b>${['낮은 음', '중간 음', '높은 음'][i]}</b></button>`).join('')}</div></section>`;
   const el = root.querySelector('.bcn'), host = root.querySelector('#bcn-stage'), skipBtn = root.querySelector('#bcn-skip'), padsEl = root.querySelector('#bcn-pads');
 
+  let stopAmb = null;   // 환경음 끄기(cleanup 짝)
   let stage = null, scn = null, hud = null, offTick = null, done = false, lessonRef = null;
   const timers = new Set();
   const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); if (!done) fn(); }, ms); timers.add(t); return t; };
@@ -58,6 +61,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   function cleanup() {
     if (done) return; done = true;
     timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey, true); bgm.setDuck(1);
+    stopAmb?.();
     offTick?.(); lessonRef?.dispose(); hud?.dispose(); scn?.dispose(); stage?.dispose();
     if (board.connected) board.noTone?.(PIN)?.catch?.(() => {});
     if (window.__beaconGame?.el === el) delete window.__beaconGame;
@@ -86,6 +90,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   const LESSON_CAM = { p: new THREE.Vector3(-3.3, 1.9, 4.9), t: new THREE.Vector3(-0.2, 1.55, -1.0) };   // 강의: 접시 · 수신 고리를 화면 오른쪽 가운데로
   const introFrom = { p: new THREE.Vector3(7.5, 8.5, 12), t: new THREE.Vector3(4.2, 5.5, -6) };          // 위성에서 접시로 내려오는 시선
   const S = { phase: 'intro', mode: startStage === 2 ? 2 : 1, lesson: false, t: 0, introT: 0, t0: 0, pausedAt: 0, beats: [], hits: 0, seen: 0, combo: 0, maxCombo: 0, score: 0, ended: false, pass: false };
+  const assist = createAssist(), wGood = () => W_GOOD * assist.k(S.mode);   // 도우미: 판정 창 1.3배
   // 세로 화면: 신호선을 비스듬히(앞쪽 왼편에서) 본다 — 가로로 긴 줄이 짧아져 중계탑까지 한 화면에 든다
   const TALL_CAM = { p: new THREE.Vector3(-1.1, 4.7, 11.2), t: new THREE.Vector3(1.85, 1.55, -1.0) };
   const camDef = () => (cam.aspect < 1 ? TALL_CAM : S.lesson ? LESSON_CAM : GAME_CAM);   // 세로 화면은 강의도 같은 구도(위쪽 글 · 아래 장면)
@@ -96,6 +101,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   };
   const camT = new THREE.Vector3();
   const toScreen = (v) => { const p = v.clone().project(cam), r = host.getBoundingClientRect(); return { x: (p.x * 0.5 + 0.5) * r.width, y: (-p.y * 0.5 + 0.5) * r.height }; };
+  const barks = createBarks(hud.root, () => toScreen(bot.object.localToWorld(new THREE.Vector3(0, 1.3, 0))));   // 게임 중 한마디(말풍선)
   const COMBO_AT = new THREE.Vector3(HIT_X - 0.95, 2.6, WIRE_Z);
 
   // 신호 알갱이(빛 공 + 꼬리)
@@ -222,7 +228,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     for (const b of S.beats) { if (b.judged || b.lane !== lane) continue; const d = Math.abs(now - b.target); if (d < bestD) { bestD = d; best = b; } }
     if (!best || bestD >= 360) return;   // 2D 판과 같음: 그 줄에 가까운 신호가 없으면 무시
     best.judged = true; S.seen++;
-    if (bestD <= W_GOOD) {
+    if (bestD <= wGood()) {
       const perfect = bestD <= W_PERFECT;
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo); S.score += (perfect ? 100 : 60) + S.combo * 5; S.hits++;
       tone(best.freq, 280); scn.pulse(lane); conduct(lane, perfect); lanePop(lane, perfect ? 'PERFECT' : 'GOOD', perfect ? '#5ff0a0' : '#ffd25a');
@@ -257,19 +263,21 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     if (S.ended) return; S.ended = true; S.phase = 'land'; padsEl.hidden = true;
     const stageNo = S.mode, acc = S.hits / S.beats.length, grade = gradeOf(acc), pass = acc >= PASS_ACC, pct = Math.round(acc * 100);
     results.record('buzzer', { accuracy: pct, grade, passed: pass, summary: STAGE_NAME[stageNo - 1], metrics: [{ label: '적중', value: `${S.hits}/${S.beats.length}` }, { label: '정확도', value: `${pct}%` }, { label: '최고 콤보', value: `${S.maxCombo}` }] });
+    const assistOn = assist.record(S.mode, pass);
     if (roomCleared('buzzer') && !medals.isCleared('buzzer')) medals.mark('buzzer');
     const medal = medals.isCleared('buzzer');
     S.pass = pass; bgm.setDuck(1); hud.combo(0, 0, 0);
     actor.conduct(null).look(camPos);
     if (pass) {
       if (stageNo === 2) { scn.revealPart(); sfx.ok(); }
-      await wait(700); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(900, () => actor.pose('wide')); later(2600, () => actor.pose(null));
+      await wait(700); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('dance')); later(2600, () => actor.pose(null));
       await hud.banner(stageNo === 1 ? '신호 연결!' : '교신 성공!', 'MISSION CLEAR', { ms: 1800 });
       await hud.say(stageNo === 1 ? '위성이 대답했어! 이제 긴 신호로 통신을 완전히 잇자.' : medal ? '통신 안테나 획득! 기지 로켓에 달러 가자 📡' : '교신 성공! 1단계도 통과하면 안테나를 받아.', { mood: '웃음' });
     } else {
-      bot.setExpression('졸림');
+      bot.setExpression('졸림'); later(500, () => actor.routine('phew', 1.8));
       await hud.banner('신호가 조금 끊겼어', 'TRY AGAIN', { bad: true, ms: 1600 });
       await hud.say('소리를 들으면서 다시 해볼까? 높이만 맞추면 돼.', { mood: '졸림' });
+      if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 박자 판정을 넉넉하게 했어. 다시 해 보자!', { mood: '윙크' }); }
     }
     if (done) return;
     S.phase = 'result';
@@ -289,7 +297,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   const ease = (t) => t * t * (3 - 2 * t);
   offTick = stage.onTick((dt) => {
     if (!el.isConnected) { cleanup(); return; }
-    S.t += dt; scn.update(dt);
+    S.t += dt; barks.watch(S); scn.update(dt);
     if (S.phase === 'intro') { S.introT += dt; const k = ease(Math.min(1, S.introT / INTRO)); cam.position.lerpVectors(introFrom.p, fitCam(), k); camT.lerpVectors(introFrom.t, camDef().t, k); }
     else { const k = 1 - Math.exp(-dt * 3.2); cam.position.lerp(fitCam(), k); camT.lerp(camDef().t, k); }
     cam.position.y += Math.sin(S.t * 0.6) * 0.002; cam.lookAt(camT);
@@ -297,8 +305,8 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     const playing = S.phase === 'play' && !S.ended, now = playing ? playNow() : -1e9;
     let k = 0;
     if (playing) for (const b of S.beats) {
-      if (b.judged || k >= notes.length) continue; const d = b.target - now; if (d > LEAD || d < -W_GOOD) continue;
-      const n = notes[k++], u = Math.max(d, -W_GOOD) / LEAD, near = Math.abs(d) < W_GOOD, c = new THREE.Color(near ? 0xffffff : LANE_HEX[b.lane]);
+      if (b.judged || k >= notes.length) continue; const d = b.target - now; if (d > LEAD || d < -wGood()) continue;
+      const n = notes[k++], u = Math.max(d, -wGood()) / LEAD, near = Math.abs(d) < wGood(), c = new THREE.Color(near ? 0xffffff : LANE_HEX[b.lane]);
       n.g.visible = true; n.g.position.set(HIT_X + u * (FROM_X - HIT_X), WIRE_Y[b.lane], WIRE_Z);
       n.g.scale.setScalar(near ? 1.3 : 0.85 + 0.35 * (1 - u));
       n.ball.material.color.copy(c).multiplyScalar(near ? 2.2 : 1.7); n.ball.material.opacity = Math.min(1, 0.4 + (1 - u));
@@ -307,7 +315,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     for (; k < notes.length; k++) notes[k].g.visible = false;
     if (playing) { const c = toScreen(COMBO_AT); hud.combo(S.combo, c.x, c.y); }
     if (playing && !S.pausedAt) {
-      for (const b of S.beats) if (!b.judged && now - b.target > W_GOOD) { b.judged = true; S.seen++; miss(b.lane); progressGoal(); }
+      for (const b of S.beats) if (!b.judged && now - b.target > wGood()) { b.judged = true; S.seen++; miss(b.lane); progressGoal(); }
       if (now > S.beats[S.beats.length - 1].target + 900) endPlay();
     }
   });
@@ -316,7 +324,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   if (S.mode === 2) { cam.position.copy(fitCam()); camT.copy(camDef().t); }
   else { cam.position.copy(introFrom.p); camT.copy(introFrom.t); }
   await stage.warm(); if (done) return;
-  stage.reveal();
+  stage.reveal(); stopAmb = sfx.ambient('base');   // 미션 환경음
   if (S.mode === 2) { introSkipped = true; skipBtn.hidden = true; S.phase = 'prep'; S.introT = INTRO; prep(); }
   else intro();
 }

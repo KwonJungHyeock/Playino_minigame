@@ -13,6 +13,7 @@ import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { ground } from './landing.js';
 import { FONT } from '../type.js';
+import { partShowcase } from '../rocket.js';
 
 const V = THREE.Vector3;
 export const SIDE_HEX = [0x4d8dff, 0xeef3ff], SIDE_CSS = ['#4d8dff', '#eef3ff'], SIDE_NAME = ['파랑', '하양'];
@@ -74,14 +75,8 @@ function meteorModel() {
   return g;
 }
 
-/** 방어막 노즈콘(보상 부품) — 기지 로켓 'nose' 와 같은 빨간 원뿔 + 금 테 + 흰 몸 */
-function nosePart() {
-  const g = new THREE.Group();
-  const cone = mesh(dome(0.32, 40), TOY.red(), { cast: false }); cone.scale.y = 1.4; g.add(cone);
-  const ring = mesh(new THREE.TorusGeometry(0.32, 0.03, 10, 40), TOY.gold(), { cast: false }); ring.rotation.x = Math.PI / 2; g.add(ring);
-  const tip = mesh(new THREE.SphereGeometry(0.05, 14, 10), lamp(0x8ff7ee, 2.4), { cast: false }); tip.position.y = 0.46; g.add(tip);
-  return g;
-}
+/** 보상 부품 — 로켓에 붙는 것과 같은 모양(gfx3d/rocket.js) */
+const nosePart = () => partShowcase('nose', 0.8);
 
 export async function createShieldScene(stage) {
   const { scene, camera, renderer } = stage;
@@ -142,6 +137,16 @@ export async function createShieldScene(stage) {
     (s === 0 ? arms.Arm_R : arms.Arm_L)?.add(f); f.visible = false; return f;
   });
 
+  // 1단계: 바이저봇 왼손의 작은 방패(바이저봇 재질 — 흰 원판 · 금 테 · LED 무늬). 막을 때 두 팔을 앞으로 내밀면(cover 자세) 방패 면이 정면을 보게 미리 계산
+  const buckler = new THREE.Group(); {
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.75, 0, 0.25)), dir = new V(0, 0, 1).applyQuaternion(q.invert());
+    buckler.position.set(0.02, -0.2, 0.06); buckler.quaternion.setFromUnitVectors(new V(0, 1, 0), dir);
+    const disc = mesh(roundedCylinder(0.17, 0.05, 0.02, 0.02, 32), TOY.shell()); disc.position.y = -0.025; buckler.add(disc);
+    const rim = mesh(new THREE.TorusGeometry(0.165, 0.022, 8, 36), TOY.gold()); rim.rotation.x = Math.PI / 2; rim.position.y = 0.025; buckler.add(rim);
+    for (const r of [0, Math.PI / 2]) { const bar = mesh(roundedBox(0.2, 0.012, 0.035, 0.01, 1), LED, { cast: false }); bar.position.y = 0.03; bar.rotation.y = r; buckler.add(bar); }
+    arms.Arm_L?.add(buckler); buckler.visible = false;
+  }
+
   // 운석 풀 · 반짝이
   const meteors = [0, 1].map(() => { const m = meteorModel(); root.add(m); return m; });
   const sparks = createParticles({ max: 140, additive: true, tier: stage.tier }), dust = createParticles({ max: 60, tier: stage.tier });
@@ -178,7 +183,7 @@ export async function createShieldScene(stage) {
   }
   function flash(side) { shields[side].userData.flash = 1; gens[side].userData.emitMat.emissiveIntensity = 3.6; }
   function setShield(side, on) { shields[side].userData.on = on ? 1 : 0; }
-  function show(m) { mode = m; board.visible = m === 'command' || m === 'all'; flags.forEach((f) => { f.visible = m === 'command' || m === 'all'; }); if (m !== 'command') { setShield(0, false); setShield(1, false); } }
+  function show(m) { mode = m; board.visible = m === 'command' || m === 'all'; flags.forEach((f) => { f.visible = m === 'command' || m === 'all'; }); buckler.visible = m === 'catch' || m === 'all'; if (m !== 'command') { setShield(0, false); setShield(1, false); } }
   function revealPart() { reveal = 0.001; part.visible = true; part.scale.setScalar(0.01); }
   const genTop = (side) => GEN[side].clone().setY(1.6);
   const meteorAt = (side) => meteors[side].position.clone();

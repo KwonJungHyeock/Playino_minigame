@@ -13,6 +13,7 @@ import { placeKit } from '../kits.js';
 import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
+import { partShowcase } from '../rocket.js';
 
 const P = PALETTE, V = THREE.Vector3;
 export const ROAD_V = 3.2;                 // 2단계: 로버가 달리는 빠르기(m/초) — 관문 간격 = 판정 간격 × 이 값
@@ -117,16 +118,8 @@ function roverModel() {
   return g;
 }
 
-/** 추력 지느러미(보상 부품) — 기지 로켓 'fins' 와 같은 산호 지느러미 셋 + 금 테 + 흰 몸통(바이저봇 재질) */
-function finsPart() {
-  const g = new THREE.Group();
-  const hub = mesh(new THREE.CapsuleGeometry(0.12, 0.26, 8, 24), TOY.shell(), { cast: false }); g.add(hub);
-  const band = mesh(new THREE.TorusGeometry(0.122, 0.02, 10, 32), TOY.gold(), { cast: false }); band.rotation.x = Math.PI / 2; band.position.y = 0.08; g.add(band);
-  const fs = new THREE.Shape(); fs.moveTo(0, 0.18); fs.quadraticCurveTo(0.28, 0.1, 0.32, -0.22); fs.lineTo(0, -0.12); fs.lineTo(0, 0.18);
-  for (let k = 0; k < 3; k++) { const h = new THREE.Group(); h.rotation.y = (k / 3) * Math.PI * 2; const f = mesh(extrude(fs, 0.035, 0.012), TOY.coral(), { cast: false }); f.position.set(0.1, -0.02, -0.018); h.add(f); g.add(h); }
-  const glow = mesh(new THREE.SphereGeometry(0.07, 16, 12), lamp(0x8ff7ee, 2.4), { cast: false }); glow.position.y = -0.24; g.add(glow);
-  return g;
-}
+/** 보상 부품 — 로켓에 붙는 것과 같은 모양(gfx3d/rocket.js) */
+const finsPart = () => partShowcase('fins', 0.8);
 
 export async function createRoverScene(stage) {
   const { scene, camera, renderer } = stage;

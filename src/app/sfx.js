@@ -30,7 +30,35 @@ function sweep(f0, f1, ms = 200, type = 'sine', vol = 0.1) {
     o.start(t); o.stop(t + d + 0.02);
   } catch (_) {}
 }
+// 잡음 버퍼(바람 · 굉음 · 웅웅의 재료) — 한 번 만들어 돌려 쓴다
+let noiseBuf = null;
+function noise(a) { if (!noiseBuf) { noiseBuf = a.createBuffer(1, a.sampleRate * 2, a.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } const n = a.createBufferSource(); n.buffer = noiseBuf; n.loop = true; return n; }
+/** 미션 환경음(아주 작게 깔린다). kind: 'cave' 물방울 · 낮은 울림 / 'reactor' 웅웅 · 우르릉 / 'launch' 바람 / 'base' 기지 바깥 잔잔한 바람. 반환: 끄는 함수 */
+function ambient(kind) {
+  const a = ctx(); if (!a) return () => {};
+  const out = a.createGain(), nodes = [], timers = [];
+  const level = (kind === 'reactor' ? 0.05 : 0.04) * SFX_SCALE;
+  out.gain.value = muted ? 0 : level; out.connect(a.destination);
+  const osc = (f, type, v) => { const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.value = f; g.gain.value = v; o.connect(g); g.connect(out); o.start(); nodes.push(o); return o; };
+  const filtered = (type, f, q, v) => { const n = noise(a), fl = a.createBiquadFilter(), g = a.createGain(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; g.gain.value = v; n.connect(fl); fl.connect(g); g.connect(out); n.start(); nodes.push(n); return g; };
+  try {
+    if (kind === 'cave') { osc(55, 'sine', 0.5); osc(58.3, 'sine', 0.4); filtered('lowpass', 260, 0.7, 0.25);
+      const drip = () => { if (!muted) blip(1100 + Math.random() * 900, 140, 'sine', 0.035); timers.push(setTimeout(drip, 800 + Math.random() * 1900)); }; timers.push(setTimeout(drip, 900)); }
+    else if (kind === 'reactor') { const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 220; const o = a.createOscillator(), g = a.createGain(); o.type = 'sawtooth'; o.frequency.value = 60; g.gain.value = 0.35; o.connect(lp); lp.connect(g); g.connect(out); o.start(); nodes.push(o); osc(120, 'sine', 0.25); filtered('bandpass', 320, 0.9, 0.5); }
+    else if (kind === 'base') { const w = filtered('lowpass', 380, 0.5, 0.55); const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = 0.09; lg.gain.value = 0.3; lfo.connect(lg); lg.connect(w.gain); lfo.start(); nodes.push(lfo); osc(98, 'sine', 0.08); }   // 기지 바깥: 잔잔한 바람 + 기지 기계 웅
+    else if (kind === 'launch') { const w = filtered('lowpass', 480, 0.6, 0.9); const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = 0.13; lg.gain.value = 0.45; lfo.connect(lg); lg.connect(w.gain); lfo.start(); nodes.push(lfo); }
+  } catch (_) {}
+  const mute = setInterval(() => { out.gain.value = muted ? 0 : level; }, 400);
+  return () => { clearInterval(mute); timers.forEach(clearTimeout); nodes.forEach((n) => { try { n.stop(); } catch (_) {} }); try { out.disconnect(); } catch (_) {} };
+}
+/** 로켓 발사 굉음: 낮은 잡음이 차오르며 밝아졌다가 사라진다 */
+function roar(ms = 5000) {
+  if (muted) return; const a = ctx(); if (!a) return;
+  try { const n = noise(a), fl = a.createBiquadFilter(), g = a.createGain(), t = a.currentTime, d = ms / 1000; fl.type = 'lowpass'; fl.frequency.setValueAtTime(160, t); fl.frequency.exponentialRampToValueAtTime(1400, t + d * 0.35); fl.frequency.exponentialRampToValueAtTime(300, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22 * SFX_SCALE, t + 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + d); n.connect(fl); fl.connect(g); g.connect(a.destination); n.start(t); n.stop(t + d + 0.05); } catch (_) {}
+}
 export const sfx = {
+  ambient, roar,
   get muted() { return muted; },
   toggle() { muted = !muted; try { localStorage.setItem('eduino.muted', muted ? '1' : '0'); } catch (_) {} return muted; },
   hover() { blip(440, 38, 'sine', 0.05); },
