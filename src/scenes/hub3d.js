@@ -13,7 +13,7 @@ import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curricu
 import { STORY, ACTS, PART_ROOMS } from '../content/v4story.js';
 import { bonus, BONUS } from '../app/bonus.js';
 
-const THREE_D = new Set(['led', 'buzzer', 'rgb', 'cds', 'pot', 'button', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
+const THREE_D = new Set(['led', 'buzzer', 'rgb', 'cds', 'pot', 'button', 'lamp', 'challenge']);   // 3D 판이 있는 미션(나머지는 기존 방) — main.js sceneMission3d 와 짝
 const PLANET_R = 11;   // 작은 행성 반지름(m) — 걸으면 지평선 너머에서 스팟이 솟는다(gfx3d/curve.js)
 const SPEED = 3.1, BOT_R = 0.32;
 const HOLD_T = 0.8;              // 꾹 누르는 시간(초) — 실수로 들어가지 않을 만큼, 기다림이 느껴지지 않을 만큼
@@ -403,7 +403,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     $('#hub3-go-b').textContent = b.st.locked ? '아직 잠겨 있어요' : s.stages ? `${b.sel + 1}단계 출발` : '꾹 눌러 출발';
     holdBtn.setAttribute('aria-label', b.st.locked ? '잠긴 문' : `${s.name} ${s.stages ? `${b.sel + 1}단계 ` : ''}출발 — 꾹 누르기`);
     const multi = s.stages && !b.st.locked;
-    $('#hub3-pick-k').innerHTML = multi ? '<span class="hud-key">1</span><span class="hud-key">2</span> 단계 고르기' : '';
+    $('#hub3-pick-k').innerHTML = multi ? `${s.stages.map((_, i) => `<span class="hud-key">${i + 1}</span>`).join('')} 단계 고르기` : '';
     $('#hub3-pick-t').textContent = multi ? '마디로 단계 고르기' : b.st.locked ? '' : '버튼을 꾹 누르고 있어요';
   }
   function visorClose() {
@@ -528,7 +528,7 @@ export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openA
     if (KEYMAP[e.code]) { if (!S.busy) { keys.add(e.code); e.preventDefault(); } return; }
     if (S.busy) return;
     if (e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); pause(); return; }
-    if (S.brief && (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Numpad1' || e.code === 'Numpad2')) { selectStage(e.code.endsWith('1') ? 0 : 1); return; }
+    { const m = S.brief && /^(?:Digit|Numpad)([1-9])$/.exec(e.code); if (m) { selectStage(+m[1] - 1); return; } }   // 단계 수만큼(셋째 단계가 있는 미션 포함) — 범위 밖은 select 가 무시
     if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault(); if (e.repeat) return;
       if (S.brief) holdStart();

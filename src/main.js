@@ -141,6 +141,7 @@ const MISSION_3D = {
   cds: () => import('./scenes/solarGame.js').then((m) => m.showSolarGame),
   pot: () => import('./scenes/roverGame.js').then((m) => m.showRoverGame),
   button: () => import('./scenes/shieldGame.js').then((m) => m.showShieldGame),
+  lamp: () => import('./scenes/caveGame.js').then((m) => m.showCaveGame),
   challenge: () => import('./scenes/challengeGame.js').then((m) => m.showChallengeGame),   // 자유 도전(센서 없음)
 };
 function sceneMission3d(id, stage = 1) {
@@ -196,8 +197,8 @@ function boot() {
     return;
   }
   // v4 3D 게임 미리보기(?v4=led) — 착륙 유도등 단독으로(&stage=2 면 2단계 라이트 연주부터).
-  if (MISSION_3D[q.get('v4')]) {   // ?v4=led · ?v4=buzzer · ?v4=rgb · ?v4=cds · ?v4=pot · ?v4=button (&stage=2) · ?v4=challenge
-    MISSION_3D[q.get('v4')]().then((show) => show(app(), { stage: q.get('stage') === '2' ? 2 : 1, onExit: () => { location.search = ''; } }));
+  if (MISSION_3D[q.get('v4')]) {   // ?v4=led · ?v4=buzzer · ?v4=rgb · ?v4=cds · ?v4=pot · ?v4=button · ?v4=lamp (&stage=2 · 3) · ?v4=challenge
+    MISSION_3D[q.get('v4')]().then((show) => show(app(), { stage: Math.max(1, Math.min(3, parseInt(q.get('stage') || '1', 10) || 1)), onExit: () => { location.search = ''; } }));
     return;
   }
   // 온보딩(인트로~보드 연결)을 아직 안 끝냈으면 복원하지 않는다 — 순서를 건너뛰면 안 되는 구간이다.

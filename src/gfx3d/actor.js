@@ -54,7 +54,7 @@ export function createActor(bot) {
     // 팔: 포즈 · 가리키기 · 지휘
     let RT = S.RT, LT = S.LT;
     if (S.point) { const p = typeof S.point === 'function' ? S.point() : S.point; if (p) { o.updateWorldMatrix(true, false); tmp.copy(p); o.worldToLocal(tmp); tmp.y -= 0.4; const e = Math.atan2(tmp.y, Math.max(0.05, Math.hypot(tmp.z, Math.abs(tmp.x)))), az = Math.atan2(tmp.x, tmp.z); const ax = -(Math.PI / 2 + THREE.MathUtils.clamp(e, -0.9, 0.65));   // 머리 위로는 올리지 않는다(헬멧에 가림)
-      if (az > 0.15) { LT = [ax, THREE.MathUtils.clamp(az + 0.3, -0.2, 1.3)]; RT = null; } else RT = [ax, THREE.MathUtils.clamp(az - 0.3, -1.3, 0.2)]; } }   // 목표가 있는 쪽 팔로 · 살짝 바깥으로
+      if (S.pointArm === 'L' || (S.pointArm !== 'R' && az > 0.15)) { LT = [ax, THREE.MathUtils.clamp(az + 0.3, -0.2, 1.3)]; RT = null; } else RT = [ax, THREE.MathUtils.clamp(az - 0.3, -1.3, 0.35)]; } }   // 목표가 있는 쪽 팔로 · 살짝 바깥으로
     if (S.conduct != null) { RT = [-(Math.PI / 2 + S.conduct), -0.75]; LT = [RT[0], 0.75]; }   // 두 팔로 지휘 · 옆으로 벌려 든다(헬멧에 가리지 않게)
     // 포즈가 있으면 그 값으로 섞어 들어가고, 없어지면 마지막 값에서 클립으로 섞여 나온다
     S.poseW += ((RT || LT ? 1 : 0) - S.poseW) * k(9);
@@ -96,7 +96,7 @@ export function createActor(bot) {
     /** 두 팔을 따로: [x, z] 또는 null(클립대로). 깃발 들기처럼 한쪽씩 올리고 내릴 때 */
     arms(R, L) { S.point = null; S.conduct = null; S.RT = R; S.LT = L; S.pose = 'arms'; return actor; },
     /** 오른팔로 가리키기(Vector3 · 함수 · null) */
-    point(t) { S.point = t; if (t) { S.conduct = null; } return actor; },
+    point(t, { arm = 'auto' } = {}) { S.point = t; S.pointArm = arm; if (t) { S.conduct = null; } return actor; },   // arm: 'auto'(목표 쪽) · 'R' · 'L'(무엇을 든 손으로)
     /** 지휘: 오른팔 높이(수평 기준 위 각도, 라디안) · null */
     conduct(e) { S.conduct = e; return actor; },
     hop(v = 3.2) { if (S.hop < 0.02) S.hopV = v; return actor; },
