@@ -57,7 +57,7 @@ function paint(line) {
   const [code, ...cm] = line.split('//');
   let h = esc(code)
     .replace(/____/g, '<span class="blank">?</span>')
-    .replace(/\b(digitalWrite|delay|pinMode|tone|noTone|analogWrite|analogRead|digitalRead)\b/g, '<span class="f">$1</span>')
+    .replace(/\b(digitalWrite|delay|pinMode|tone|noTone|analogWrite|analogRead|digitalRead|setPixelColor|show)\b/g, '<span class="f">$1</span>')
     .replace(/\b(HIGH|LOW|OUTPUT|INPUT)\b/g, '<span class="k">$1</span>')
     .replace(/\b(\d+)\b/g, '<span class="n">$1</span>');
   if (cm.length) h += `<span class="c">//${esc(cm.join('//'))}</span>`;

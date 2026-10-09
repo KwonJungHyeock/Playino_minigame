@@ -7,7 +7,7 @@ export const STORY = {
   basics: { no: 'PROLOGUE', name: '부팅 훈련', icon: '🔋', line: '충격으로 꺼졌던 센서를 하나씩 깨워 보자.', reward: '기지 출입 카드', part: null },
   led:    { no: 'MISSION 01', name: '착륙 유도등', icon: '🛬', line: '보급선이 엔진 부품을 싣고 내려와. 유도등으로 길을 안내하자.', reward: '엔진 노즐', part: 'engine', stages: ['타이밍 쇼', '라이트 연주'] },
   buzzer: { no: 'MISSION 02', name: '구조 신호 비콘', icon: '📡', line: '멜로디 신호를 보내 궤도 위 위성과 통신을 다시 잇자.', reward: '통신 안테나', part: 'antenna', stages: ['쉬운 곡 · 작은별', '어려운 곡 · 환희의 송가'] },
-  rgb:    { no: 'MISSION 03', name: '에너지 셀 색 맞추기', icon: '🔋', line: '셀마다 맞는 빛 색을 섞어 넣어야 충전돼.', reward: '에너지 셀', part: 'cells' },
+  rgb:    { no: 'MISSION 03', name: '에너지 셀 색 맞추기', icon: '🔋', line: '셀마다 맞는 빛 색을 섞어 넣어야 충전돼.', reward: '에너지 셀', part: 'cells', stages: ['쉬운 색', '어려운 색'] },
   cds:    { no: 'MISSION 04', name: '태양광 충전소', icon: '☀️', line: '빛을 가리고 비추며 태양광 판의 반응을 맞춰 보자.', reward: '태양광 날개', part: 'wings' },
   pot:    { no: 'MISSION 05', name: '로버 추력 조절', icon: '🛞', line: '다이얼로 힘을 딱 맞게 조절해서 로버를 움직이자.', reward: '추력 지느러미', part: 'fins' },
   button: { no: 'MISSION 06', name: '운석 방어막', icon: '🛡️', line: '날아오는 운석을 버튼 두 개로 막아 내자.', reward: '방어막 노즈콘', part: 'nose' },
