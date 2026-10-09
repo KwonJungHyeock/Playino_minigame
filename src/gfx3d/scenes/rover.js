@@ -14,6 +14,7 @@ import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { partShowcase } from '../rocket.js';
+import { strataColumn, strataMaterial } from '../toyrock.js';
 
 const P = PALETTE, V = THREE.Vector3;
 export const ROAD_V = 3.2;                 // 2단계: 로버가 달리는 빠르기(m/초) — 관문 간격 = 판정 간격 × 이 값
@@ -119,7 +120,7 @@ function roverModel() {
 }
 
 /** 보상 부품 — 로켓에 붙는 것과 같은 모양(gfx3d/rocket.js) */
-const finsPart = () => partShowcase('fins', 0.8);
+const finsPart = () => partShowcase('fins', 0.9);
 
 export async function createRoverScene(stage) {
   const { scene, camera, renderer } = stage;
@@ -139,15 +140,16 @@ export async function createRoverScene(stage) {
   // 아득한 협곡 바닥 + 먼 협곡 벽(실루엣)
   const floor = mesh(new THREE.PlaneGeometry(400, 80), new THREE.MeshStandardMaterial({ color: 0x5a3434, roughness: 1 }), { cast: false }); floor.rotation.x = -Math.PI / 2; floor.position.set(0, -7, -10); root.add(floor);
   const walls = new THREE.Group(); root.add(walls);
-  for (let k = 0; k < 16; k++) { const h = 6 + ((k * 37) % 7), w = 3 + ((k * 13) % 4); const b = mesh(roundedBox(w, h, 3, 0.6), vinyl(k % 2 ? ROCK : ROCK_D, { roughness: 0.9, clearcoat: 0, sheen: 0 }), { cast: false }); b.position.set(-30 + k * 4.2, -7 + h / 2, -14 - (k % 3) * 2.5); walls.add(b); }
+  const wallMat = strataMaterial();
+  for (let k = 0; k < 16; k++) { const h = 6 + ((k * 37) % 7), w = 3 + ((k * 13) % 4); const b = mesh(strataColumn(w, h, 3, { r: 0.6, colors: k % 2 ? [ROCK, ROCK_D, SAND] : [ROCK_D, ROCK, 0xd98c6c] }), wallMat, { cast: false }); b.position.set(-30 + k * 4.2, -7 + h / 2, -14 - (k % 3) * 2.5); walls.add(b); }   // 지층 기둥(장난감 바위 결)
 
   // ── 1단계: 바위 기둥이 줄지어 선 협곡. 로버는 기둥에서 기둥으로 앞으로 나아간다(뒤 기둥은 남아 지나온 길이 보인다) ──
   const jumpG = new THREE.Group(); track.add(jumpG);
-  const mesaMat = vinyl(SAND, { roughness: 0.85, clearcoat: 0, sheen: 0.2 }), mesaSide = vinyl(ROCK, { roughness: 0.9, clearcoat: 0, sheen: 0 }), edgeMat = lamp(0xffd25a, 1.2);
+  const mesaMat = vinyl(SAND, { roughness: 0.85, clearcoat: 0, sheen: 0.2 }), mesaSide = strataMaterial(), edgeMat = lamp(0xffd25a, 1.2);
   const LM = 2.4, NEAR_END = 1.05;   // 기둥 윗면 길이 · 로버가 선 기둥의 앞 끝(로버 기준)
   function mesa() {
     const g = new THREE.Group();
-    const side = mesh(roundedBox(LM, 7, 2.6, 0.3), mesaSide); side.position.y = -3.5; g.add(side);
+    const side = mesh(strataColumn(LM, 7, 2.6, { r: 0.3, colors: [ROCK, ROCK_D, SAND] }), mesaSide); side.position.y = -3.5; g.add(side);
     const top = mesh(roundedBox(LM + 0.05, 0.16, 2.65, 0.06), mesaMat); top.position.y = -0.08; g.add(top);
     for (const s of [-1, 1]) { const e = mesh(roundedBox(0.1, 0.05, 2.5, 0.02), edgeMat, { cast: false }); e.position.set(s * (LM / 2 - 0.08), 0.02, 0); g.add(e); }
     jumpG.add(g); return g;
@@ -176,7 +178,7 @@ export async function createRoverScene(stage) {
       if (i < n - 1) { const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
     }
     const mk = (pos, mat) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); const m = mesh(g, mat, { cast: false }); m.frustumCulled = false; rideG.add(m); return m; };
-    road = [mk(top, vinyl(0x6d6a8c, { roughness: 0.7, clearcoat: 0, sheen: 0 })), mk(side, mesaSide)];
+    road = [mk(top, vinyl(0x6d6a8c, { roughness: 0.7, clearcoat: 0, sheen: 0 })), mk(side, vinyl(ROCK, { roughness: 0.9, clearcoat: 0, sheen: 0 }))];   // 언덕 옆면은 정점 색이 없어 단색 재질
     // 길 가장자리 빛 줄(앞쪽)
     const edgePts = []; for (let i = 0; i < n; i += 2) edgePts.push(new V(X0 + i * DX, H[i] + 0.03, 1.05));
     const edge = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgePts), n, 0.025, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd25a).multiplyScalar(1.1), toneMapped: false })); rideG.add(edge); road.push(edge);
@@ -264,7 +266,7 @@ export async function createRoverScene(stage) {
     // 먼 협곡 벽은 천천히(깊이감)
     walls.position.x = mode === 'ride' ? -(X * 0.15) % 4.2 : rover.position.x * 0.85;   // 먼 벽은 천천히(깊이감)
     dust.update(dt); sparks.update(dt);
-    if (reveal > 0) { reveal = Math.min(1, reveal + dt * 0.6); const e = 1 - Math.pow(1 - reveal, 3); part.position.copy(rover.position).add(new V(0.2, 1.4 + e * 0.9, 0.5)); part.rotation.y += dt * 1.6; part.scale.setScalar(Math.max(0.01, e * 1.6)); }
+    if (reveal > 0) { reveal = Math.min(1, reveal + dt * 0.6); const e = 1 - Math.pow(1 - reveal, 3); part.position.copy(rover.position).add(new V(1.5, 0.7 + e * 0.8, 0.8)); part.rotation.y += dt * 1.6; part.scale.setScalar(Math.max(0.01, e * 2.0)); }   // 보상: 로버 앞 오른쪽(왼쪽 위 목표 칸에 가리지 않게)
   }
   function landFx() { dust.burst(14, (k, n) => [[rover.position.x + (k % 2 ? 0.6 : -0.6), rover.position.y + 0.05, (Math.random() - 0.5) * 1.2], [(Math.random() - 0.5) * 2, 0.6 + Math.random() * 0.6, (Math.random() - 0.5) * 2], { life: 0.8, size: 0.22, grow: 2.4, color: 0xd9a58c, alpha: 0.6, gravity: 0.3, damp: 2.4 }]); }
   function done(dist) { const a = anim; anim = null; baseX += dist; rover.position.set(baseX, 0, 0); rover.rotation.z = 0; a.res(); }

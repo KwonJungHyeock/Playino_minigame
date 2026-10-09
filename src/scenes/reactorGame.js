@@ -85,7 +85,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   await fontsReady(); if (done) return;
   scn = await createReactorScene(stage);
   if (done) { scn.dispose(); return; }
-  addPost(stage, { bloom: 0.5, bloomRadius: 0.7, threshold: 1.0 });
+  addPost(stage, { bloom: 0.42, bloomRadius: 0.7, threshold: 1.1 });   // 돔 · 노심이 하얗게 날지 않게
   hud = createHud(el, { mission: { icon: '⚛️', eyebrow: 'MISSION 08 · 깊은 곳으로', title: '원자로 진정' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
   // 바이저봇이 핸들을 돌린다: 두 손을 바퀴 테에(핸들이 돌면 한 손은 오르고 한 손은 내린다) · 눈은 계기판 · 맞으면 콩 · 김이 뿜으면 움찔

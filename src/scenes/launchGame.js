@@ -102,7 +102,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   await fontsReady(); if (done) return;
   scn = await createLaunchScene(stage);
   if (done) { scn.dispose(); return; }
-  addPost(stage, { bloom: 0.5, bloomRadius: 0.7, threshold: 1.0 });
+  addPost(stage, { bloom: 0.42, bloomRadius: 0.7, threshold: 1.05 });
   hud = createHud(el, { mission: { icon: '🚀', eyebrow: 'FINAL · 탈출', title: '발사 쇼' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
   // 바이저봇이 쇼 감독: 1막엔 조명을 가리키고 · 2막엔 음 높이만큼 지휘 · 3막엔 조종대 빨간 단추를 꾹 · 끝엔 직접 타고 떠난다

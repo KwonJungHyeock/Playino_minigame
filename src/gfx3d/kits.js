@@ -4,6 +4,7 @@ import { Box3, Vector3, Group } from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { instantiate } from './assets.js';
 import { vinyl, gloss, PALETTE } from './materials.js';
+import { isToyRock, toyRock } from './toyrock.js';
 
 const SPACE = import.meta.glob('../assets/3d/kits/space/*.glb', { query: '?url', import: 'default', eager: true });
 const url = (name) => SPACE[`../assets/3d/kits/space/${name}.glb`];
@@ -27,6 +28,7 @@ const RESTYLE = {
  */
 export async function placeKit(parent, name, { x = 0, y = 0, z = 0, ry = 0, s = 1, smooth = false } = {}) {
   // smooth: 각진 면(저폴리)을 매끈한 음영으로 — 바위 · 수정이 둥근 장난감처럼 보이게
+  if (isToyRock(name)) { const g = toyRock(name); g.name = 'kit:' + name; g.scale.setScalar(s); g.rotation.y = ry; g.position.set(x, y, z); parent.add(g); return g; }   // 바위 · 운석 · 수정 바위는 바이저봇 재질에 맞춘 장난감 바위(gfx3d/toyrock.js)
   const u = url(name); if (!u) throw new Error('키트 모델 없음: ' + name);
   const { scene } = await instantiate(u);
   const bb = new Box3().setFromObject(scene), c = bb.getCenter(new Vector3());

@@ -243,7 +243,7 @@ export async function createReactorScene(stage) {
     // 열기 → 노심 색 · 흔들림 · 방 빛 · 김 · 표정
     heatShow += (heat - heatShow) * (1 - Math.exp(-dt * 3));
     const h = heatShow; if (h > 0.5) hc.copy(WARM).lerp(HOT, (h - 0.5) * 2); else hc.copy(CALM).lerp(WARM, h * 2);
-    U.coreMat.color.copy(hc).multiplyScalar(1.05 + h * 0.45); U.coreGlow.material.color.copy(hc); U.coreGlow.material.opacity = 0.22 + h * 0.22;
+    U.coreMat.color.copy(hc).multiplyScalar(0.95 + h * 0.35); U.coreGlow.material.color.copy(hc); U.coreGlow.material.opacity = 0.16 + h * 0.18;
     const wob = 1 + Math.sin(t * (4 + h * 10)) * 0.03 * (0.3 + h) + Math.sin(t * 17) * 0.02 * h; U.core.scale.setScalar(wob); U.core.rotation.y += dt * (0.6 + h * 3); U.core.rotation.x += dt * 0.3;
     coreLight.color.copy(hc); coreLight.intensity = 4 + h * 3 + Math.sin(t * 9) * h * 1.0;
     R.position.x = R_AT.x + (h > 0.7 ? Math.sin(t * 47) * 0.012 * (h - 0.7) * 3 : 0);   // 들끓으면 덜덜

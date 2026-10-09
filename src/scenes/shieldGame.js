@@ -241,11 +241,11 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
     if (done || S.phase !== 'count') return;
     S.phase = 'play'; const now = performance.now(); S.spawnAt = now + 400; S.nextAt = now + 300;
   }
-  /** 1단계: 바이저봇이 그쪽으로 몸을 틀고 방패를 쑥 내민다(금빛이면 빙글) */
+  /** 1단계: 바이저봇이 그쪽을 보며 방패를 쑥 내민다(금빛이면 빙글) */
   let blockT = 0;
   function block(i, golden) {
-    const at = scn.genTop(i); actor.face(at).pose('cover').look(at); actor.hop(golden ? 3.2 : 2.2); if (golden) actor.spin();
-    clearTimeout(blockT); blockT = later(420, () => { actor.pose(null).face(camPos); later(380, () => { if (S.mode === 1) actor.face(null); }); });
+    const at = scn.genTop(i); actor.pose('cover').look(at); actor.hop(golden ? 3.2 : 2.2); if (golden) actor.spin();   // 몸은 화면을 본 채로 — 방패 면이 보이게
+    clearTimeout(blockT); blockT = later(420, () => actor.pose(null));
   }
   function progressGoal() { const game = GAMES[S.mode - 1]; hud.goal(S.mode === 1 ? `막은 점수 ${S.score} / ${game.target}` : `명령 ${S.score}점 / 목표 ${game.target} · 남은 ${game.count - S.idx}`, Math.min(1, S.score / game.target)); }
 

@@ -140,7 +140,7 @@ export async function createShieldScene(stage) {
   // 1단계: 바이저봇 왼손의 작은 방패(바이저봇 재질 — 흰 원판 · 금 테 · LED 무늬). 막을 때 두 팔을 앞으로 내밀면(cover 자세) 방패 면이 정면을 보게 미리 계산
   const buckler = new THREE.Group(); {
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.75, 0, 0.25)), dir = new V(0, 0, 1).applyQuaternion(q.invert());
-    buckler.position.set(0.02, -0.2, 0.06); buckler.quaternion.setFromUnitVectors(new V(0, 1, 0), dir);
+    buckler.position.set(0.02, -0.2, 0.06); buckler.quaternion.setFromUnitVectors(new V(0, 1, 0), dir); buckler.scale.setScalar(1.3);
     const disc = mesh(roundedCylinder(0.17, 0.05, 0.02, 0.02, 32), TOY.shell()); disc.position.y = -0.025; buckler.add(disc);
     const rim = mesh(new THREE.TorusGeometry(0.165, 0.022, 8, 36), TOY.gold()); rim.rotation.x = Math.PI / 2; rim.position.y = 0.025; buckler.add(rim);
     for (const r of [0, Math.PI / 2]) { const bar = mesh(roundedBox(0.2, 0.012, 0.035, 0.01, 1), LED, { cast: false }); bar.position.y = 0.03; bar.rotation.y = r; buckler.add(bar); }

@@ -170,7 +170,7 @@ export async function createLaunchScene(stage) {
   function setFlood(h) { floodHue = h; }
   /** 로켓 얼굴: 색(1막 = 원하는 색) · 표정 */
   function setFace(h, m = faceMood) { faceHue = h; faceMood = m; }
-  function show(m) { mode = m; floods.forEach((f) => { f.userData.light.intensity = m === 'color' || m === 'all' ? 15 : 0; }); notes.forEach((n) => { n.visible = m === 'melody' || m === 'all'; }); ringPath.visible = zone.visible = dot.visible = num.visible = m === 'cue' || m === 'all'; }
+  function show(m) { mode = m; floods.forEach((f) => { f.userData.light.intensity = m === 'color' || m === 'all' ? 10 : 0; }); notes.forEach((n) => { n.visible = m === 'melody' || m === 'all'; }); ringPath.visible = zone.visible = dot.visible = num.visible = m === 'cue' || m === 'all'; }
   function setChecks(n) { T.checks.forEach((m, k) => m.color.setHex(k < n ? 0x5ff0a0 : 0x40465e).multiplyScalar(k < n ? 1.5 : 1)); }
   function check(i) { setChecks(i + 1); burst(tower.localToWorld(new V(-0.2, 1.2 + i * 0.47, 0.6)), 0x5ff0a0, 18); }
   function noteOn(i) { const n = notes[i]; if (!n) return; n.userData.k = 1; antFlash = 1; const tip = rocket.getObjectByName('AntTip'); if (tip) tip.material.color.setHex(NOTE_HEX[i]).multiplyScalar(1.6); burst(n.position.clone().setY(0.45), NOTE_HEX[i], 10); }
@@ -196,7 +196,7 @@ export async function createLaunchScene(stage) {
   function update(dt) {
     t += dt; bot.update(dt);
     // 1막 조명탑 색
-    hueColor(floodHue, lc); floods.forEach((f) => { f.userData.lensMat.color.copy(lc).multiplyScalar(1.4); f.userData.halo.material.color.copy(lc); f.userData.light.color.copy(lc); f.userData.halo.material.opacity = mode === 'color' ? 0.8 : 0.15; });
+    hueColor(floodHue, lc); floods.forEach((f) => { f.userData.lensMat.color.copy(lc).multiplyScalar(1.15); f.userData.halo.material.color.copy(lc); f.userData.light.color.copy(lc); f.userData.halo.material.opacity = mode === 'color' ? 0.8 : 0.15; });
     // 로켓 얼굴
     const fcss = mode === 'color' ? `#${hueColor(faceHue).getHexString(THREE.SRGBColorSpace)}` : '#8ef7ed'; RK.face.draw(faceMood, fcss);
     // 2막 음표등은 켜졌다가 서서히
