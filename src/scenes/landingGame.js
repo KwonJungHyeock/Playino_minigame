@@ -258,6 +258,15 @@ export async function showLandingGame(root, { onExit, stage: startStage = 1 } = 
           acts: [{ code: 'delay(500)', label: '깜빡', color: '#1fb85a', line: [0, 1, 2], run: () => blink(0, 500) }, { code: 'delay(1000)', label: '깜빡', color: '#1fb85a', line: [0, 1, 2], run: () => blink(0, 1000) }],
           after: '보급선을 내릴 때도 딱 맞는 박자로 켜야 해!' },
       ],
+      fix: {
+        title: '착륙 신호 코드 고치기', goal: '노랑 유도등(3번 핀)을 1초 켰다 끄기',
+        say: '보급선에 보내는 신호 코드가 고장 났어! 빈칸을 채워서 노랑 유도등이 1초 동안 켜지게 고쳐 줘.',
+        code: ['digitalWrite(____, HIGH);  // 켜기', 'delay(____);              // 기다리기(1000 = 1초)', 'digitalWrite(3, LOW);      // 끄기'],
+        blanks: [{ label: '핀 번호', options: ['2', '3', '4'], answer: 1 }, { label: '기다릴 시간', options: ['100', '1000', '10000'], answer: 1 }],
+        run: (v) => { lampAll(false); blink(+v[0] - 2, Math.min(+v[1], 2500)); },
+        hint: (v) => (v[0] !== '3' ? `${v[0]}번 핀은 ${['초록', '노랑', '빨강'][+v[0] - 2]} 유도등이야. 노랑은 몇 번 핀이었지?` : v[1] === '100' ? '100은 0.1초 — 너무 짧아서 신호가 안 보여. 1초는 몇이었지?' : '10000은 10초나 돼! 1초는 1000이야.'),
+        good: '노랑이 딱 1초 켜졌다 꺼졌어. 보급선이 신호를 받았어!',
+      },
       quiz: [
         { q: '노랑 유도등(3번 핀)을 켜는 코드는?', options: [{ code: 'digitalWrite(3, LOW);' }, { code: 'digitalWrite(3, HIGH);' }, { code: 'digitalWrite(2, HIGH);' }], answer: 1,
           hint: 'HIGH가 켜짐, 노랑은 3번 핀이었지!', good: '정답! 노랑 유도등이 켜졌어.', onRight: () => { lampAll(false); blink(1, 1400); } },

@@ -34,10 +34,19 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
     .cop-hint{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 14px;border:3px solid #fff;border-radius:12px;background:linear-gradient(180deg,#26338a,#172064);box-shadow:4px 5px 0 #0d1238;color:#fff;font:700 13px var(--f-ui);pointer-events:none;opacity:0;transition:opacity .4s}
     .cop-hint.on{opacity:1}.cop-hint .hud-key{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 6px;border-radius:999px;background:#fff;color:#0d1238;font:800 11px var(--f-ui);border:2px solid #0d1238}
     .cop-fade{position:absolute;inset:0;z-index:8;pointer-events:none;background:radial-gradient(circle,rgba(26,10,20,0),rgba(26,10,20,.95));opacity:0;transition:opacity .22s}.cop-fade.on{opacity:1}
+    /* 코드 판: 지금 구간 장치의 조건문 — 값이 참이면 초록, 거짓이면 빨강으로 실시간 */
+    .cop-code{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:calc(max(16px,env(safe-area-inset-bottom)) + 40px);z-index:6;width:min(430px,calc(100% - 32px));padding:10px 14px 12px;border:3px solid #fff;border-radius:14px;background:linear-gradient(180deg,#1d2766,#0b1033);box-shadow:4px 5px 0 #0d1238;pointer-events:none;opacity:0;transition:opacity .3s}
+    .cop-code.on{opacity:1}
+    .cop-code h4{margin:0 0 6px;font:400 14px/1.2 var(--f-kart,"Jua");color:#ffd21f}
+    .cop-code pre{margin:0;font:600 15px/1.6 "JetBrains Mono",ui-monospace,monospace;color:#e9eeff;white-space:pre-wrap}
+    .cop-code .t{color:#062a14;background:#5ff0a0;border-radius:5px;padding:0 4px}.cop-code .f{color:#3a0a00;background:#ff8a7a;border-radius:5px;padding:0 4px}.cop-code .c{color:#ffe9a8}
+    .cop-code p{margin:6px 0 0;font:700 13px/1.4 var(--f-ui);color:#c9d3ff}
+    @media (max-width:640px){.cop-code{bottom:auto;top:110px;width:calc(100% - 32px)}.cop-code pre{font-size:13px}}
     .cop-mode{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;padding:6px 12px;border-radius:999px;background:rgba(13,18,56,.7);color:#c9d3ff;font:700 12px var(--f-ui);pointer-events:none}</style>
     <section class="cop" aria-label="모둠 협동 코스"><div class="cop-stage" id="cop-stage"></div>
       <div class="cop-top" id="cop-top"><b id="cop-time">0:00.0</b><div class="cop-team" id="cop-team"></div></div>
       <div class="cop-hint" id="cop-hint"><span class="hud-key">WASD</span>이동 · <span class="hud-key">스페이스</span>점프 · <span class="hud-key">Shift</span>다이브 · <span class="hud-key">R</span>체크포인트로 · <span class="hud-key">Esc</span>메뉴</div>
+      <div class="cop-code" id="cop-code"><h4 id="cop-code-h"></h4><pre id="cop-code-pre"></pre><p id="cop-code-p"></p></div>
       <div class="cop-fade" id="cop-fade"></div>
       <div class="cop-mode">${room.mode === 'server' ? `방 ${room.code} · 교실 서버` : `방 ${room.code} · 같은 컴퓨터 창끼리`}</div></section>`;
   const el = root.querySelector('.cop'), host = root.querySelector('#cop-stage'), $ = (s) => root.querySelector(s);
@@ -208,6 +217,43 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
     return out;
   }
 
+  // ── 코드 판: 장치마다 조건문 한 줄 + 지금 값(참 · 거짓). 몸으로 하는 일이 곧 조건문이라는 걸 보이게 ──
+  const codeEl = $('#cop-code'), codeH = $('#cop-code-h'), codePre = $('#cop-code-pre'), codeP = $('#cop-code-p');
+  const V = (ok, txt) => `<span class="${ok ? 't' : 'f'}">${txt}</span>`, C = (t) => `<span class="c">${t}</span>`;
+  let codeAcc = 0, codeKey = '';
+  function codeBoard(dt) {
+    codeAcc += dt; if (codeAcc < 0.2) return; codeAcc = 0;
+    const D = crs.D, z = me.body.position.z, N = Math.max(1, order.length);
+    let h = '', pre = '', p = '';
+    if (z > -14.4 && z < -0.6) {
+      const need = Math.max(1, D.need), on = Math.min(D.on1, need);
+      h = '① 동시 발판 문 — && (그리고)';
+      pre = `if (${Array.from({ length: need }, (_, i) => V(i < on, `발판${i + 1}`)).join(' && ')}) {\n  문.열기();   ${C('// 모두 참이어야 열려요')}\n}`;
+      p = D.door ? '모두 참! → 문이 열렸어요. 지금 달려요!' : `${on}/${need} 참 — && 는 하나라도 거짓이면 거짓`;
+    } else if (z > -29.6 && z <= -14.4) {
+      h = '② 지키는 다리 — || (또는)';
+      pre = `if (${V(D.brA, 'A발판')} || ${V(D.brB, 'B발판')}) {\n  다리.펴기();   ${C('// 하나만 참이어도 돼요')}\n}`;
+      p = D.brA || D.brB ? '하나가 참! → 다리가 나와요' : '둘 다 거짓 → 다리가 들어가요. 누가 발판을 지켜 줘!';
+    } else if (z > -47.6 && z <= -29.6) {
+      const heavy = D.far - D.near > 0, down = heavy && !D.winch;
+      h = '③ 시소 — > (크다) 비교 · ! (아니다)';
+      pre = `int 무게차 = 먼쪽 - 가까운쪽;   ${C(`// ${D.far} - ${D.near} = ${D.far - D.near}`)}\nif (${V(heavy, '무게차 > 0')} && ${V(!D.winch, '!윈치')}) {\n  먼쪽끝.가라앉기();   ${C(down ? '// 참 → 가라앉아요' : '// 거짓 → 괜찮아요')}\n}`;
+      p = D.winch ? '윈치가 켜졌어요 → 먼 쪽 끝이 올라와요' : down ? '먼 쪽이 무거워요 → 끝이 가라앉아요. 무게를 나누거나 윈치를!' : '균형! 지금 건너요';
+    } else if (z > -66.4 && z <= -47.6 && !D.boxIn) {
+      const need = D.pushNeed || Math.min(2, N);
+      h = '④ 컨테이너 — >= (크거나 같다)';
+      pre = `if (${V(D.push >= need, `미는사람 >= ${need}`)}) {   ${C(`// 지금 ${D.push}명`)}\n  상자.밀기();\n}`;
+      p = D.push >= need ? `${D.push}명이 밀어요 → 움직여요!` : `${need}명 이상이 같이 앞으로 밀어야 해요`;
+    } else if (z <= -60 && !D.gate) {
+      h = '⑤ 팀 문 — == (같다)';
+      pre = `if (${V(D.gateIn >= N, `모인사람 == ${N}`)}) {   ${C(`// 지금 ${D.gateIn}명`)}\n  팀문.열기();\n}`;
+      p = D.gateIn >= N ? '모두 모였어요!' : `아직 ${N - D.gateIn}명이 안 왔어요 — 기다려 줘요`;
+    }
+    const key = h + pre + p; if (key === codeKey) return; codeKey = key;
+    codeEl.classList.toggle('on', !!h && S.phase === 'play' && !S.ended);
+    if (h) { codeH.textContent = h; codePre.innerHTML = pre; codeP.textContent = p; }
+  }
+
   // ── 팀 칩 ──
   function renderTeam() {
     teamEl.innerHTML = order.map((id) => { const p = room.players.get(id); return p ? `<span class="cop-chip${doneSet.has(id) ? ' done' : ''}${id === room.you ? ' me' : ''}" style="--c:${colorOf(id)}"><i></i>${p.name.replace(/[<>&"]/g, '')}${room.host === id ? ' 👑' : ''}${doneSet.has(id) ? ' ✓' : ''}</span>` : ''; }).join('');
@@ -262,6 +308,27 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
     sfx.perfect?.();
     for (let i = 0; i < 5; i++) later(i * 240, () => confetti.burst(60, tmp.set((Math.random() - 0.5) * 6, crs.goalY + 4, crs.GOAL_Z - 4), { up: 3, spread: 4, life: 2.8 }));
     await hud.banner('모둠 협동 성공!', '도착', { ms: 1900 }); if (done) return;
+    // 몸으로 배운 조건문 돌아보기(각자 화면에서 3문제) — 장치가 곧 조건문이었다는 걸 정리
+    {
+      const { runLesson } = await import('../gfx3d/lesson.js'); if (done) return;
+      topEl.classList.remove('on'); codeEl.classList.remove('on');
+      const ref = runLesson(el, {
+        sfx: { click: () => sfx.click?.(), perfect: () => sfx.perfect?.(), no: () => sfx.no?.() },
+        flow: [['play', '🎮 협동 코스'], ['quiz', '❓ 조건문 퀴즈'], ['rep', '📒 정리']], flowEnd: 'rep', doneLabel: '결과 보기',
+        outro: '방금 우리 몸으로 조건문을 실행한 거야. 코드도 이렇게 생각해!',
+        summary: ['&& (그리고) — 모두 참이어야 참. 동시 발판 문', '|| (또는) — 하나만 참이어도 참. 지키는 다리', '> · ! — 크다 · 아니다. 시소와 윈치', '>= (크거나 같다) — 2명 이상. 컨테이너', '== (같다) — 모두 모였는지. 팀 문'],
+        cards: [],
+        quiz: [
+          { q: '동시 발판 문은 언제 열렸을까?', code: ['if (발판1 ____ 발판2 ____ 발판3) {', '  문.열기();', '}'], options: [{ code: '&&  (그리고)' }, { code: '||  (또는)' }, { code: '==  (같다)' }], answer: 0,
+            hint: '한 명만 밟았을 땐 안 열렸지? 모두 밟아야 열렸어.', good: '맞아! && 는 모두 참일 때만 참이야.' },
+          { q: '지키는 다리는 A나 B 중 하나만 밟아도 나왔어. 빈칸은?', code: ['if (A발판 ____ B발판) {', '  다리.펴기();', '}'], options: [{ code: '&&' }, { code: '||' }, { code: '!' }], answer: 1,
+            hint: '둘 다 밟지 않아도 됐지? "또는"을 뜻하는 기호야.', good: '맞아! || 는 하나만 참이어도 참이야.' },
+          { q: '컨테이너는 2명이 밀어도, 3명이 밀어도 움직였어. 조건은?', code: ['if (미는사람 ____ 2) {', '  상자.밀기();', '}'], options: [{ code: '> 2   (2보다 크다)' }, { code: '>= 2  (2보다 크거나 같다)' }, { code: '== 1  (1과 같다)' }], answer: 1,
+            hint: '> 2 면 딱 2명일 땐 안 움직여. 2명도 되려면?', good: '맞아! >= 는 "크거나 같다" — 2명부터 참이야.' },
+        ],
+      });
+      await ref.done; if (done) return;
+    }
     let sub = `${n}명이 함께 ${fmt(time)} 만에 행성 훈련장을 통과!`;
     if (n >= 2) {
       const r = bonus.record('coop', { time, falls });
@@ -322,6 +389,7 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
     S.poseAcc += dt; if (S.poseAcc >= 1 / POSE_HZ) { S.poseAcc = 0; sendPose(); }
     if (room.isHost()) { S.hostAcc += dt; if (S.hostAcc >= 1 / HOST_HZ) { S.hostAcc = 0; crs.D.done = [...doneSet]; send('h', { ...crs.D }); hostCheckFinish(); } }
     if (S.phase === 'play' || S.phase === 'count') { $('#cop-time').textContent = fmt(S.run); }
+    codeBoard(dt);
     camFrame(dt);
     stage.renderer.getDrawingBufferSize(bufSize); dust.setScale(bufSize.y); sparks.setScale(bufSize.y);
     dust.update(dt); sparks.update(dt); confetti.update(dt);

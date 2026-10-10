@@ -256,6 +256,15 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
           acts: [{ code: 'v < 400', label: '가리기', color: '#5d6bd8', line: [0, 1], run: () => force(0) }, { code: 'else', label: '비추기', color: '#ffd24a', line: [2, 3], run: () => force(1) }],
           after: '이번 게임도 이 기준으로 어둠과 밝음을 가려 내!' },
       ],
+      fix: {
+        title: '어둠 감지 코드 고치기', goal: '센서를 가리면(어두우면) 충전 멈추기',
+        say: '충전소가 어두워져도 계속 충전하려고 해! 센서 핀과 비교 기호를 고쳐 줘.',
+        code: ['int v = analogRead(____);   // 조도 센서 읽기', 'if (v ____ 400) {          // 어두우면', '  stopCharge();             // 충전 멈춤', '}'],
+        blanks: [{ label: '센서 핀', options: ['A0', 'D5', '13'], answer: 0 }, { label: '비교 기호', options: ['<', '>', '=='], answer: 0 }],
+        run: () => { force(0); later(1200, () => force(1)); },
+        hint: (v) => (v[0] !== 'A0' ? '빛의 양처럼 0~1023 값은 아날로그 핀(A0)으로 읽어!' : v[1] === '>' ? '가리면 숫자가 작아져. "작으면 어둡다"는 어떤 기호?' : '== 는 딱 400일 때만이야. 400보다 작으면 모두 어둡지!'),
+        good: 'v < 400 이면 어둡다! 가리면 충전이 멈추고, 비추면 다시 충전돼.',
+      },
       quiz: [
         { q: '조도 센서를 손으로 가리면 analogRead 값은?', options: [{ label: '커진다' }, { label: '작아진다' }, { label: '그대로다' }], answer: 1,
           hint: '빛이 적을수록 숫자가 어떻게 됐지?', good: '정답! 가리면 값이 작아져.', onRight: () => force(0) },

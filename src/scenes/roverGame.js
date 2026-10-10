@@ -216,6 +216,15 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
           acts: [{ code: '약하게', label: '30', color: '#5d6bd8', line: 0, run: () => turn(0.12) }, { code: '알맞게', label: '127', color: '#5ff0a0', line: 0, run: () => turn(0.5) }, { code: '세게', label: '230', color: '#ff8a7a', line: 0, run: () => turn(0.9) }],
           after: '로버는 무거워서 힘이 조금 늦게 붙어. 미리 돌리는 게 요령!' },
       ],
+      fix: {
+        title: '추력 변환 코드 고치기', goal: '다이얼 0~1023 → 모터 0~255로 바꾸기',
+        say: '로버 모터가 다이얼 값을 엉뚱하게 받아서 고장 났어! map 의 범위를 고쳐 줘.',
+        code: ['int v = analogRead(A0);                  // 다이얼 0~1023', 'int speed = map(v, 0, ____, 0, ____);    // 다이얼 범위 → 모터 범위', 'analogWrite(MOTOR, speed);               // 모터 0~255'],
+        blanks: [{ label: '다이얼 최대', options: ['255', '1023', '100'], answer: 1 }, { label: '모터 최대', options: ['255', '1023', '100'], answer: 0 }],
+        run: (v, ok) => { if (ok) { turn(0); later(450, () => turn(0.5)); later(950, () => turn(1)); later(1600, () => turn(0.5)); } else turn(v[1] === '1023' ? 1 : 0.15); },
+        hint: (v) => (v[0] !== '1023' ? 'analogRead 는 0~1023 이었지? 다이얼 쪽 끝은 1023!' : '모터(analogWrite)는 0~255 로 힘을 받아.'),
+        good: 'map(v, 0, 1023, 0, 255) — 다이얼을 끝까지 돌리면 모터도 최대 255!',
+      },
       quiz: [
         { q: '다이얼을 오른쪽 끝까지 돌리면 analogRead 값은?', options: [{ label: '255' }, { label: '1023' }, { label: '0' }], answer: 1,
           hint: '센서 값은 LED 보다 잘게 — 0 부터 몇까지였지?', good: '정답! 1023 이야.', onRight: () => turn(1) },

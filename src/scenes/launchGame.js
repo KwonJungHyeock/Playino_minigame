@@ -254,6 +254,15 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
           acts: [{ code: 'HIGH', label: '눌러 보기', color: '#ff8a7a', line: [0, 1], run: () => { scn.press(); pressPose(); sfx.ok(); } }],
           after: '빛 점이 금색 구간에 올 때 누르면 숫자가 줄어. 0 이 되면 발사!' },
       ],
+      fix: {
+        title: '교신 멜로디 코드 고치기', goal: '배열에 담긴 음 3개를 차례로 모두 치기',
+        say: '교신 멜로디가 이상하게 나가! for 반복 횟수와 음 길이를 고쳐 줘.',
+        code: ['int song[] = {262, 330, 392};      // 도 · 미 · 솔', 'for (int i = 0; i < ____; i++) {   // 몇 번 반복?', '  tone(5, song[i]); delay(____);   // 음 길이(ms)', '}'],
+        blanks: [{ label: '반복 횟수', options: ['1', '3', '10'], answer: 1 }, { label: '음 길이', options: ['5', '400', '5000'], answer: 1 }],
+        run: (v) => { const n = Math.min(3, +v[0]), gap = Math.min(900, Math.max(140, +v[1])); for (let i = 0; i < n; i++) later(i * gap, () => playNote([0, 2, 4][i])); },
+        hint: (v) => (v[0] === '1' ? 'i < 1 이면 한 번만 돌아. 음이 3개니까?' : v[0] === '10' ? '배열엔 음이 3개뿐이야. 10번 돌면 없는 음을 꺼내!' : v[1] === '5' ? '5는 0.005초 — 너무 짧아서 안 들려.' : '5000은 5초! 멜로디가 너무 느려.'),
+        good: 'for 로 3번, 0.4초씩 — 도 미 솔! 관제탑과 교신 성공.',
+      },
       quiz: [
         { q: 'tone(5, 440) 에서 5는?', code: ['tone(5, 440);'], options: [{ label: '소리 높이' }, { label: '부저 핀 번호' }, { label: '소리 길이' }], answer: 1,
           hint: '첫 번째 숫자는 어디에 꽂았는지였지.', good: '정답! 5번 핀의 부저야.', onRight: () => playNote(5) },

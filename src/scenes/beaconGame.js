@@ -230,6 +230,15 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
           acts: [{ code: 'delay(150)', label: '짧게', color: LANE_CSS[2], line: [0, 1, 2], run: () => play(G4, 150) }, { code: 'delay(600)', label: '길게', color: LANE_CSS[2], line: [0, 1, 2], run: () => play(G4, 600) }],
           after: '음 높이 + 길이 = 멜로디! 이걸로 신호를 보낼 거야.' },
       ],
+      fix: {
+        title: '구조 신호 멜로디 고치기', goal: '부저(5번 핀)로 도 → 솔 신호 보내기',
+        say: '구조 신호가 이상한 소리로 나가고 있어! 부저 핀과 솔의 높이를 고쳐 줘.',
+        code: ['tone(____, 262);   // 도', 'delay(300);        // 0.3초', 'tone(5, ____);     // 솔', 'delay(300);', 'noTone(5);         // 소리 끄기'],
+        blanks: [{ label: '부저 핀', options: ['3', '5', '13'], answer: 1 }, { label: '솔 주파수(Hz)', options: ['131', '392', '2000'], answer: 1 }],
+        run: (v) => { if (v[0] !== '5') return; play(C4, 300); later(380, () => play(+v[1], 300)); },
+        hint: (v) => (v[0] !== '5' ? `${v[0]}번 핀엔 부저가 없어서 소리가 안 나! 부저는 몇 번에 꽂았지?` : v[1] === '131' ? '131은 도보다 낮은 소리야. 솔은 더 높아!' : '2000은 삐— 너무 높아. 솔은 392Hz!'),
+        good: '도 → 솔! 구조 신호가 위성까지 닿았어.',
+      },
       quiz: [
         { q: '더 높은 소리를 내는 코드는?', options: [{ code: 'tone(5, 262);' }, { code: 'tone(5, 523);' }, { code: 'noTone(5);' }], answer: 1,
           hint: '주파수 숫자가 클수록 높은 소리였지!', good: '정답! 523 이 더 높아.', onRight: () => play(C5, 500) },

@@ -220,6 +220,15 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
           acts: [{ code: '맞춤', label: '띠 안으로', color: '#5ff0a0', line: [0, 1], run: () => turn(0.68) }, { code: '빗나감', label: '띠 밖으로', color: '#ff8a7a', line: 0, run: () => turn(0.3) }],
           after: '불이 계속 켜진 채로 잠깐 버티면 원자로가 진정돼!' },
       ],
+      fix: {
+        title: '안정 신호 코드 고치기', goal: '목표와 아주 가까우면(차이 40 미만) 경고등 계속 켜기',
+        say: '원자로가 안정됐는데도 경고등이 계속 깜빡여! 안정 조건을 고쳐 줘.',
+        code: ['int d = abs(v - goal);         // 목표와의 거리', 'if (d < ____) {               // 아주 가까우면', '  digitalWrite(____, HIGH);   // 계속 켜짐 = 안정', '}'],
+        blanks: [{ label: '안정 기준', options: ['40', '400', '1023'], answer: 0 }, { label: '경고등 핀', options: ['5', '13', 'A0'], answer: 1 }],
+        run: (v, ok) => turn(ok ? 0.68 : 0.3),
+        hint: (v) => (v[0] !== '40' ? `${v[0]} 이면 멀리 있어도 "안정"이 돼 버려. 아주 가까울 때만이니까 작은 수!` : '경고등은 보드 내장 LED, 13번 핀이야.'),
+        good: 'd < 40 이면 계속 켜기 — 깜빡임이 멈추면 원자로가 진정된 거야!',
+      },
       quiz: [
         { q: '바늘이 목표에 가까워지면 경고등은?', options: [{ label: '더 천천히 깜빡인다' }, { label: '더 빨리 깜빡인다' }, { label: '바로 꺼진다' }], answer: 1,
           hint: '거리가 짧으면 delay 도 짧았지.', good: '정답! 가까울수록 빨라.', onRight: () => turn(0.58) },

@@ -263,6 +263,15 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
           acts: [{ code: 'R+G', label: '노랑', color: '#ffd84a', line: 0, run: () => show([255, 255, 0]) }, { code: 'R+B', label: '자홍', color: '#ff5ad0', line: 1, run: () => show([255, 0, 255]) }, { code: 'R+G+B', label: '흰색', color: '#ffffff', line: 2, run: () => show([255, 255, 255]) }],
           after: '물감은 섞을수록 어두워지지만 빛은 밝아져 — 이게 빛의 혼합이야.' },
       ],
+      fix: {
+        title: '노랑 셀 빛 섞기', goal: '노랑 셀을 가장 밝은 노랑 빛으로 채우기',
+        say: '노랑 셀에 빛이 안 들어가! 빨강 · 초록 · 파랑 숫자를 골라 가장 밝은 노랑을 만들어 줘.',
+        code: ['led.setPixelColor(0, ____, ____, ____);  // 빨강, 초록, 파랑', 'led.show();                              // 켜기'],
+        blanks: [{ label: '빨강', options: ['0', '128', '255'], answer: 2 }, { label: '초록', options: ['0', '128', '255'], answer: 2 }, { label: '파랑', options: ['0', '128', '255'], answer: 0 }],
+        run: (v) => show(v.map(Number)),
+        hint: (v) => (v[2] !== '0' ? '파랑까지 섞으면 흰빛 쪽으로 가. 노랑은 빨강 + 초록만!' : v[0] === '0' || v[1] === '0' ? '노랑은 빨강과 초록 두 빛을 섞어야 해.' : '조금 어두워. 가장 밝게는 255!'),
+        good: '빨강 255 + 초록 255 = 가장 밝은 노랑! 셀이 가득 찼어.',
+      },
       quiz: [
         { q: '빨강 빛과 초록 빛을 함께 켜면 무슨 색?', options: [{ label: '검정' }, { label: '노랑' }, { label: '갈색' }], answer: 1,
           hint: '빛은 섞을수록 밝아졌지! 세 번째 카드를 떠올려 봐.', good: '정답! 빨강 + 초록 = 노랑 빛.', onRight: () => show([255, 255, 0]) },

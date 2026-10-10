@@ -210,6 +210,15 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
           acts: [{ code: '맞춤', label: '초록 비추기', color: hueCss(120), line: [0, 1], run: () => { cover(120 / HUE_MAX); scn.monster(0, 0.9); } }, { code: '빗나감', label: '빨강 비추기', color: hueCss(0), line: 0, run: () => { cover(0); scn.monster(0, 0); } }],
           after: '고리 색과 등불 색이 같아지면 몬스터가 바들바들 떨어!' },
       ],
+      fix: {
+        title: '빛 마법 조건 고치기', goal: '등불 색이 몬스터 약점 색과 가까울 때만 빛 마법 발사',
+        say: '빛 마법이 아무 때나 나가서 몬스터가 안 쓰러져! 비교 코드를 고쳐 줘.',
+        code: ['int d = abs(hue - ____);   // 약점 색과의 차이', 'if (d ____ 20) {          // 차이가 작으면', '  lightMagic();           // 빛 마법!', '}'],
+        blanks: [{ label: '비교할 색', options: ['weak', 'hue', '320'], answer: 0 }, { label: '비교 기호', options: ['<', '>'], answer: 0 }],
+        run: (v, ok) => { cover(120 / HUE_MAX); scn.monster(0, ok ? 0.9 : 0); },
+        hint: (v) => (v[0] === 'hue' ? 'hue - hue 는 늘 0이야! 몬스터의 약점 색(weak)과 비교해야 해.' : v[0] === '320' ? '320은 늘 보라색이야. 몬스터마다 다른 약점(weak)을 써야 해.' : '차이가 "작을 때" 맞은 거야. 작다는 기호는?'),
+        good: 'abs(hue - weak) < 20 — 색이 가까우면 빛 마법! 몬스터가 바들바들.',
+      },
       quiz: [
         { q: '센서 프로그램의 순서로 맞는 것은?', options: [{ label: '입력 → 처리 → 출력' }, { label: '출력 → 입력 → 처리' }, { label: '처리 → 출력 → 입력' }], answer: 0,
           hint: '먼저 읽어야 바꿀 수 있고, 바꿔야 켤 수 있어.', good: '정답! 읽고 → 바꾸고 → 켜기.', onRight: () => cover(0.5) },

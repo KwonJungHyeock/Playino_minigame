@@ -201,6 +201,15 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
           acts: [{ code: 'D4', label: '왼쪽', color: SIDE_CSS[0], line: 0, run: () => demo(0, true) }, { code: 'D5', label: '오른쪽', color: '#c9d0ea', line: 1, run: () => demo(1, true) }],
           after: '핀 번호가 버튼의 주소야 — 유도등 때 배운 것과 같지?' },
       ],
+      fix: {
+        title: '방어막 버튼 코드 고치기', goal: '오른쪽 버튼(D5)을 누르면 오른쪽 방어막 켜기',
+        say: '오른쪽 방어막이 버튼을 눌러도 안 켜져! 읽는 핀과 조건을 고쳐 줘.',
+        code: ['if (digitalRead(____) == ____) {   // 버튼 읽기', '  shieldOn(RIGHT);                  // 오른쪽 방어막', '}'],
+        blanks: [{ label: '오른쪽 버튼 핀', options: ['4', '5', '13'], answer: 1 }, { label: '눌렸을 때 값', options: ['HIGH', 'LOW'], answer: 0 }],
+        run: (v, ok) => { if (ok) demo(1, true); else if (v[0] === '4' && v[1] === 'HIGH') demo(0, true); },
+        hint: (v) => (v[0] === '4' ? '4번은 왼쪽 버튼이야! 오른쪽은 몇 번?' : v[0] === '13' ? '13번은 보드 LED 핀이야. 버튼이 아니지!' : '누르면 HIGH, 떼면 LOW였어.'),
+        good: 'D5 가 HIGH 일 때 오른쪽 방어막! 핀 번호가 버튼의 주소야.',
+      },
       quiz: [
         { q: '버튼을 누르고 있을 때 digitalRead 값은?', options: [{ label: 'LOW' }, { label: 'HIGH' }, { label: '1023' }], answer: 1,
           hint: '디지털은 두 가지뿐 — 눌림은 켜짐 쪽이야.', good: '정답! 누르면 HIGH.', onRight: () => demo(0, true) },

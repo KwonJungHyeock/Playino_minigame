@@ -189,6 +189,15 @@ export async function showBasicsGame(root, { onExit } = {}) {
           acts: [{ code: 'digitalWrite(13, HIGH);', label: '실행', color: '#2ee86a', line: [0, 1], run: async () => { clearInterval(fadeT); scn.force('led', null); scn.setPin13(true); look(scn.boardAt()); sfx.click(); await scn.beam(scn.boardAt(), scn.partTop('led'), OUT_HEX); if (done) return; scn.force('led', true); sfx.ok(); later(1800, () => { scn.force('led', null); scn.setPin13(false); }); } }],
           after: 'D 핀은 디지털, A 핀은 아날로그. 전원(5V)과 접지(GND)는 꼭 맞게 꽂아!' },
       ],
+      fix: {
+        title: '콘솔 깨우기 코드 고치기', goal: '버튼(2번 핀)을 누르면 13번 LED 켜기',
+        say: '콘솔 버튼을 눌러도 불이 안 들어와! 읽는 함수와 켜는 값을 고쳐 줘.',
+        code: ['if (____(2) == HIGH) {     // 버튼 읽기', '  digitalWrite(13, ____);  // LED 켜기', '}'],
+        blanks: [{ label: '읽는 함수', options: ['digitalRead', 'digitalWrite', 'delay'], answer: 0 }, { label: '켜는 값', options: ['HIGH', 'LOW'], answer: 0 }],
+        run: (v, ok) => { if (ok) chain('button', 'led'); },
+        hint: (v) => (v[0] === 'digitalWrite' ? 'Write 는 "내보내기"야. 버튼 값을 "읽으려면"?' : v[0] === 'delay' ? 'delay 는 기다리기야. 버튼을 읽는 함수는?' : 'LOW 는 꺼짐! 켜려면?'),
+        good: 'digitalRead 로 읽고 HIGH 로 켜기 — 입력 → 처리 → 출력 완성!',
+      },
       quiz: [
         { q: '온도 센서로 온도를 "읽는" 것은?', options: [{ label: '⬅ 입력' }, { label: '출력 ➡' }, { label: '전원' }], answer: 0,
           hint: '센서는 정보를 받는 쪽이었지? 빛이 어느 쪽으로 흘렀는지 떠올려 봐.', good: '정답! 센서로 정보를 받으니 입력이야.', onRight: () => { wake('temp'); scn.beam(scn.partTop('temp'), scn.boardAt(), IN_HEX); } },

@@ -25,7 +25,7 @@ const PLATES1 = [[-4.6, -3.0], [4.6, -3.0], [0, -1.6]], PLATE_A = [3.2, -18.6], 
 const PLATE_R = 0.9;
 
 /** 장치 상태 처음 값(방장이 바꿔 나눠 준다) */
-export const initialDevices = () => ({ T: 0, door: 0, doorT: 0, need: 3, on1: 0, br: 0, brA: 0, brB: 0, saw: 0, winch: 0, box: BOX_Z0, boxIn: 0, gate: 0, gateIn: 0 });
+export const initialDevices = () => ({ T: 0, door: 0, doorT: 0, need: 3, on1: 0, br: 0, brA: 0, brB: 0, saw: 0, winch: 0, far: 0, near: 0, box: BOX_Z0, boxIn: 0, push: 0, pushNeed: 2, gate: 0, gateIn: 0 });
 
 function stripeTex(a, b, n = 8) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 32; const x = c.getContext('2d');
@@ -234,8 +234,8 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
     D.brHold = D.brA || D.brB ? (N === 1 ? 5 : 0.35) : Math.max(0, (D.brHold || 0) - dt);
     D.br = D.brHold > 0 ? Math.min(BR_LEN, D.br + 7 * dt) : Math.max(0, D.br - 5 * dt);
     // ③ 시소: 무게 모멘트(먼 쪽 + / 가까운 쪽 −) + 윈치(끝을 들어 올림)
-    let tau = 0;
-    for (const q of players) { const top = sawTop(q.p.x, q.p.z); if (top != null && Math.abs(q.p.y - top) < 0.6) tau += SAW_Z - q.p.z; }
+    let tau = 0; D.far = 0; D.near = 0;   // far · near: 시소 위 먼 쪽 · 가까운 쪽 사람 수(코드 판에 보여 준다)
+    for (const q of players) { const top = sawTop(q.p.x, q.p.z); if (top != null && Math.abs(q.p.y - top) < 0.6) { tau += SAW_Z - q.p.z; if (SAW_Z - q.p.z > 0) D.far++; else D.near++; } }
     D.winch = onPlate(pW, players) ? 1 : 0; if (D.winch) tau -= 7;
     const kt = N === 1 ? 0.02 : 0.055, target = Math.max(-0.32, Math.min(0.32, kt * tau));
     D.saw += (target - D.saw) * Math.min(1, dt * 2.2);
@@ -243,6 +243,7 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
     if (!D.boxIn) {
       const back = D.box + BOX_LEN / 2, need = Math.min(2, N);
       const pushers = players.filter((q) => q.ground && q.p.z > back - 0.1 && q.p.z < back + 0.9 && Math.abs(q.p.x) < BOX_W / 2 + 0.6 && q.vz < -0.6).length;
+      D.push = pushers; D.pushNeed = need;   // 코드 판: if (미는사람 >= need)
       if (pushers >= need) D.box -= 1.7 * dt;
       if (D.box <= (TRENCH0 + TRENCH1) / 2) { D.box = (TRENCH0 + TRENCH1) / 2; D.boxIn = 1; }
     }
