@@ -38,7 +38,7 @@ const ICON_LOCK = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M13 18v-
  * @param {{onRoom:(id:string, o:{mode:'3d', stage:number})=>void, onExit?:Function, spawnAt?:string, openAll?:boolean, partsPreview?:number}} o
  *   openAll: 잠금 무시(미리보기) · partsPreview: 로켓 부품을 n 개 붙인 모습만 보여 줌(기록은 바꾸지 않음)
  */
-export async function showHub3d(root, { onRoom, onExit, spawnAt, openAll = false, partsPreview = null } = {}) {
+export async function showHub3d(root, { onRoom, onExit, onCoop, spawnAt, openAll = false, partsPreview = null } = {}) {
   const g = await import('../gfx3d/index.js');
   if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
 
@@ -169,7 +169,7 @@ export async function showHub3d(root, { onRoom, onExit, spawnAt, openAll = false
       <div class="hub3-go-t"><b id="hub3-go-b">꾹 눌러 출발</b><span class="h3-kb"><span class="hud-key wide">스페이스</span>꾹 누르기</span><span class="h3-kb h3-pick" id="hub3-pick-k"></span><span class="h3-tp" id="hub3-pick-t"></span></div></div>
     <div class="hub3-hint off" id="hub3-hint"><span class="k"><span class="hud-key">←↑↓→</span> 또는 <span class="hud-key">WASD</span> 걷기 · <span class="hud-key">Shift</span> 달리기 · <span class="hud-key">스페이스</span> 점프 · <span class="hud-key">C</span> 시점 · 문 위에서 <span class="hud-key">스페이스</span> 꾹</span><span class="t">가고 싶은 곳을 누르면 걸어가요</span></div>
     <div class="hub3-iris" id="hub3-iris"></div>
-    <div class="hub3-tools" id="hub3-tools"><button type="button" id="hub3-style" aria-label="에디 꾸미기">🎨 꾸미기 <b id="hub3-star-n"></b></button><button type="button" id="hub3-view" aria-label="시점 바꾸기" title="시점 바꾸기(C)">🎥</button><button type="button" id="hub3-photo" aria-label="기념사진 찍기">📷</button><button type="button" id="hub3-log" aria-label="탐사 일지 · 보고서">📒 일지</button></div>
+    <div class="hub3-tools" id="hub3-tools"><button type="button" id="hub3-style" aria-label="에디 꾸미기">🎨 꾸미기 <b id="hub3-star-n"></b></button><button type="button" id="hub3-view" aria-label="시점 바꾸기" title="시점 바꾸기(C)">🎥</button><button type="button" id="hub3-photo" aria-label="기념사진 찍기">📷</button><button type="button" id="hub3-log" aria-label="탐사 일지 · 보고서">📒 일지</button>${onCoop ? '<button type="button" id="hub3-coop" aria-label="모둠 협동(최대 5명)">👥 모둠</button>' : ''}</div>
     <button class="hub3-skip" id="hub3-skip" type="button" hidden>인트로 건너뛰기 ⏭</button></section>`;
   const el = root.querySelector('.hub3'), host = root.querySelector('#hub3-stage'), hint = root.querySelector('#hub3-hint'), skipBtn = root.querySelector('#hub3-skip');
   const $ = (s) => root.querySelector(s);
@@ -606,6 +606,7 @@ export async function showHub3d(root, { onRoom, onExit, spawnAt, openAll = false
   on($('#hub3-photo'), 'click', openPhoto);
   on($('#hub3-view'), 'click', () => { if (!S.busy) cycleView(); });
   on($('#hub3-log'), 'click', () => journalWin());
+  if (onCoop) on($('#hub3-coop'), 'click', () => { if (S.busy) return; cleanup(); onCoop(); });   // 모둠 협동 입구(scenes/coopLobby.js)
 
   // ── 탐사 일지 · 돌아보기 · 보고서 PDF(app/report.js · reportPdf.js) ──
   async function journalWin({ ending = false } = {}) {

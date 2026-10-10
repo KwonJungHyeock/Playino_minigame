@@ -6,6 +6,7 @@ function save(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {
 
 export const BONUS = {
   booster: { name: '부스터 날개', from: 'challenge', perk: '발사 쇼에서 실수 한 번을 부스터가 막아 줘요' },
+  coop: { name: '모둠 깃발', from: 'coop', perk: '꾸미기에 모둠 깃발 머리 장식이 열렸어요' },   // 모둠 협동 코스(2명 이상)
 };
 
 export const bonus = {

@@ -52,6 +52,16 @@ const BUILD = {
       const gem = mesh(new THREE.IcosahedronGeometry(0.016, 1), new THREE.MeshPhysicalMaterial({ color: [0xe5765a, 0x8ff7ee, 0xbea4ff][k % 3], roughness: 0.1, clearcoat: 1 })); gem.position.set(Math.cos(a) * (R * 1.03 + 0.004), 0, Math.sin(a) * (R * 1.03 + 0.004)); g.add(gem); }
     g.position.y = HR.y - 0.005; g.rotation.x = -0.1; return { g, hideAntenna: true };
   },
+  squad() {   // 모둠 깃발(모둠 협동 코스 팀 보상): 금빛 깃대 + 분홍 삼각기 + 별 다섯(모둠 5명)
+    const g = new THREE.Group(), au = gold();
+    const pole = mesh(new THREE.CylinderGeometry(0.009, 0.011, 0.26, 12), au); pole.position.y = HR.y + 0.12; g.add(pole);
+    const knob = mesh(new THREE.SphereGeometry(0.018, 14, 10), au); knob.position.y = HR.y + 0.26; g.add(knob);
+    const tri = new THREE.Shape(); tri.moveTo(0, 0); tri.lineTo(0.15, -0.045); tri.lineTo(0, -0.09); tri.closePath();
+    const flag = mesh(new THREE.ExtrudeGeometry(tri, { depth: 0.01, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.003, bevelSegments: 1 }), new THREE.MeshPhysicalMaterial({ color: 0xff6fb5, emissive: 0xff3f8e, emissiveIntensity: 0.25, roughness: 0.4, clearcoat: 0.8 }));
+    flag.position.set(0.008, HR.y + 0.245, -0.005); g.add(flag);
+    for (let k = 0; k < 5; k++) { const s = mesh(star(0.011, 0.006), new THREE.MeshPhysicalMaterial({ color: 0xffd25a, emissive: 0xffb02a, emissiveIntensity: 0.6 })); s.position.set(0.03 + (k % 3) * 0.032, HR.y + 0.225 - Math.floor(k / 3) * 0.03, 0.01); g.add(s); }
+    return { g, hideAntenna: true };
+  },
 };
 
 /** 이름 판: 캔버스 글자(Jua) → 명패 앞면 크기의 판 */

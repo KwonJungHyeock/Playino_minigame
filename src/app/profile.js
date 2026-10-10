@@ -13,14 +13,15 @@ export const STYLE = {
   helmet: [{ id: 'white', hex: 0xf8f9f6, need: 0, name: '하양' }, { id: 'mint', hex: 0x8fe3c9, need: 0, name: '민트' }, { id: 'lavender', hex: 0xc4b4f2, need: 0, name: '라벤더' }, { id: 'peach', hex: 0xffbf9c, need: 8, name: '복숭아' }, { id: 'sky', hex: 0xa9d2ff, need: 16, name: '하늘' }, { id: 'night', hex: 0x3a4266, need: 25, name: '밤하늘' }],
   ear: [{ id: 'gold', hex: 0xe8b632, need: 0, name: '금' }, { id: 'silver', hex: 0xc9ced8, need: 0, name: '은' }, { id: 'rose', hex: 0xe8a08a, need: 4, name: '로즈골드' }, { id: 'sky', hex: 0x6fb6ff, need: 10, name: '하늘' }, { id: 'coral', hex: 0xff6f61, need: 18, name: '산호' }],
   // 머리 장식(gfx3d/accessories.js) · 가슴 명패 — 색 대신 그림(icon). req: 'final' = 발사 쇼로 행성 탈출
-  hat: [{ id: 'none', icon: '⭕', need: 0, name: '없음' }, { id: 'beanie', icon: '🧶', need: 3, name: '비니' }, { id: 'goggles', icon: '🥽', need: 7, name: '고글' }, { id: 'star', icon: '⭐', need: 11, name: '별 안테나' }, { id: 'headset', icon: '🎧', need: 16, name: '헤드셋' }, { id: 'crown', icon: '👑', need: 0, req: 'final', name: '왕관' }],
+  hat: [{ id: 'none', icon: '⭕', need: 0, name: '없음' }, { id: 'beanie', icon: '🧶', need: 3, name: '비니' }, { id: 'goggles', icon: '🥽', need: 7, name: '고글' }, { id: 'star', icon: '⭐', need: 11, name: '별 안테나' }, { id: 'headset', icon: '🎧', need: 16, name: '헤드셋' }, { id: 'crown', icon: '👑', need: 0, req: 'final', name: '왕관' }, { id: 'squad', icon: '🚩', need: 0, req: 'coop', name: '모둠 깃발' }],
   plate: [{ id: 'eduino', icon: '🏷️', need: 0, name: 'Eduino' }, { id: 'name', icon: '✏️', need: 0, name: '내 이름' }],
 };
 export const PARTS = [['led', '바이저 빛'], ['cape', '망토'], ['helmet', '헬멧'], ['ear', '귀 장식'], ['hat', '머리 장식'], ['plate', '가슴 명패']];
 const DEF = { led: 'cyan', cape: 'red', helmet: 'white', ear: 'gold', hat: 'none', plate: 'eduino' };
-const reqOk = (o) => !o.req || (() => { try { return JSON.parse(localStorage.getItem('eduino.progress.v1') || '[]').includes(o.req); } catch { return false; } })();
+// req: 'final' = 진도(발사 쇼 졸업) · 'coop' = 모둠 협동 코스를 2명 이상이 함께 깸(bonus.js)
+const reqOk = (o) => !o.req || (() => { try { if (o.req === 'coop') return !!JSON.parse(localStorage.getItem('eduino.v4.bonus.v1') || '{}').coop?.at; return JSON.parse(localStorage.getItem('eduino.progress.v1') || '[]').includes(o.req); } catch { return false; } })();
 /** 잠긴 칸의 안내 글(⭐ 7 · 🚀 탈출) */
-export const lockLabel = (o) => (o.req === 'final' ? '🚀 탈출' : `⭐ ${o.need}`);
+export const lockLabel = (o) => (o.req === 'final' ? '🚀 탈출' : o.req === 'coop' ? '👥 협동' : `⭐ ${o.need}`);
 
 const read = (k) => { try { const v = JSON.parse(localStorage.getItem(k) || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } };
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };

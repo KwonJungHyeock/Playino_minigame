@@ -1,0 +1,11 @@
+{
+  "name": "eduino-room-server",
+  "private": true,
+  "version": "1.0.0",
+  "description": "붉은 행성 대탈출 모둠 협동 방 서버(웹소켓 중계). 게임 계산은 하지 않고 방 안 메시지만 나눠 준다.",
+  "type": "module",
+  "main": "room-server.mjs",
+  "engines": { "node": ">=18" },
+  "scripts": { "start": "node room-server.mjs" },
+  "dependencies": { "ws": "^8.18.0" }
+}

@@ -60,8 +60,10 @@ npm run assets     # 이미지 최적화 (아래 §자산 파이프라인)
     ├── content/curriculum.js  # ★ 챕터/방/진척 집계의 단일 공급원
     ├── serial/             # Web Serial 연결 · 프로토콜 · 웹 플래싱(STK500)
     ├── engine/utils.js     # 등급 · 수치 공용 함수
-    ├── gfx3d/              # 3D 런타임 — 무대 · 재질 · 에디 · HUD · 강의 · 장면(scenes/)
-    └── scenes/             # 화면 — 온보딩 · 타이틀 · 캐릭터 만들기 · 3D 기지(hub3d) · 3D 미션 10개(*Game.js) · no3d(3D 미지원 안내)
+    ├── gfx3d/              # 3D 런타임 — 무대 · 재질 · 에디 · HUD · 강의 · 달리기 몸(runner) · 장면(scenes/)
+    ├── net/                # 모둠 협동 방 — roomCore(방 규칙, 서버와 공유) · room(학생 연결: 교실 서버 / 창끼리)
+    └── scenes/             # 화면 — 온보딩 · 타이틀 · 캐릭터 만들기 · 3D 기지(hub3d) · 3D 미션 10개(*Game.js) · 모둠 협동(coopLobby · coopGame) · no3d
+server/                     # 모둠 협동 방 서버(Node · 웹소켓 중계) — server/README.md(AWS 배포)
 ```
 
 > 게임은 3D 전용이다(예전 2D 미니게임 · 2D 허브는 2026-10 에 없앴다). 새 미션은 [`docs/V4-MISSION-FORMAT.md`](docs/V4-MISSION-FORMAT.md) 의 짜임새를 따른다.
@@ -143,6 +145,17 @@ avr-objcopy -O ihex -R .eeprom fw.elf public/firmware/playhouse-uno.hex
 ```
 
 구현: [`src/serial/flasher.js`](src/serial/flasher.js)(STK500v1) + [`src/serial/intelhex.js`](src/serial/intelhex.js)(HEX 파서).
+
+## 모둠 협동(멀티플레이, 최대 5명)
+
+기지 오른쪽 위 **👥 모둠** → 방 만들기(4자리 코드) · 코드로 참가 → 대기실 → 협동 코스 '붉은 행성 협동 훈련장'.
+혼자서는 못 깨는 장치(동시 발판 문 · 지키는 다리 · 시소+윈치 · 같이 미는 컨테이너 · 팀 문)를 모둠이 함께 통과하면
+2명 이상일 때 모두에게 머리 장식 **모둠 깃발**이 열린다.
+
+- **여러 기기**: 방 서버가 필요하다(브라우저는 같은 와이파이의 다른 컴퓨터를 직접 찾지 못한다). [`server/README.md`](server/README.md) 대로
+  AWS 에 올리고 빌드 환경 변수 `VITE_ROOM_URL=wss://…` 를 넣는다. 시험은 주소 뒤 `?room=wss://…`, 선생님은 대기실의 '서버 주소'.
+- **서버 없이**: 같은 컴퓨터의 창 · 탭끼리만(시범 · 점검용). 바로 열기 `?v4=coop`.
+- 각자 자기 에디만 계산하고 위치를 나눈다. 협동 장치는 방장 화면이 계산한다(방장이 나가면 다음 사람이 이어받는다).
 
 ## 배포
 

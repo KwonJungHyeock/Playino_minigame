@@ -47,9 +47,12 @@ function sceneHub3d(opts) {
   import('./scenes/hub3d.js').then((m) => m.showHub3d(app(), {
     ...opts,
     onRoom: (id, { stage }) => nav.push(() => sceneMission3d(id, stage)),
+    onCoop: () => nav.push(sceneCoop),
     onExit: () => { if (nav.canBack()) nav.back(); else location.search = ''; },   // 본 흐름: 타이틀로 · 미리보기(?v4=hub): 주소 비우기
   }));
 }
+// 모둠 협동(최대 5명 · 방 코드) — 입구 · 대기실 · 협동 코스(scenes/coopLobby.js → coopGame.js)
+function sceneCoop() { import('./scenes/coopLobby.js').then((m) => m.showCoopLobby(app(), { onExit: () => nav.back() })); }
 // 미션(허브 THREE_D 와 짝) — 고른 단계부터 시작, 나가면 기지의 그 문 앞으로
 const MISSION_3D = {
   basics: () => import('./scenes/basicsGame.js').then((m) => m.showBasicsGame),   // 프롤로그 부팅 훈련(보드 없음)
@@ -107,6 +110,8 @@ function boot() {
     nav.start(() => sceneHub3d({ openAll: q.get('all') === '1', partsPreview: n != null && n !== '' ? Number(n) : null }));
     return;
   }
+  // 모둠 협동 미리보기(?v4=coop) — 주소에 &room=ws://… 를 붙이면 그 방 서버로
+  if (q.get('v4') === 'coop') { nav.start(sceneCoop); return; }
   // 미션 미리보기(?v4=led 등, &stage=2 · 3)
   if (MISSION_3D[q.get('v4')]) {   // ?v4=basics · led · buzzer · rgb · cds · pot · button · lamp · bomb · final · challenge
     MISSION_3D[q.get('v4')]().then((show) => show(app(), { stage: Math.max(1, Math.min(3, parseInt(q.get('stage') || '1', 10) || 1)), onExit: () => { location.search = ''; } }));
