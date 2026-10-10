@@ -24,11 +24,11 @@
   React 이식 시 `useEffect` 정리 함수에 1:1 대응되는 자산이므로 깨뜨리지 말 것.
 - **`src/styles/parts/*.css` 의 `@import` 순서** — 캐스케이드 순서다. 재배치하거나
   규칙을 다른 파트로 옮기면 화면이 깨진다. `src/styles/main.css:3-7` 에 경고가 있다.
-- **`public/brand/` 의 파일명** — 파일명 규칙으로 자산을 찾는 코드가 있다
-  (`/brand/game-${id}-cover.webp` 등). 이름을 바꾸면 이미지가 사라진다.
+- **`public/` 의 남은 절대경로 파일** — `brand/logo.webp`(CSS) · `brand/bgm.mp3`(있으면 재생) · `firmware/playhouse-uno.hex`(보드 굽기).
+  이름을 바꾸면 그 기능이 사라진다. (예전 2D 판 그림은 2026-10 시범판 정리 때 지웠다.)
 
 ## 경로 주의
 
-자산 경로 **82곳이 루트 기준 절대경로**(`/brand/...`)이고 `vite.config.js` 에 `base` 가
-없다. 새 코드에서 자산을 참조할 때 절대경로를 **추가하지 말 것** — 이유와 대안은
-`docs/refactoring.md` 2장·Phase 1 참고.
+루트 기준 절대경로 자산은 이제 **3곳**(위 목록)뿐이고 `vite.config.js` 에 `base` 가
+없다. 새 코드에서 자산을 참조할 때 절대경로를 **추가하지 말 것** — `src/assets/` 에 두고 `?url` 로 가져온다
+(이유와 대안은 `docs/refactoring.md` 2장·Phase 1 참고 — 그 문서의 82곳 실측은 2D 판 시절 값).

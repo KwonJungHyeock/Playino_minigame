@@ -68,10 +68,7 @@ export function showLogin(root, { onDone, v4 = true } = {}) {   // v4(붉은 행
       </div>
     </div>`;
 
-  // 배경(있으면 컨셉 배경 recede 적용)
-  const bgProbe = new Image();
-  bgProbe.onload = () => { const b = root.querySelector('#lg-bg'); b.style.backgroundImage = `url(${bgProbe.src})`; b.classList.add('has-img'); };
-  if (!v4) bgProbe.src = '/brand/login-bg.webp';   // v4 는 키 아트(V4_CSS)
+  // 배경은 키 아트(V4_CSS) — 예전 2D 판 배경 그림은 없앴다
 
   const heroEl = root.querySelector('#lg-hero');
   const rig = Object.assign(document.createElement('div'), { className: 'lg-hero-fallback', innerHTML: PORTRAIT('웃음') });

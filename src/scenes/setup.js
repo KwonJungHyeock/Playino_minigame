@@ -74,9 +74,6 @@ export function showSetup(root, { onDone }) {
   root.querySelector('#su-eddie').innerHTML = `<div class="v4face">${PORTRAIT('웃음')}</div>`;
   mountMonitor(root.querySelector('#su-mon'));
 
-  // 배경: 전용(setup-bg) 우선, 없으면 카니발(main-bg)로 폴백 — recede 처리
-  const suBg = root.querySelector('#su-bg');
-  const tryBg = (src, next) => { const im = new Image(); im.onload = () => { suBg.style.backgroundImage = `url(${im.src})`; suBg.classList.add('has-img'); }; im.onerror = next; im.src = src; };
   // 배경은 키 아트(V4_CSS) — 예전 카니발 배경은 쓰지 않는다
   goBtn.addEventListener('click', () => { sfx.start(); onDone?.(); });
   root.querySelector('#su-skip').addEventListener('click', () => { sfx.click(); onDone?.(); });
