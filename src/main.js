@@ -1,10 +1,7 @@
 // main.js — Eduino AI : 붉은 행성 대탈출(3D 전용)
-// 플로우: 인트로 → 모드선택 → 메인 → 타이틀 → 로그인 → 캐릭터 만들기 → 보드연결 → 3D 기지 → 미션(모두 3D).
-// 보드 연결을 마친 기기는 다음 세션부터 타이틀에서 바로 시작한다 — boot() 참고.
+// 플로우: 타이틀(살아 있는 3D 인트로) → 로그인 → 캐릭터 만들기 → 보드 연결 → 3D 기지 → 미션(모두 3D).
+// 예전 로고 인트로 · 기기 모드 선택 · 상품 메인(2D 결 화면)은 타이틀 하나로 합쳤다.
 // WebGL2(3D)를 못 쓰는 기기는 안내 화면(scenes/no3d.js)만 보여 준다 — 예전 2D 판은 없앴다.
-import { showPlatformIntro } from './scenes/platformIntro.js';
-import { showModeSelect } from './scenes/modeSelect.js';
-import { showProductMain } from './scenes/productMain.js';
 import { showLogin } from './scenes/login.js';
 import { showSetup } from './scenes/setup.js';
 import { progress } from './app/progress.js';
@@ -21,11 +18,7 @@ import { supports3D } from './gfx3d/quality.js';
 const app = () => document.getElementById('app');
 
 // 모든 전환은 nav 를 통과 → 기기/브라우저 뒤로·ESC·통일 버튼이 한 단계씩 되돌아감.
-function scenePlatformIntro() { showPlatformIntro(app(), { onDone: () => nav.push(sceneModeSelect) }); }     // ① 플랫폼 스튜디오 인트로(로고)
-function sceneModeSelect() { showModeSelect(app(), { onDone: () => nav.push(sceneProductMain) }); }   // ①-b 기기 모드 선택
-function sceneProductMain() { showProductMain(app(), { onDone: () => nav.push(sceneTitle) }); }                // ② 상품 메인페이지 → 타이틀
-
-// ③ 타이틀 '붉은 행성 대탈출' — 이어하기 · 새로 시작(로그인 → 캐릭터 만들기) · 기록 불러오기
+// 타이틀 '붉은 행성 대탈출' — 이어하기 · 새로 시작(로그인 → 캐릭터 만들기) · 기록 불러오기
 function sceneTitle() {
   showTitle(app(), {
     onContinue: () => enterV4(),
@@ -119,15 +112,10 @@ function boot() {
     MISSION_3D[q.get('v4')]().then((show) => show(app(), { stage: Math.max(1, Math.min(3, parseInt(q.get('stage') || '1', 10) || 1)), onExit: () => { location.search = ''; } }));
     return;
   }
-  // 온보딩(인트로~보드 연결)을 아직 안 끝냈으면 복원하지 않는다 — 순서를 건너뛰면 안 되는 구간이다.
+  // 보드 연결을 아직 안 한 기기는 복원하지 않는다(타이틀 → 로그인 → 만들기 → 연결 순서를 지킨다). 새 세션도 타이틀부터.
   const ready = progress.isCleared('setup');
   const trail = ready ? readTrail() : [];
-  if (!trail.length) {
-    if (!ready) { nav.start(scenePlatformIntro); return; }
-    // 새 세션(브라우저를 닫았다 연 경우)인데 이 기기는 이미 준비됐다 — 매 차시 온보딩 5화면을 다시 겪지 않게 타이틀부터.
-    nav.start(sceneTitle);
-    return;
-  }
+  if (!trail.length) { nav.start(sceneTitle); return; }
   // 스택 맨 밑에 타이틀을 깐다(route 없음 = 복원 대상 아님) — 기지에서 뒤로 = 타이틀
   const entries = [{ fn: sceneTitle }];
   for (const r of trail) {

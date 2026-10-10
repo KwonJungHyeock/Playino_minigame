@@ -1,6 +1,5 @@
 // login.js — 플레이어 입장(접속 코드). 구매 시 이메일로 받은 6자리 코드를 입력해 입장.
 // 데모: 아무 코드나(또는 빈칸) 입장 가능. 메인과 동일 완성도(배지·사운드·말풍선·인터랙션).
-import { mountEddieRig } from '../app/eddieRig.js';
 import { PORTRAIT } from '../gfx3d/portrait.js';
 import { sfx } from '../app/sfx.js';
 import { icon } from '../app/icons.js';
@@ -59,9 +58,9 @@ export function showLogin(root, { onDone, v4 = true } = {}) {   // v4(붉은 행
   if (!v4) bgProbe.src = '/brand/login-bg.webp';   // v4 는 키 아트(V4_CSS)
 
   const heroEl = root.querySelector('#lg-hero');
-  const rig = v4 ? Object.assign(document.createElement('div'), { className: 'lg-hero-fallback', innerHTML: PORTRAIT('웃음') }) : mountEddieRig(heroEl);
-  if (v4) heroEl.appendChild(rig);
-  const lines = v4 ? LINES_V4 : LINES;
+  const rig = Object.assign(document.createElement('div'), { className: 'lg-hero-fallback', innerHTML: PORTRAIT('웃음') });
+  heroEl.appendChild(rig);
+  const lines = LINES_V4;
 
   // EDDIE 말풍선 순환 + 클릭 반응
   const say = root.querySelector('#lg-speech');

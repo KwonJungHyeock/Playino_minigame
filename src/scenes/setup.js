@@ -1,13 +1,21 @@
-// setup.js — 사용환경 준비(학습 준비 체크리스트).
-// 가로 진행형 스텝퍼(회색→초록) + EDDIE가 박스 위로 올라타 peeking + 단계별 말풍선 + 하단 시리얼 로그.
-// 기능(브라우저→연결→펌웨어→내장 LED, 자동 진단/복구)은 동일.
+// setup.js — 출발 전 장비 점검(보드 연결 체크리스트). 붉은 행성 대탈출 옷: 타이틀 키 아트를 흐리게 깔고 짙은 유리 판 + 금빛 단추.
+// 가로 진행형 스텝퍼(회색→초록) + 에디 얼굴 · 단계별 말풍선 + 하단 시리얼 로그.
+// 기능(브라우저→연결→펌웨어→내장 LED, 자동 진단/복구)은 그대로.
 import { board } from '../app/board.js';
 import { mountMonitor } from '../app/monitor.js';
-import { mountEddieRig } from '../app/eddieRig.js';
+import { PORTRAIT } from '../gfx3d/portrait.js';
+import ART_WIDE from '../assets/title/keyart-wide.webp?url';
 import { sfx } from '../app/sfx.js';
 import { icon } from '../app/icons.js';
 
 const BUILTIN_LED = 13;
+// 공용 CSS 파트(03-onboarding)는 그대로 두고 여기서만 덮는다 — 순서를 바꾸지 않으려고
+const V4_CSS = `.setup2.v4 .pm-bg{background:url("${ART_WIDE}") 62% 50%/cover no-repeat!important;filter:blur(7px) brightness(.45) saturate(1.1);transform:scale(1.06)}.setup2.v4 .pm-blobs,.setup2.v4 .brand-badge{display:none}
+.setup2.v4 .su-panel,.setup2.v4 .su-monitor{background:linear-gradient(180deg,rgba(16,20,54,.88),rgba(10,13,38,.92));border:1px solid rgba(255,255,255,.12);box-shadow:0 30px 60px rgba(0,0,0,.45);backdrop-filter:blur(12px);color:#fff}
+.setup2.v4 .su-kicker{color:#ffd25a}.setup2.v4 .su-title{font-family:var(--f-display,inherit);font-weight:400}
+.setup2.v4 .su-go{background:linear-gradient(180deg,#ffeaa0 0%,#ffd25a 55%,#f0b52e 100%);color:#2b1d00;font-family:var(--f-display,inherit);font-weight:400;box-shadow:inset 0 2px 0 rgba(255,255,255,.65),inset 0 -4px 0 rgba(160,100,10,.35),0 5px 0 #a8761a,0 12px 24px rgba(0,0,0,.35)}
+.setup2.v4 .su-go:disabled{filter:grayscale(.6) brightness(.75)}
+.setup2.v4 .su-eddie{display:grid;place-items:center}.setup2.v4 .su-eddie .v4face{width:118px;height:118px;border-radius:32px;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#fff,#dfe3ee);box-shadow:0 8px 0 rgba(0,0,0,.25),0 18px 30px rgba(0,0,0,.35)}.setup2.v4 .su-eddie .v4face svg{width:100px;height:100px}`;
 
 const ITEMS = [
   { id: 'browser',  label: '브라우저 확인',   desc: 'Chrome / Edge' },
@@ -22,7 +30,7 @@ export function showSetup(root, { onDone }) {
   let connectHint = '';
 
   root.innerHTML = `
-    <div class="setup2 scene-fade">
+    <style>${V4_CSS}</style><div class="setup2 v4 scene-fade">
       <div class="pm-bg" id="su-bg"></div>
       <div class="pm-blobs"><span></span><span></span><span></span><span></span></div>
       <button class="snd-toggle" id="snd-toggle" title="소리 켜기/끄기">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button>
@@ -32,11 +40,11 @@ export function showSetup(root, { onDone }) {
           <div class="su-eddie" id="su-eddie"></div>
           <div class="su-speech" id="su-speech">장비가 잘 작동하는지 같이 점검하자! 💪</div>
           <div class="su-panel">
-            <div class="su-kicker"><span class="brand-dot"></span>사용환경 준비</div>
-            <h2 class="su-title">학습 준비 체크리스트</h2>
+            <div class="su-kicker"><span class="brand-dot"></span>붉은 행성 대탈출 · 출발 준비</div>
+            <h2 class="su-title">출발 전 장비 점검</h2>
             <div class="su-steps" id="su-steps"></div>
             <div class="su-action" id="su-action"></div>
-            <button class="btn su-go" id="su-go" disabled>학습 시작하기 ▶</button>
+            <button class="btn su-go" id="su-go" disabled>기지로 출발 ▶</button>
             <button class="su-skip" id="su-skip">건너뛰기 ▶ (장비 준비 생략)</button>
           </div>
         </div>
@@ -52,13 +60,13 @@ export function showSetup(root, { onDone }) {
   const actionEl = root.querySelector('#su-action');
   const goBtn = root.querySelector('#su-go');
 
-  mountEddieRig(root.querySelector('#su-eddie'));
+  root.querySelector('#su-eddie').innerHTML = `<div class="v4face">${PORTRAIT('웃음')}</div>`;
   mountMonitor(root.querySelector('#su-mon'));
 
   // 배경: 전용(setup-bg) 우선, 없으면 카니발(main-bg)로 폴백 — recede 처리
   const suBg = root.querySelector('#su-bg');
   const tryBg = (src, next) => { const im = new Image(); im.onload = () => { suBg.style.backgroundImage = `url(${im.src})`; suBg.classList.add('has-img'); }; im.onerror = next; im.src = src; };
-  tryBg('/brand/setup-bg.webp', () => tryBg('/brand/main-bg.webp', null));
+  // 배경은 키 아트(V4_CSS) — 예전 카니발 배경은 쓰지 않는다
   goBtn.addEventListener('click', () => { sfx.start(); onDone?.(); });
   root.querySelector('#su-skip').addEventListener('click', () => { sfx.click(); onDone?.(); });
   const snd = root.querySelector('#snd-toggle');
