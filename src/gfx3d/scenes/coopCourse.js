@@ -1,10 +1,10 @@
 // coopCourse.js — 모둠 협동 코스 '붉은 행성 협동 훈련장'(최대 5명, 혼자서는 못 깬다). 판정 방식은 도전 챌린지(course.js)와 같다.
 // 구간(-z 로 뻗는다):
-//   ① 동시 발판 문 — 남은 사람 수만큼(최대 3) 발판을 '동시에' 밟으면 문이 4.5초만 열린다. 가운데엔 회전 빔.
+//   ① 동시 발판 문 — 남은 사람 수만큼(최대 3) 발판을 '동시에' 밟으면 문이 4초만 열린다. 가운데엔 회전 빔.
 //   ② 지키는 다리 — 이쪽(A) · 저쪽(B) 발판 중 하나라도 누가 밟고 있어야 다리가 나온다. 위로 진자 해머.
 //   ③ 시소 — 혼자 건너면 끝이 가라앉아 못 올라간다. 반대쪽에 무게를 싣거나, 건너간 친구가 감는 발판(윈치)을 밟아 끝을 올린다.
 //   ④ 부품 컨테이너 — 2명 이상이 같이 밀어야 움직이는 상자를 구덩이에 밀어 넣으면 다리가 된다.
-//   ⑤ 팀 문 — 모두 모여야 열린다 → 골.
+//   ⑤ 팀 문 — 모두 모여야 열린다(모이는 자리에 회전 빔) → 골.
 // 장치 상태는 방장 화면이 계산해(host) 모두에게 나눠 주고(apply), 각자 그 상태로 자기 몸을 움직인다.
 // 사람 수(n)에 맞춰 규칙이 바뀐다 — 1명(혼자 연습)이면 모든 장치가 혼자서도 되도록 느슨해진다.
 import * as THREE from 'three';
@@ -46,7 +46,7 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
   const { scene, renderer } = stage;
   const root = new THREE.Group(); root.name = 'CoopCourse'; scene.add(root);
   // 붉은 행성 낮 하늘(도전 챌린지와 같은 결) — 아래로 행성이 보이는 하늘 훈련장
-  addSpaceSky(scene, { top: 0x3a1630, horizon: 0xd8784a, glow: 0xffc28a, stars: 1400, fog: [40, 130] });
+  const sky = addSpaceSky(scene, { top: 0x3a1630, horizon: 0xd8784a, glow: 0xffc28a, stars: 1400, fog: [40, 130] });   // 하늘 돔(반지름 52)은 에디를 따라간다 — 긴 코스 끝에서 돔 밖으로 나가 검게 보이지 않게
   renderer.toneMappingExposure = 1.08; renderer.shadowMap.type = THREE.PCFSoftShadowMap; scene.environmentIntensity = 0.7;
   root.add(new THREE.HemisphereLight(0xffe6d6, 0x8a4a38, 1.3));
   const key = new THREE.DirectionalLight(0xfff1e2, 2.3); key.castShadow = true;
@@ -89,12 +89,14 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
   const wallL = addBox(-3.6, 3.2, DOOR_Z, 4.8, 0.8, { h: 3.2, mat: wallMat }), wallR = addBox(3.6, 3.2, DOOR_Z, 4.8, 0.8, { h: 3.2, mat: wallMat });
   const door = addBox(0, 3.0, DOOR_Z, 2.4, 0.5, { h: 3.0, mat: doorMat });
   const doorSign = add(labelSprite('발판 0/3', '#ffd21f', 4.2)); doorSign.position.set(0, 4.4, DOOR_Z + 0.6);
-  // 회전 빔(가운데)
-  const SW1 = { c: new THREE.Vector3(0, 0, -8), ang: 0, w: 1.15, y: 0.42, len: 5.0, r: 0.24 };
-  { const hub = add(mesh(roundedCylinder(0.55, 0.9, 0.25, 0.05, 32), M.mustard)); hub.position.copy(SW1.c);
-    const sweep = new THREE.Group(); sweep.position.set(SW1.c.x, SW1.y, SW1.c.z); add(sweep);
-    for (const r of [0, Math.PI / 2]) { const bar = mesh(new THREE.CapsuleGeometry(SW1.r, SW1.len * 2 - SW1.r * 2, 6, 16), new THREE.MeshPhysicalMaterial({ map: stripeTex('#ffd21f', '#0d1238', 10), roughness: 0.4, clearcoat: 0.8 })); bar.rotation.z = Math.PI / 2; bar.rotation.y = r; sweep.add(bar); }
-    hazards.push({ type: 'sweep', s: SW1 }); anim.push((T) => { SW1.ang = T * SW1.w; sweep.rotation.y = SW1.ang; }); }
+  // 회전 빔: 가운데 기둥 + 줄무늬 막대 두 개(+ 모양). 시간 T(방장 박자)로 돈다
+  function addSweep(SW) {
+    const hub = add(mesh(roundedCylinder(0.55, 0.9, 0.25, 0.05, 32), M.mustard)); hub.position.copy(SW.c);
+    const sweep = new THREE.Group(); sweep.position.set(SW.c.x, SW.y, SW.c.z); add(sweep);
+    for (const r of [0, Math.PI / 2]) { const bar = mesh(new THREE.CapsuleGeometry(SW.r, SW.len * 2 - SW.r * 2, 6, 16), new THREE.MeshPhysicalMaterial({ map: stripeTex('#ffd21f', '#0d1238', 10), roughness: 0.4, clearcoat: 0.8 })); bar.rotation.z = Math.PI / 2; bar.rotation.y = r; sweep.add(bar); }
+    hazards.push({ type: 'sweep', s: SW }); anim.push((T) => { SW.ang = T * SW.w + (SW.ph || 0); sweep.rotation.y = SW.ang; });
+  }
+  addSweep({ c: new THREE.Vector3(0, 0, -8), ang: 0, w: 1.3, y: 0.42, len: 5.0, r: 0.24 });
 
   // ── ② 지키는 다리 ──
   addBox(0, 0, -17, 8, 6);
@@ -114,7 +116,7 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
     const pivot = new THREE.Group(); pivot.position.set(0, 5.4, z); add(pivot);
     const rod = mesh(roundedCylinder(0.07, 3.9, 0.02, 0), M.steel); rod.position.y = -3.9; pivot.add(rod);
     const ball = mesh(new THREE.SphereGeometry(0.72, 32, 22), vinyl(0xd23f36, { roughness: 0.3, clearcoat: 1 })); ball.position.y = -4.3; pivot.add(ball);
-    const h = { pivot, ph, amp: 1.0, w: 1.85, L: 4.3, r: 0.72, world: new THREE.Vector3(), vel: new THREE.Vector3() }; hammers.push(h); hazards.push({ type: 'ball', h });
+    const h = { pivot, ph, amp: 1.1, w: 2.2, L: 4.3, r: 0.72, world: new THREE.Vector3(), vel: new THREE.Vector3() }; hammers.push(h); hazards.push({ type: 'ball', h });
   });
   anim.push((T, dt) => hammers.forEach((h) => { const a = Math.sin(T * h.w + h.ph) * h.amp, px = h.world.x; h.pivot.rotation.z = a; h.world.set(Math.sin(a) * h.L, h.pivot.position.y - Math.cos(a) * h.L, h.pivot.position.z); h.vel.set((h.world.x - px) / Math.max(dt, 1e-3), 0, 0); }));
 
@@ -133,16 +135,18 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
 
   // ── ④ 부품 컨테이너 ──
   const crateMat = new THREE.MeshPhysicalMaterial({ color: 0xe2a12c, roughness: 0.45, clearcoat: 0.5 });
+  let crateLabel = null;
   const crate = addBox(0, LAND_Y + BOX_H, BOX_Z0, BOX_W, BOX_LEN, { h: BOX_H, mat: crateMat });
   { const lid = mesh(roundedBox(BOX_W + 0.06, 0.1, BOX_LEN + 0.06, 0.04, 2), M.white); lid.position.y = 0.02; crate.obj.add(lid);
     for (const z of [-2, 0, 2]) { const band = mesh(roundedBox(BOX_W + 0.08, BOX_H * 0.9, 0.12, 0.03, 2), M.dark); band.position.set(0, -BOX_H / 2, z); crate.obj.add(band); }
-    const cs = labelSprite('부품', '#ffffff', 2.2); cs.position.set(0, 0.9, 0); crate.obj.add(cs); }
+    const cs = crateLabel = labelSprite('부품', '#ffffff', 2.2); cs.position.set(0, 0.9, 0); crate.obj.add(cs); }
   addBox(0, LAND_Y, -70, 8, 8, { h: 2.4 });   // 구덩이 건너편
   { const pitL = mesh(roundedBox(0.4, 2.4, TRENCH0 - TRENCH1, 0.05, 2), M.trim); pitL.position.set(-BOX_W / 2 - 0.2, LAND_Y - 1.2, (TRENCH0 + TRENCH1) / 2); add(pitL); const pitR = pitL.clone(); pitR.position.x *= -1; add(pitR); }
   const pitSign = add(labelSprite('같이 밀어!', '#ffd21f', 2.6)); pitSign.position.set(0, LAND_Y + 3.4, BOX_Z0 + 3.4);
   checkpoints.push({ z: TRENCH1 - 0.4, name: '체크포인트 4', at: (i) => new THREE.Vector3((i - 2) * 1.0, LAND_Y, -67.5) });
 
-  // ── ⑤ 팀 문 · 골 ──
+  // ── ⑤ 팀 문 · 골 ── 모이는 자리 한가운데 회전 빔: 기다리는 동안에도 계속 뛰어야 한다
+  addSweep({ c: new THREE.Vector3(0, LAND_Y, -69.4), ang: 0, w: 1.5, ph: 0.8, y: LAND_Y + 0.42, len: 3.5, r: 0.24 });
   const gateL = addBox(-2.6, LAND_Y + 3, GATE_Z, 2.8, 0.6, { h: 3, mat: wallMat }), gateR = addBox(2.6, LAND_Y + 3, GATE_Z, 2.8, 0.6, { h: 3, mat: wallMat });
   const gate = addBox(0, LAND_Y + 2.8, GATE_Z, 2.4, 0.4, { h: 2.8, mat: doorMat });
   const gateSign = add(labelSprite('모두 모여! 0/5', '#ffd21f', 4.2)); gateSign.position.set(0, LAND_Y + 4.0, GATE_Z + 0.5);
@@ -219,11 +223,11 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
   function host(dt, players) {
     const N = Math.max(1, players.length);
     D.T += dt;
-    // ① 남은 사람 수만큼 발판(최대 3) — 동시에 밟으면 4.5초 열림(혼자 연습: 6초)
+    // ① 남은 사람 수만큼 발판(최대 3) — 동시에 밟으면 4초 열림(혼자 연습: 6초)
     const behind = players.filter((q) => q.p.z > DOOR_Z + 0.3).length;
     D.need = Math.min(3, behind); D.on1 = plates1.filter((pl) => onPlate(pl, players)).length;
     if (D.doorT > 0) D.doorT = Math.max(0, D.doorT - dt);
-    else if (D.need > 0 && D.on1 >= D.need) D.doorT = N === 1 ? 6 : 4.5;
+    else if (D.need > 0 && D.on1 >= D.need) D.doorT = N === 1 ? 6 : 4;
     D.door = D.doorT > 0 ? 1 : 0;
     // ② 다리: A 또는 B 를 밟는 동안 나온다. 떼면 곧 들어간다(혼자 연습이면 5초 버텨 준다)
     D.brA = onPlate(pA, players) ? 1 : 0; D.brB = onPlate(pB, players) ? 1 : 0;
@@ -276,6 +280,7 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
     anim.forEach((f) => f(D.T, dt));
     const sx = Math.round(botPos.x), sz = Math.round(botPos.z);
     key.target.position.set(sx, 0, sz); key.position.set(sx - 6, 18, sz + 8);
+    sky.position.set(botPos.x, 0, botPos.z);
   }
 
   /** 카메라와 내 에디 사이에 벽이 끼면 비쳐 보이게(문을 지나면 카메라가 벽 뒤에 남는다) */
@@ -283,7 +288,7 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
   function see(camZ, myZ) {
     let a = 1; for (const [, , z] of walls) if (camZ > z + 0.3 && myZ < z - 0.2) a = 0.22;
     for (const m of [wallMat, doorMat]) { m.opacity += (a - m.opacity) * 0.25; m.depthWrite = m.opacity > 0.95; }
-    doorSign.visible = myZ > DOOR_Z + 0.4; gateSign.visible = myZ > GATE_Z + 0.4; pitSign.visible = myZ > BOX_Z0 - 2;   // 지나간 안내판은 카메라 앞을 가리지 않게
+    doorSign.visible = myZ > DOOR_Z + 0.4; gateSign.visible = myZ > GATE_Z + 0.4; pitSign.visible = myZ > BOX_Z0 - 2; if (crateLabel) crateLabel.visible = !D.boxIn && myZ > crate.pos.z - 1;   // 지나간 안내판은 카메라 앞을 가리지 않게
   }
 
   const bot = await loadRobot();

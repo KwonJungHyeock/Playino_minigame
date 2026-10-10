@@ -119,7 +119,7 @@ export async function createCourse(stage) {
   topCache = new Map();
   const root = new THREE.Group(); root.name = 'Course'; scene.add(root);
   // 사탕빛 우주: 보라 하늘 · 분홍 지평 · 복숭아빛 노을 — 밤 기지보다 밝고 들뜬 축제 분위기
-  addSpaceSky(scene, { top: 0x3a1630, horizon: 0xd8784a, glow: 0xffc28a, stars: 1600, fog: [34, 120] });
+  const sky = addSpaceSky(scene, { top: 0x3a1630, horizon: 0xd8784a, glow: 0xffc28a, stars: 1600, fog: [34, 120] });   // 하늘 돔(반지름 52)은 에디를 따라간다 — 긴 코스 끝에서 돔 밖으로 나가 검게 보이지 않게
   renderer.toneMappingExposure = 1.12; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene.environmentIntensity = 0.75;
   root.add(new THREE.HemisphereLight(0xffe6d6, 0x8a4a38, 1.35));
@@ -165,7 +165,7 @@ export async function createCourse(stage) {
   const sweep = new THREE.Group(); sweep.position.set(D1.x, 0.42, D1.z); root.add(sweep);
   const barA = striped(10.2, 0.28); sweep.add(barA);
   const barB = striped(10.2, 0.28); barB.rotation.y = Math.PI / 2; barB.position.y = 0.0; sweep.add(barB);
-  const SW = { w: 1.25, ang: 0, y: 0.42, len: 5.1, r: 0.26 };
+  const SW = { w: 1.55, ang: 0, y: 0.42, len: 5.1, r: 0.26 };   // 중학생 기준: 예전(1.25)보다 빠르게 돈다
   hazards.push({ type: 'sweep', c: D1, s: SW });
   // 범퍼: 원판 가장자리 통통한 기둥 — 닿으면 '퉁' 하고 튕겨 낸다(밖으로 떨어지기 직전에 안쪽으로 밀어 주기도)
   const bumpers = [];
@@ -186,8 +186,8 @@ export async function createCourse(stage) {
   // ── ② 움직이는 발판(허공 위 좌우로) ──
   const movers = [];
   [[-21.8, 0, 3.2, 0], [-25.2, 0.45, 3.4, 1.9], [-28.6, 0.9, 3.0, 3.6], [-32.0, 0.45, 3.4, 5.1]].forEach(([z, y, amp, ph], i) => {
-    const c = addBox(0, y, z, 2.6, 2.4, [C.sky, C.lemon, C.pink, C.lime][i]);
-    c.amp = amp; c.ph = ph; c.speed = 1.05 + i * 0.12; movers.push(c);
+    const c = addBox(0, y, z, 2.1, 2.0, [C.sky, C.lemon, C.pink, C.lime][i]);   // 작은 발판(틈 1.4m)
+    c.amp = amp; c.ph = ph; c.speed = 1.3 + i * 0.12; movers.push(c);   // 옆으로 가장 빠를 때 ≈ 달리기 속도(예전 1.05 + 0.12i)
   });
   anim.push((t) => { movers.forEach((c) => { c.prev.copy(c.pos); c.pos.x = Math.sin(t * c.speed + c.ph) * c.amp; }); });
   addBox(0, 0.45, -37, 6, 4.4, C.purple);
@@ -195,9 +195,11 @@ export async function createCourse(stage) {
   checkpoints.push({ z: -35.4, at: new THREE.Vector3(0, 0.45, -36.6), gate: cpB, name: '체크포인트 2' });
 
   // ── ③ 무너지는 육각 타일 ──
+  const HEX_HOLES = new Set(['1,-1', '2,1', '3,0', '4,-2', '5,1', '6,-1', '7,0']);
   const hexes = [], HR = 0.78, hxStep = HR * 1.74, hzStep = HR * 1.52;
   for (let row = 0; row < 8; row++) for (let col = -2; col <= 2; col++) {
     const x = col * hxStep + (row % 2 ? hxStep / 2 : 0); if (Math.abs(x) > 3.6) continue;
+    if (HEX_HOLES.has(`${row},${col}`)) continue;   // 처음부터 빈 칸(줄마다 하나쯤) — 밟을 곳이 적다
     const z = -40.3 - row * hzStep, y = 0.45;
     const { g, body } = hexTile(HR, [C.sky, C.lime, C.lemon, C.pink][row % 4]); g.position.set(x, y, z); add(g);
     const c = { type: 'hex', obj: g, body, mat: body.material, pos: g.position, home: new THREE.Vector3(x, y, z), r: HR * 0.9, top: y, bottom: y - 0.42, state: 0, t: 0, vy: 0, live: true };
@@ -205,8 +207,8 @@ export async function createCourse(stage) {
   }
   anim.push((t, dt) => {   // 밟힌 타일: 젤리처럼 출렁이며 깜빡 → 떨어짐 → 다시 솟음
     hexes.forEach((c) => {
-      if (c.state === 1) { c.t += dt; const k = Math.min(1, c.t / 0.55); c.obj.position.x = c.home.x + Math.sin(c.t * 70) * 0.04 * k; c.body.material = k > 0.5 && Math.floor(c.t * 18) % 2 ? hexWarn : c.mat; c.obj.scale.set(1 + Math.sin(c.t * 40) * 0.05 * k, 1 - Math.sin(c.t * 40) * 0.08 * k, 1 + Math.sin(c.t * 40) * 0.05 * k); if (c.t > 0.55) { c.state = 2; c.t = 0; c.vy = 0; c.live = false; } }
-      else if (c.state === 2) { c.t += dt; c.vy -= 22 * dt; c.obj.position.y += c.vy * dt; c.obj.rotation.x += dt * 1.5; if (c.t > 3.6) { c.state = 3; c.t = 0; } }
+      if (c.state === 1) { c.t += dt; const k = Math.min(1, c.t / 0.4); c.obj.position.x = c.home.x + Math.sin(c.t * 70) * 0.04 * k; c.body.material = k > 0.5 && Math.floor(c.t * 18) % 2 ? hexWarn : c.mat; c.obj.scale.set(1 + Math.sin(c.t * 40) * 0.05 * k, 1 - Math.sin(c.t * 40) * 0.08 * k, 1 + Math.sin(c.t * 40) * 0.05 * k); if (c.t > 0.4) { c.state = 2; c.t = 0; c.vy = 0; c.live = false; } }
+      else if (c.state === 2) { c.t += dt; c.vy -= 22 * dt; c.obj.position.y += c.vy * dt; c.obj.rotation.x += dt * 1.5; if (c.t > 5.0) { c.state = 3; c.t = 0; } }
       else if (c.state === 3) { c.t += dt; const k = Math.min(1, c.t / 0.5); c.obj.position.copy(c.home); c.obj.position.y = c.home.y - 2 * (1 - k); c.obj.rotation.x = 0; c.obj.scale.setScalar(0.4 + 0.6 * k); c.body.material = c.mat; if (k >= 1) { c.state = 0; c.live = true; c.obj.scale.setScalar(1); } }
     });
   });
@@ -216,7 +218,7 @@ export async function createCourse(stage) {
   checkpoints.push({ z: -51.6, at: new THREE.Vector3(0, 0.45, -52.8), gate: cpC, name: '체크포인트 3' });
 
   // ── ④ 진자 해머 다리 ──
-  addBox(0, 0.45, -63.2, 1.7, 16, C.orange, { h: 0.6 });
+  addBox(0, 0.45, -63.2, 1.3, 16, C.orange, { h: 0.6 });   // 좁은 다리
   const hammers = [];
   [[-57.5, 0], [-61, 1.6], [-64.5, 3.1], [-68, 4.4]].forEach(([z, ph], i) => {
     const pivot = new THREE.Group(); pivot.position.set(0, 5.4, z); root.add(pivot);
@@ -227,7 +229,7 @@ export async function createCourse(stage) {
     // 풍선 해머: 통통한 공 + 흰 물방울무늬
     const ball = mesh(new THREE.SphereGeometry(0.78, 36, 24), puffy([C.pink, C.sky, C.lemon, C.lime][i])); ball.position.y = -4.3; pivot.add(ball);
     const dotM = puffy(0xffffff); for (let k = 0; k < 14; k++) { const ph2 = Math.acos(1 - 2 * (k + 0.5) / 14), th = k * 2.4; const d = mesh(new THREE.SphereGeometry(0.11, 12, 8), dotM, { cast: false }); d.position.set(Math.sin(ph2) * Math.cos(th) * 0.76, -4.3 + Math.cos(ph2) * 0.76, Math.sin(ph2) * Math.sin(th) * 0.76); d.scale.setScalar(1); pivot.add(d); }
-    const h = { pivot, ball, ph, amp: 1.05, w: 1.9 + i * 0.08, L: 4.3, r: 0.78, world: new THREE.Vector3(), vel: new THREE.Vector3() };
+    const h = { pivot, ball, ph, amp: 1.15, w: 2.25 + i * 0.1, L: 4.3, r: 0.78, world: new THREE.Vector3(), vel: new THREE.Vector3() };
     hammers.push(h); hazards.push({ type: 'ball', h });
   });
   anim.push((t, dt) => {
@@ -369,8 +371,9 @@ export async function createCourse(stage) {
     // 그림자: 봇 주변만
     const sx = Math.round(botPos.x), sz = Math.round(botPos.z);
     key.target.position.set(sx, 0, sz); key.position.set(sx - 6, 18, sz + 8);
+    sky.position.set(botPos.x, 0, botPos.z);
   }
   function resetHexes() { hexes.forEach((c) => { c.state = 0; c.t = 0; c.live = true; c.obj.position.copy(c.home); c.obj.rotation.set(0, 0, 0); c.obj.scale.setScalar(1); c.body.material = c.mat; }); }
 
-  return { root, bot, checkpoints, ground, sides, hits, carry, update, passed, resetHexes, GOAL_Z, goalY, booster, startGate, dispose: () => bot.dispose() };
+  return { root, bot, checkpoints, ground, sides, hits, carry, update, passed, resetHexes, GOAL_Z, goalY, booster, startGate, hz: { SW, D1, movers, hammers, hexes }, dispose: () => bot.dispose() };   // hz: 자동 점검(난이도 봇)용
 }

@@ -222,7 +222,7 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
     await wait(120); if (done) return;
     fadeEl.classList.remove('on'); S.respawning = false;
   }
-  const SECTION_TIP = ['', '발판 위에 동시에! "하나, 둘, 셋!" 문은 4.5초만 열려요', '누군가 발판을 밟아야 다리가 나와요. 건너간 친구는 저쪽 발판을!', '혼자 가면 시소가 가라앉아요. 무게를 나누고, 건너간 친구는 윈치를 밟아 줘!', '컨테이너는 2명 이상이 같이 밀어야 움직여요'];
+  const SECTION_TIP = ['', '발판 위에 동시에! "하나, 둘, 셋!" 문은 4초만 열려요', '누군가 발판을 밟아야 다리가 나와요. 건너간 친구는 저쪽 발판을!', '혼자 가면 시소가 가라앉아요. 무게를 나누고, 건너간 친구는 윈치를 밟아 줘!', '컨테이너는 2명 이상이 같이 밀어야 움직여요'];
   let tipShown = 0;
 
   function physics(h) {
