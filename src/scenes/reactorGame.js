@@ -43,7 +43,7 @@ const blinkMs = (dist) => Math.max(comfort.blinkMin(), lerp(90, 720, clamp(dist 
 
 export async function showReactorGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { const { showBombGame } = await import('./bombGame.js'); showBombGame(root, { onExit }); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
 
   root.innerHTML = `<style>body:has(.rea) .nav-back{display:none!important}body:has(.rea-dial:not([hidden])) .fs-toggle{display:none!important}
     .rea{position:fixed;inset:0;overflow:hidden;background:#0c0e22}.rea-stage{position:absolute;inset:0}

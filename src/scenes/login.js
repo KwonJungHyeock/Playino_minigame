@@ -20,7 +20,7 @@ const LINES = ['먼저 이름을 적어줘! 기록증에 들어가 ✏️', '구
 const LINES_V4 = ['먼저 이름을 적어줘! 탐사 보고서에 들어가 ✏️', '접속 코드 6자리를 넣으면 출발 준비 끝!', '다음엔 나를 꾸미러 가자 🎨', '붉은 행성에서 기다릴게! 🚀'];
 
 /** v4: true 면 '붉은 행성 대탈출' 흐름 — 옆 캐릭터가 3D 에디 얼굴로 바뀐다 */
-export function showLogin(root, { onDone, v4 = false } = {}) {
+export function showLogin(root, { onDone, v4 = true } = {}) {   // v4(붉은 행성) 옷이 기본 — 예전 2D 판 흐름은 없앴다
   const saved = student.get();
   root.innerHTML = `
     ${v4 ? `<style>${V4_CSS}</style>` : ''}<div class="lg scene-fade${v4 ? ' v4' : ''}">

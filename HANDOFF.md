@@ -1,3 +1,5 @@
+> **2026-10 변경: 2D 판을 없앴다.** 아래의 2D 화면(hubSelect · chapterSelect · sensorRoom · 개별 미니게임 · topdown 엔진 · 기록실)은 삭제됐다. 지금 게임은 3D 전용 — 타이틀(`scenes/title.js`) → 캐릭터 만들기 → 3D 기지(`scenes/hub3d.js`) → 3D 미션 10개. 짜임새는 `docs/V4-MISSION-FORMAT.md`, 진행 기록은 `docs/V4-3D-PLAN.md`. 커리큘럼(`content/curriculum.js`)의 방 ID · 단계 이름 · 메달 판정은 그대로 쓴다.
+
 # 🎮 Eduino AI : 미니게임천국 — 프로젝트 인계 & 백업 문서
 
 > **목적**: 담당자 인계 / 백업용 전체 정리

@@ -35,12 +35,12 @@ const ICON_LOCK = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M13 18v-
 
 /**
  * @param {HTMLElement} root
- * @param {{onRoom:(id:string, o:{mode:'3d'|'2d', stage:number})=>void, onExit?:Function, fallback?:Function, spawnAt?:string, openAll?:boolean, partsPreview?:number}} o
+ * @param {{onRoom:(id:string, o:{mode:'3d', stage:number})=>void, onExit?:Function, spawnAt?:string, openAll?:boolean, partsPreview?:number}} o
  *   openAll: 잠금 무시(미리보기) · partsPreview: 로켓 부품을 n 개 붙인 모습만 보여 줌(기록은 바꾸지 않음)
  */
-export async function showHub3d(root, { onRoom, onExit, fallback, spawnAt, openAll = false, partsPreview = null } = {}) {
+export async function showHub3d(root, { onRoom, onExit, spawnAt, openAll = false, partsPreview = null } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { fallback?.(); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
 
   root.innerHTML = `<style>
     body:has(.hub3) .nav-back{display:none!important}

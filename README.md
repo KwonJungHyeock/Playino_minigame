@@ -52,18 +52,19 @@ npm run assets     # 이미지 최적화 (아래 §자산 파이프라인)
 │   └── unused/             #   현재 미사용 자산
 ├── legacy/                 # 보관용 아카이브(빌드 제외) — legacy/README.md 참조
 └── src/
-    ├── main.js             # ★ 라우팅 진입점 — 씬 전환 + 게임 씬 동적 import
+    ├── main.js             # ★ 라우팅 진입점 — 씬 전환 + 3D 미션 동적 import(MISSION_3D)
     ├── styles/
     │   ├── main.css        #   @import 인덱스 (순서 = 캐스케이드 순서, 변경 금지)
     │   └── parts/          #   01-base · 02-components · 03-onboarding · 04-games · 05-device-final
     ├── app/                # 공용 시스템 — board · nav · progress · flags · sfx · bgm · device …
     ├── content/curriculum.js  # ★ 챕터/방/진척 집계의 단일 공급원
     ├── serial/             # Web Serial 연결 · 프로토콜 · 웹 플래싱(STK500)
-    ├── engine/topdown.js   # 탑다운 월드(전시관 이동)
-    └── scenes/             # 화면 23개 — 온보딩 · 허브 · 미니게임
+    ├── engine/utils.js     # 등급 · 수치 공용 함수
+    ├── gfx3d/              # 3D 런타임 — 무대 · 재질 · 에디 · HUD · 강의 · 장면(scenes/)
+    └── scenes/             # 화면 — 온보딩 · 타이틀 · 캐릭터 만들기 · 3D 기지(hub3d) · 3D 미션 10개(*Game.js) · no3d(3D 미지원 안내)
 ```
 
-> 새 미니게임 추가 절차는 [`HANDOFF.md`](HANDOFF.md) §7의 레시피를 따른다.
+> 게임은 3D 전용이다(예전 2D 미니게임 · 2D 허브는 2026-10 에 없앴다). 새 미션은 [`docs/V4-MISSION-FORMAT.md`](docs/V4-MISSION-FORMAT.md) 의 짜임새를 따른다.
 
 ## 자산 파이프라인
 

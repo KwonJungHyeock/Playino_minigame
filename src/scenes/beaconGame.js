@@ -37,7 +37,7 @@ function buildBeats(si) {
 
 export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { const { showBuzzerGame } = await import('./buzzerGame.js'); showBuzzerGame(root, { onExit }); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
   const { LANE_CSS } = await import('../gfx3d/scenes/beacon.js');
 
   root.innerHTML = `<style>body:has(.bcn) .nav-back{display:none!important}body:has(.bcn-pads.on-play:not([hidden])) .fs-toggle{display:none!important}

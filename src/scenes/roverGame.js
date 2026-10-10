@@ -38,7 +38,7 @@ function trackTarget(t, dur) { const s = t / 1000; const ramp = clamp(t / dur, 0
 
 export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { const { showPotGame } = await import('./potGame.js'); showPotGame(root, { onExit }); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
 
   root.innerHTML = `<style>body:has(.rov) .nav-back{display:none!important}body:has(.rov-dial:not([hidden])) .fs-toggle{display:none!important}
     .rov{position:fixed;inset:0;overflow:hidden;background:#140f26}.rov-stage{position:absolute;inset:0}

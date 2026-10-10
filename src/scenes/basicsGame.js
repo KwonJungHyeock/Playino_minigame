@@ -18,7 +18,7 @@ const LESSON_KEY = 'eduino.v4.lesson.v1', SUMMARY = '피지컬 코딩 기초';  
 
 export async function showBasicsGame(root, { onExit } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { const { showBasics } = await import('./basics.js'); showBasics(root, { onExit, onComplete: onExit }); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
   const { PARTS, IN_CSS, OUT_CSS, IN_HEX, OUT_HEX } = await import('../gfx3d/scenes/boot.js');
 
   root.innerHTML = `<style>body:has(.bsc) .nav-back{display:none!important}body:has(.bsc-ctl:not([hidden])) .fs-toggle{display:none!important}

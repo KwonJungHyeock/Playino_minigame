@@ -39,7 +39,7 @@ function trackTarget(t, dur) { const ramp = clamp(t / dur, 0, 1); return (40 + t
 
 export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { const { showLampGame } = await import('./lampGame.js'); showLampGame(root, { onExit }); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
   const { hueCss, hueColor } = await import('../gfx3d/scenes/cave.js');
   const rainbow = Array.from({ length: 9 }, (_, k) => hueCss(k * 40)).join(',');
 

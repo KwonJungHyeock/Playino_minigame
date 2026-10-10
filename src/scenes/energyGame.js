@@ -34,7 +34,7 @@ const LESSON_KEY = 'eduino.v4.lesson.v1';
 
 export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { const { showRgbGame } = await import('./rgbGame.js'); showRgbGame(root, { onExit }); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
   const { CH_CSS, CH_NAME } = await import('../gfx3d/scenes/energy.js');
 
   root.innerHTML = `<style>body:has(.eng) .nav-back{display:none!important}body:has(.eng-ctl:not([hidden])) .fs-toggle{display:none!important}

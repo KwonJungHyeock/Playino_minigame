@@ -1,4 +1,4 @@
-// title.js — v4 '붉은 행성 대탈출' 타이틀(게임의 첫 화면). 이어하기 · 새로 시작 · 기록 불러오기 · 클래식(2D 판).
+// title.js — v4 '붉은 행성 대탈출' 타이틀(게임의 첫 화면). 이어하기 · 새로 시작 · 기록 불러오기.
 // 뒤 배경은 살아 움직이는 3D(gfx3d/scenes/titleStage.js — 키 아트와 같은 구도). 3D 가 준비되기 전 · WebGL2 가 없는 기기는 미리 구운 키 아트 그림.
 // 연출: 처음(세션당 한 번) — 하늘에서 카메라가 내려오고 에디가 떨어져 착지하는 순간 로고가 '쾅' · 메뉴가 차례로. 다시 오면 짧게.
 // 메뉴는 콘솔 게임식: ↑↓ 로 고르고 스페이스 · 엔터로 결정, 마우스를 올리면 그 칸이 골라진다. 고른 칸 아래 '저장 슬롯'에 학생 · 에디 · 부품 · 별.
@@ -90,9 +90,9 @@ const CSS = `
 
 /**
  * @param {HTMLElement} root
- * @param {{onContinue:Function, onNew:Function, onClassic:Function}} o
+ * @param {{onContinue:Function, onNew:Function}} o
  */
-export function showTitle(root, { onContinue, onNew, onClassic }) {
+export function showTitle(root, { onContinue, onNew }) {
   injectType();
   const who = student.get(), made = profile.created(), canGo = !!who && made;
   const parts = PART_ROOMS.filter((id) => progress.isCleared(id)).length;
@@ -101,7 +101,6 @@ export function showTitle(root, { onContinue, onNew, onClassic }) {
     canGo ? { act: 'go', label: '이어하기', tag: '스페이스' } : { act: 'new', label: '모험 시작', tag: '스페이스' },
     ...(canGo ? [{ act: 'new', label: '새로 시작', small: '다른 학생' }] : []),
     { act: 'load', label: '기록 불러오기', small: '다른 기기에서' },
-    { act: 'classic', label: '클래식 2D 판' },
   ];
   const slot = canGo
     ? `<div class="ttl-slot" aria-label="저장된 기록"><span class="av">${PORTRAIT('웃음')}</span><span class="tx"><small>저장 기록</small><b>${esc(student.label())}</b><em>${esc(josa(profile.name(), '과', '와'))} 함께</em></span><span class="ch"><span>🚀 ${parts}/${PART_ROOMS.length}</span><span>⭐ ${stars.total()}</span></span></div>`
@@ -138,7 +137,6 @@ export function showTitle(root, { onContinue, onNew, onClassic }) {
     // 이미 학생이 있으면(이름만 있고 에디는 아직) 기록을 지우지 않고 바로 만들기로
     new: () => { sfx.click?.(); if (canGo && !confirmNewStudent()) return; depart(() => onNew?.({ cleared: canGo })); },
     load: () => { sfx.click?.(); fileIn.click(); },
-    classic: () => { sfx.click?.(); bgm.theme('arcade'); finish(onClassic); },
   };
   btns.forEach((b, i) => { b.addEventListener('pointerenter', () => select(i)); b.addEventListener('focus', () => select(i, { sound: false })); b.addEventListener('click', () => { if (!busy) ACT[b.dataset.act](); }); });
   // 다른 기기 기록 불러오기(app/saveFile.js) — 지금 기록이 있으면 덮어쓰기 확인 후, 새로고침해서 읽는다

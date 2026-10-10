@@ -7,7 +7,7 @@
 
 ## 이 프로젝트에 대해
 
-프레임워크 없는 **Vite 바닐라 ES Modules SPA**. Electron 아님 — 데스크톱 빌드가 없다.
+프레임워크 없는 **Vite 바닐라 ES Modules SPA**. 게임은 **3D 전용**(three.js — 타이틀 · 기지 · 미션 10개 모두 3D, 예전 2D 판은 2026-10 에 없앴다. WebGL2 가 없는 기기는 `scenes/no3d.js` 안내 화면만). Electron 아님 — 데스크톱 빌드가 없다.
 `npm run dev` 로 띄우고, 배포는 Vercel(`dist`). HTML 진입점은 `index.html` 하나뿐이고
 씬 전환은 `src/app/nav.js` 의 함수 호출 라우팅이다(URL 은 변하지 않는다).
 
@@ -15,8 +15,7 @@
 
 - **`src/serial/*`** — STK500v1 부트로더·Intel-HEX 파서. DOM 의존 없는 순수 로직이고,
   잘못 건드리면 보드를 못 쓰게 만들 수 있다.
-- **`src/content/curriculum.js`** — 챕터·룸 구성의 단일 소스. 17개 파일이 참조한다.
-- **`src/engine/topdown.js`** — 368줄이지만 단일 책임(캔버스 월드)이다. 쪼개지 말 것.
+- **`src/content/curriculum.js`** — 챕터·룸 구성의 단일 소스. 13개 파일이 참조한다(방 ID · 메달 판정 · 기록 이름).
 - **`src/app/flags.js`** — `import.meta.env.VITE_* === 'true'` 를 함수로 감싸면 상수
   폴딩이 깨져 번들에 죽은 코드가 남는다.
 - **각 씬의 `cleanup()` 대칭 구조** — rAF·이벤트·보드 정리를 짝 맞춰 해제한다.

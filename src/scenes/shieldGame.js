@@ -33,7 +33,7 @@ const LESSON_KEY = 'eduino.v4.lesson.v1';
 
 export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { const { showButtonGame } = await import('./buttonGame.js'); showButtonGame(root, { onExit }); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
   const { SIDE_CSS, SIDE_NAME, FLAG_UP, FLAG_DOWN } = await import('../gfx3d/scenes/shield.js');
   const [UP, UP_L] = FLAG_UP, [DOWN, DOWN_L] = FLAG_DOWN;   // 깃발 든 팔(올림 · 내림)
 

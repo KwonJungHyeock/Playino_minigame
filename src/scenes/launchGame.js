@@ -40,7 +40,7 @@ const pressureAt = (t) => 0.5 + 0.22 * Math.sin(t / 2600) + 0.08 * Math.sin(t / 
 
 export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { const { showFinaleShow } = await import('./finaleShow.js'); showFinaleShow(root, { onExit }); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
   const { NOTE_CSS, hueCss, hueColor } = await import('../gfx3d/scenes/launch.js');
 
   root.innerHTML = `<style>body:has(.lch) .nav-back{display:none!important}body:has(.lch-ctl.on) .fs-toggle{display:none!important}

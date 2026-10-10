@@ -32,7 +32,7 @@ const LESSON_KEY = 'eduino.v4.lesson.v1';
 
 export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { const { showCdsGame } = await import('./cdsGame.js'); showCdsGame(root, { onExit }); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
 
   root.innerHTML = `<style>body:has(.sol) .nav-back{display:none!important}body:has(.sol-pad:not([hidden])) .fs-toggle{display:none!important}
     .sol{position:fixed;inset:0;overflow:hidden;background:#121838}.sol-stage{position:absolute;inset:0}

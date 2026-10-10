@@ -100,7 +100,7 @@ export function askSameStudent({ onNew } = {}) {
   setTimeout(() => el.querySelector('.sa-yes')?.focus(), 50);
 }
 
-// ── 스타일 (records.js·reportCard.js 와 같은 방식: 모듈이 자기 스타일을 한 번 주입) ──
+// ── 스타일 (모듈이 자기 스타일을 한 번 주입) ──
 let styled = false;
 function ensureStyles() {
   if (styled) return;

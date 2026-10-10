@@ -58,7 +58,7 @@ const STAGE_NAME = ['타이밍 쇼', '라이트 연주'];   // results 단계 �
 
 export async function showLandingGame(root, { onExit, stage: startStage = 1 } = {}) {
   const g = await import('../gfx3d/index.js');
-  if (!g.supports3D()) { const { showLedGame } = await import('./ledGame.js'); showLedGame(root, { onExit }); return; }
+  if (!g.supports3D()) { onExit?.(); return; }   // 3D 미지원 기기는 main.js 가 안내 화면으로 막는다
 
   root.innerHTML = `<style>body:has(.lnd) .nav-back{display:none!important}body:has(.lnd-pads.on-play:not([hidden])) .fs-toggle{display:none!important}.lnd{position:fixed;inset:0;overflow:hidden;background:#121838}.lnd-stage{position:absolute;inset:0}
     .lnd-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px "Pretendard Variable","Noto Sans KR",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
