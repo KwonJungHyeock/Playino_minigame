@@ -35,7 +35,7 @@ export async function createTitleStage(stage) {
   // 빛: 노을 해(주황) + 하늘 테두리 + 둥근 하늘빛
   root.add(new THREE.HemisphereLight(0x9aa6ff, 0x6a3a3a, 0.9));
   const sun = new THREE.DirectionalLight(0xff9a70, 2.2); sun.position.set(7, 3.5, -7); root.add(sun);
-  const key = new THREE.DirectionalLight(0xffe2cc, 1.4); key.position.set(-3, 7, 8); key.castShadow = true; key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 6;
+  const key = new THREE.DirectionalLight(0xffe2cc, 1.4); key.position.set(-3, 7, 8); key.castShadow = true; key.shadow.mapSize.setScalar(1024); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 6;
   Object.assign(key.shadow.camera, { left: -7, right: 7, top: 7, bottom: -4, near: 1, far: 30 }); key.target.position.set(0.8, 0, 0.5); root.add(key, key.target);
   const rim = new THREE.DirectionalLight(0x9fd8ff, 0.9); rim.position.set(-6, 4, -3); root.add(rim);
   // 땅(큰 행성 곡면) · 발사대 · 로켓

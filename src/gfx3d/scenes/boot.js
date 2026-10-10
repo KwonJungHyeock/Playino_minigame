@@ -138,11 +138,10 @@ export async function createBootScene(stage) {
   renderer.toneMappingExposure = 1.0; renderer.shadowMap.type = THREE.VSMShadowMap; scene.environmentIntensity = 0.42;
   root.add(new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.8));
   const key = new THREE.DirectionalLight(0xd4dcff, 1.5); key.position.set(-4, 9, 7); key.castShadow = true;
-  key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 9; key.shadow.blurSamples = 16;
+  key.shadow.mapSize.setScalar(stage.tier === 'high' ? 2048 : 1024); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 6; key.shadow.blurSamples = 8;   // 그림자 흐림 표본을 줄여 가볍게
   Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 }); key.target.position.set(0, 0, -1); root.add(key, key.target);
   const rim = new THREE.DirectionalLight(0x7fd8ff, 1.3); rim.position.set(6, 4, -7); root.add(rim);
   const work = new THREE.SpotLight(0xffe6c0, 38, 14, 0.75, 0.8, 2); work.position.set(0.4, 7, 4); work.target.position.set(0, 0.6, -0.8); root.add(work, work.target);
-  const bootLight = new THREE.PointLight(0x8ff7ee, 0, 7, 2); bootLight.position.set(0, 1.6, -1.6); root.add(bootLight);
 
   root.add(ground(new V(0, 0, -0.8), [[-6.4, 2.8, 1.3], [6.8, 2.4, 1.0], [-9, -6, 2.2], [10, -10, 2.8]]));
   const podTick = crashPod(root, root, new V(-4.7, 0, -3.9));   // 에디가 타고 온 캡슐(기지 '부팅 훈련' 구역과 같은 모양)
@@ -297,7 +296,7 @@ export async function createBootScene(stage) {
     if (rp) { ring.position.set(rp.g.position.x, 0.08, rp.g.position.z); ring.scale.setScalar(1 + Math.sin(t * 4) * 0.06); }
     // 부팅: 보드 번짐 · 콘솔 빛
     if (bootK > 0) bootK = Math.min(1, bootK + dt * 0.8);
-    brdGlow.material.opacity = bootK * (0.5 + Math.sin(t * 2.5) * 0.12); bootLight.intensity = bootK * 5;
+    brdGlow.material.opacity = bootK * (0.5 + Math.sin(t * 2.5) * 0.12);   // 부팅 빛은 번짐 그림으로(점광원을 하나 더 두면 모든 재질 계산이 무거워진다)
     // 옮기기 · 빛 알갱이
     for (let k = moves.length - 1; k >= 0; k--) {
       const m = moves[k]; m.t = Math.min(1, m.t + dt / m.dur); const e = m.t * m.t * (3 - 2 * m.t);

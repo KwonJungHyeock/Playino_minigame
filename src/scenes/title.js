@@ -21,8 +21,8 @@ import { icon } from '../app/icons.js';
 const INTRO_KEY = 'eduino.title.intro';   // 세션마다 한 번만 긴 인트로
 const CSS = `
 .ttl{position:fixed;inset:0;overflow:hidden;background:#120f3a;color:#fff;font-family:var(--f-ui);--gold:#ffd25a;--ink:#1b1f4a}
-.ttl-art{position:absolute;inset:0;background:url("${ART_WIDE}") 62% 50%/cover no-repeat;transform:scale(1.03);transition:opacity .9s ease,filter .9s ease}
-.ttl.gl .ttl-art{opacity:0;filter:blur(6px)}
+.ttl-art{position:absolute;inset:0;background:url("${ART_WIDE}") 62% 50%/cover no-repeat;transform:scale(1.03);transition:opacity .9s ease}
+.ttl.gl .ttl-art{opacity:0}   /* 흐림 필터 전환은 전체 화면이라 무겁다 — 투명도만 */
 .ttl-gl{position:absolute;inset:0;opacity:0;transition:opacity .9s ease}.ttl.gl .ttl-gl{opacity:1}
 .ttl-scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(14,12,48,.8) 0%,rgba(14,12,48,.5) 28%,rgba(14,12,48,0) 52%),linear-gradient(0deg,rgba(10,8,34,.55),transparent 26%),radial-gradient(120% 80% at 50% 50%,transparent 60%,rgba(6,5,24,.45) 100%)}
 .ttl-flash{position:absolute;inset:0;z-index:5;background:#fff;opacity:0;pointer-events:none;transition:opacity .45s ease}.ttl.go .ttl-flash{opacity:1}
@@ -51,7 +51,7 @@ const CSS = `
 .ttl.on .ttl-menu>:nth-child(1){animation-delay:.62s}.ttl.on .ttl-menu>:nth-child(2){animation-delay:.7s}.ttl.on .ttl-menu>:nth-child(3){animation-delay:.78s}.ttl.on .ttl-menu>:nth-child(4){animation-delay:.86s}
 .ttl.on .ttl-slot{animation:lgfade .6s .95s ease both}.ttl.on .ttl-foot{animation:lgfade .8s 1.1s ease both}
 .ttl.on .ttl-in{animation:shake .38s .1s ease-out}
-@keyframes lgslam{0%{opacity:0;transform:scale(2.4) translateY(-.25em);filter:blur(10px)}55%{opacity:1;transform:scale(.94);filter:none}78%{transform:scale(1.04)}100%{opacity:1;transform:none}}
+@keyframes lgslam{0%{opacity:0;transform:scale(2.4) translateY(-.25em)}55%{opacity:1;transform:scale(.94)}78%{transform:scale(1.04)}100%{opacity:1;transform:none}}
 @keyframes lgdrop{0%{opacity:0;transform:translateY(-1.2em) rotate(-14deg)}100%{opacity:1;transform:rotate(-4deg)}}
 @keyframes lgfade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes mnin{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
@@ -169,12 +169,12 @@ export function showTitle(root, { onContinue, onNew, onClassic }) {
   function onPoke(e) { if (!ts || e.target.closest('button,nav')) return; if (ts.poke(toNdc(e))) sfx.boing?.(); }
   el.addEventListener('pointermove', onMove); el.addEventListener('pointerdown', onPoke);
 
-  prewarmV4();   // 고르는 동안 3D 기지 · 에디 모델을 미리 받아 둔다
   bgm.theme('space');   // 붉은 행성 테마곡(첫 누름 · 키에서 시작 — 자동재생 정책)
 
   // ── 살아 있는 배경(3D) — 늦게 준비되면 로고부터, 빨리 준비되면 에디 착지에 맞춰 로고 ──
   const t0 = performance.now(), reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let seen = false; try { seen = !!sessionStorage.getItem(INTRO_KEY); sessionStorage.setItem(INTRO_KEY, '1'); } catch {}
+  later(seen ? 1500 : 4200, () => prewarmV4());   // 3D 기지 · 캐릭터 만들기 코드를 미리 받아 둔다 — 인트로(카메라 하강 · 착지)가 끝난 뒤에(겹치면 끊긴다)
   let waitLand = false;
   if (new URLSearchParams(location.search).get('intro') === 'full') waitLand = true;
   later(seen || reduce ? 150 : 1600, () => { if (!waitLand) showLogo(); });   // 3D 를 기다리지 않는 상한(긴 인트로가 시작됐으면 착지 때)
