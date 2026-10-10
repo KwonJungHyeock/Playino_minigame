@@ -9,6 +9,7 @@ import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 import { placeKit } from '../kits.js';
 import { partShowcase } from '../rocket.js';
+import { MARS } from '../mars.js';
 
 const P = PALETTE;
 export const KILL_Y = -9;          // 이 아래로 떨어지면 체크포인트로
@@ -118,14 +119,14 @@ export async function createCourse(stage) {
   topCache = new Map();
   const root = new THREE.Group(); root.name = 'Course'; scene.add(root);
   // 사탕빛 우주: 보라 하늘 · 분홍 지평 · 복숭아빛 노을 — 밤 기지보다 밝고 들뜬 축제 분위기
-  addSpaceSky(scene, { top: 0x241a6b, horizon: 0xc46ad8, glow: 0xffb3a1, stars: 1600, fog: [34, 120] });
+  addSpaceSky(scene, { top: 0x3a1630, horizon: 0xd8784a, glow: 0xffc28a, stars: 1600, fog: [34, 120] });
   renderer.toneMappingExposure = 1.12; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene.environmentIntensity = 0.75;
-  root.add(new THREE.HemisphereLight(0xffe9ff, 0x7a4f9a, 1.35));
+  root.add(new THREE.HemisphereLight(0xffe6d6, 0x8a4a38, 1.35));
   const key = new THREE.DirectionalLight(0xfff1e2, 2.4); key.castShadow = true;
   key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0005; key.shadow.normalBias = 0.03; key.shadow.radius = 4;
   Object.assign(key.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 60 }); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0x9fe4ff, 1.6); rim.position.set(8, 5, -20); root.add(rim);
+  const rim = new THREE.DirectionalLight(0xffb48a, 1.6); rim.position.set(8, 5, -20); root.add(rim);
 
   // 떨어지면 보이는 저 아래 행성 + 대기 띠
   const planet = mesh(new THREE.SphereGeometry(70, 96, 48), new THREE.MeshStandardMaterial({ color: 0xe88fb8, roughness: 0.85 }), { cast: false, receive: false });

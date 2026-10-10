@@ -12,6 +12,7 @@ import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { partShowcase } from '../rocket.js';
 import { bounce, trail } from '../juice.js';
+import { MARS } from '../mars.js';
 
 const V = THREE.Vector3;
 export const HUE_MAX = 320;
@@ -84,8 +85,8 @@ export async function createCaveScene(stage) {
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene.environmentIntensity = 0.2;
-  root.add(new THREE.HemisphereLight(0x3a3f7a, 0x120c18, 0.35));
-  const rim = new THREE.DirectionalLight(0x6a7cff, 0.7); rim.position.set(3, 5, -6); root.add(rim);   // 뒤에서 은은히 — 검은 몬스터 윤곽이 보이게
+  root.add(new THREE.HemisphereLight(0x7a3a34, 0x140a0a, 0.35));
+  const rim = new THREE.DirectionalLight(MARS.rim, 0.7); rim.position.set(3, 5, -6); root.add(rim);   // 뒤에서 은은히 — 검은 몬스터 윤곽이 보이게
 
   // 바닥(울퉁불퉁 짙은 바위) + 동굴 벽(무료 모델 바위로 둘러싼다) + 천장 종유석
   const fg = new THREE.PlaneGeometry(40, 30, 80, 60); fg.rotateX(-Math.PI / 2);

@@ -13,6 +13,7 @@ import { createParticles } from '../fx.js';
 import { comfort } from '../comfort.js';
 import { partShowcase } from '../rocket.js';
 import { bounce, trail } from '../juice.js';
+import { MARS } from '../mars.js';
 
 const V = THREE.Vector3;
 export const R_AT = new V(0.9, 0, -1.3);
@@ -160,10 +161,10 @@ export async function createReactorScene(stage) {
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene.environmentIntensity = 0.45;
-  root.add(new THREE.HemisphereLight(0x9aa4d8, 0x1a1420, 0.7));
+  root.add(new THREE.HemisphereLight(...MARS.hemi, 0.7));
   const key = new THREE.DirectionalLight(0xfff4e6, 1.5); key.position.set(-4, 7, 6); key.castShadow = true; key.shadow.mapSize.setScalar(stage.tier === 'low' ? 512 : 1024);
   Object.assign(key.shadow.camera, { left: -6, right: 6, top: 6, bottom: -4, near: 1, far: 20 }); key.shadow.bias = -0.0008; root.add(key);
-  const rim = new THREE.DirectionalLight(0x7f8cff, 0.8); rim.position.set(4, 4, -6); root.add(rim);
+  const rim = new THREE.DirectionalLight(MARS.rim, 0.8); rim.position.set(4, 4, -6); root.add(rim);
 
   // 바닥(짙은 남색 판) + 원자로 둘레 금 안전선 + 둥근 벽(이음선 기둥 · 하늘색 띠등)
   root.add(mesh(new THREE.PlaneGeometry(40, 30).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x232744, roughness: 0.75, metalness: 0.1 }), { cast: false }));

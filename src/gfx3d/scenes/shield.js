@@ -15,6 +15,7 @@ import { ground } from './landing.js';
 import { FONT } from '../type.js';
 import { partShowcase } from '../rocket.js';
 import { bounce, trail } from '../juice.js';
+import { MARS } from '../mars.js';
 
 const V = THREE.Vector3;
 export const SIDE_HEX = [0x4d8dff, 0xeef3ff], SIDE_CSS = ['#4d8dff', '#eef3ff'], SIDE_NAME = ['파랑', '하양'];
@@ -82,15 +83,15 @@ const nosePart = () => partShowcase('nose', 0.8);
 export async function createShieldScene(stage) {
   const { scene, camera, renderer } = stage;
   const root = new THREE.Group(); root.name = 'ShieldScene'; scene.add(root);
-  addSpaceSky(scene, { top: 0x050817, horizon: 0x24204a, glow: 0x6a3a4a, stars: 2000, fog: [18, 70] });
+  addSpaceSky(scene, { ...MARS.sky, stars: 2000, fog: [18, 70] });
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.type = THREE.VSMShadowMap;
   scene.environmentIntensity = 0.42;
-  root.add(new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.85));
-  const key = new THREE.DirectionalLight(0xd4dcff, 1.6); key.position.set(-4, 9, 7); key.castShadow = true;
+  root.add(new THREE.HemisphereLight(...MARS.hemi, 0.85));
+  const key = new THREE.DirectionalLight(MARS.key, 1.6); key.position.set(-4, 9, 7); key.castShadow = true;
   key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 9; key.shadow.blurSamples = 16;
   Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 }); key.target.position.set(0, 0, -0.6); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0x7fd8ff, 1.3); rim.position.set(6, 5, -7); root.add(rim);
+  const rim = new THREE.DirectionalLight(MARS.rim, 1.3); rim.position.set(6, 5, -7); root.add(rim);
   root.add(ground(new V(0, 0, -0.6), [[-6.5, 3, 1.3], [7, 2.4, 1.0], [-9, -6, 2.2], [10, -10, 2.8]]));
 
   // 지키는 기지(뒤 가운데 큰 돔) + 탱크

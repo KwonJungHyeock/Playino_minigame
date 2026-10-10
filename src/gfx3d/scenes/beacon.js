@@ -12,6 +12,7 @@ import { loadRobot } from '../robot.js';
 import { ground } from './landing.js';
 import { partShowcase } from '../rocket.js';
 import { bounce, trail } from '../juice.js';
+import { MARS } from '../mars.js';
 
 export const LANE_HEX = [0x2ee86a, 0x5ac9ff, 0xffc84a];         // 2D 판 레인색(초록 · 하늘 · 노랑)과 같은 계열
 export const LANE_CSS = ['#2ee86a', '#5ac9ff', '#ffc84a'];
@@ -72,15 +73,15 @@ const antennaPart = () => partShowcase('antenna', 0.8);
 export async function createBeaconScene(stage) {
   const { scene, camera, renderer } = stage;
   const root = new THREE.Group(); root.name = 'BeaconScene'; scene.add(root);
-  addSpaceSky(scene, { top: 0x050817, horizon: 0x1e1f4a, glow: 0x5a3358, stars: 1800, fog: [16, 60] });
+  addSpaceSky(scene, { ...MARS.sky, stars: 1800, fog: [16, 60] });
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.type = THREE.VSMShadowMap;
   scene.environmentIntensity = 0.42;
-  root.add(new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.85));
-  const key = new THREE.DirectionalLight(0xd4dcff, 1.7); key.position.set(-4, 9, 7); key.castShadow = true;
+  root.add(new THREE.HemisphereLight(...MARS.hemi, 0.85));
+  const key = new THREE.DirectionalLight(MARS.key, 1.7); key.position.set(-4, 9, 7); key.castShadow = true;
   key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 9; key.shadow.blurSamples = 16;
   Object.assign(key.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 }); key.target.position.set(1.5, 0, -0.8); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0x7fd8ff, 1.5); rim.position.set(6, 4, -7); root.add(rim);
+  const rim = new THREE.DirectionalLight(MARS.rim, 1.5); rim.position.set(6, 4, -7); root.add(rim);
   const work = new THREE.SpotLight(0xffe6c0, 60, 16, 0.65, 0.8, 2); work.position.set(1.8, 7, 4); work.target.position.set(1.6, 1.4, WIRE_Z); root.add(work, work.target);
 
   root.add(ground(new THREE.Vector3(1.5, 0, -0.8), [[-6, 3.5, 1.4], [7.5, 2.4, 1.0], [-9, -6, 2.2], [10, -10, 2.8]]));

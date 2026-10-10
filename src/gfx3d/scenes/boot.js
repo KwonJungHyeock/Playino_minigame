@@ -15,6 +15,7 @@ import { createParticles } from '../fx.js';
 import { FONT, INK } from '../type.js';
 import { ground } from './landing.js';
 import { crashPod } from './base.js';
+import { MARS } from '../mars.js';
 
 const P = PALETTE, V = THREE.Vector3;
 export const IN_HEX = 0x4d8dff, OUT_HEX = 0xff5fa2, IN_CSS = '#4d8dff', OUT_CSS = '#ff5fa2';   // 2D 판과 같은 뜻의 색: 입력 = 파랑 · 출력 = 분홍
@@ -134,13 +135,13 @@ function accessCard() {
 export async function createBootScene(stage) {
   const { scene, camera, renderer } = stage;
   const root = new THREE.Group(); root.name = 'BootScene'; scene.add(root);
-  addSpaceSky(scene, { top: 0x050817, horizon: 0x1f1d48, glow: 0x45305a, stars: 1800, fog: [16, 60] });
+  addSpaceSky(scene, { ...MARS.sky, stars: 1800, fog: [16, 60] });
   renderer.toneMappingExposure = 1.0; renderer.shadowMap.type = THREE.VSMShadowMap; scene.environmentIntensity = 0.42;
-  root.add(new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.8));
-  const key = new THREE.DirectionalLight(0xd4dcff, 1.5); key.position.set(-4, 9, 7); key.castShadow = true;
+  root.add(new THREE.HemisphereLight(...MARS.hemi, 0.8));
+  const key = new THREE.DirectionalLight(MARS.key, 1.5); key.position.set(-4, 9, 7); key.castShadow = true;
   key.shadow.mapSize.setScalar(stage.tier === 'high' ? 2048 : 1024); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 6; key.shadow.blurSamples = 8;   // 그림자 흐림 표본을 줄여 가볍게
   Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 }); key.target.position.set(0, 0, -1); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0x7fd8ff, 1.3); rim.position.set(6, 4, -7); root.add(rim);
+  const rim = new THREE.DirectionalLight(MARS.rim, 1.3); rim.position.set(6, 4, -7); root.add(rim);
   const work = new THREE.SpotLight(0xffe6c0, 38, 14, 0.75, 0.8, 2); work.position.set(0.4, 7, 4); work.target.position.set(0, 0.6, -0.8); root.add(work, work.target);
 
   root.add(ground(new V(0, 0, -0.8), [[-6.4, 2.8, 1.3], [6.8, 2.4, 1.0], [-9, -6, 2.2], [10, -10, 2.8]]));

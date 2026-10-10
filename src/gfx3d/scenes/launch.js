@@ -12,6 +12,7 @@ import { loadRobot } from '../robot.js';
 import { createParticles, createConfetti } from '../fx.js';
 import { createRocket } from '../rocket.js';
 import { bounce, trail } from '../juice.js';
+import { MARS } from '../mars.js';
 
 const V = THREE.Vector3;
 export const PAD = new V(0.6, 0, -1.2);
@@ -103,18 +104,18 @@ function consoleModel(M) {
 export async function createLaunchScene(stage) {
   const { scene, camera, renderer } = stage;
   const root = new THREE.Group(); root.name = 'LaunchScene'; scene.add(root);
-  const SKY_DUSK = new THREE.Color(0x3a2448), SKY_SPACE = new THREE.Color(0x02030a);
-  scene.background = SKY_DUSK.clone(); scene.fog = new THREE.Fog(0x3a2448, 14, 46);
+  const SKY_DUSK = new THREE.Color(MARS.dusk), SKY_SPACE = new THREE.Color(0x02030a);
+  scene.background = SKY_DUSK.clone(); scene.fog = new THREE.Fog(MARS.dusk, 14, 46);
   renderer.toneMappingExposure = 1.0; renderer.shadowMap.type = THREE.PCFSoftShadowMap; scene.environmentIntensity = 0.5;
-  const hemi = new THREE.HemisphereLight(0xe8eaff, 0x5a3434, 1.15); root.add(hemi);
+  const hemi = new THREE.HemisphereLight(0xffe6d6, 0x5a2a22, 1.15); root.add(hemi);
   const sun = new THREE.DirectionalLight(0xffe6d0, 2.3); sun.position.set(-4, 7, 8); sun.castShadow = true; sun.shadow.mapSize.setScalar(stage.tier === 'low' ? 512 : 1024);
   Object.assign(sun.shadow.camera, { left: -7, right: 7, top: 8, bottom: -3, near: 1, far: 24 }); sun.shadow.bias = -0.0008; root.add(sun);
-  const rim = new THREE.DirectionalLight(0x8f9cff, 0.7); rim.position.set(5, 5, -6); root.add(rim);
+  const rim = new THREE.DirectionalLight(MARS.rim, 0.7); rim.position.set(5, 5, -6); root.add(rim);
 
   // 하늘: 지평선 노을 띠 + 해 + 별(우주로 갈수록 밝아진다)
   const skyGeo = new THREE.SphereGeometry(60, 32, 16), skyMat = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { uSpace: { value: 0 } },
     vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'varying vec3 vP; uniform float uSpace; void main(){ float h = vP.y; vec3 dusk = mix(vec3(1.0,0.55,0.38), vec3(0.23,0.14,0.30), smoothstep(-0.02, 0.35, h)); dusk = mix(dusk, vec3(0.08,0.06,0.18), smoothstep(0.35, 0.9, h)); vec3 c = mix(dusk, vec3(0.008,0.01,0.035), uSpace); gl_FragColor = vec4(c, 1.0); }' });
+    fragmentShader: 'varying vec3 vP; uniform float uSpace; void main(){ float h = vP.y; vec3 dusk = mix(vec3(1.0,0.55,0.38), vec3(0.34,0.12,0.12), smoothstep(-0.02, 0.35, h)); dusk = mix(dusk, vec3(0.09,0.035,0.07), smoothstep(0.35, 0.9, h)); vec3 c = mix(dusk, vec3(0.008,0.01,0.035), uSpace); gl_FragColor = vec4(c, 1.0); }' });
   const sky = new THREE.Mesh(skyGeo, skyMat); sky.renderOrder = -10; sky.userData.noAO = true; root.add(sky);
   const SUN_OFF = new V(-30, 4, -40), sunDisc = glow(9, 0xffa070); sunDisc.position.copy(SUN_OFF); sunDisc.material.opacity = 0.9; root.add(sunDisc);
   const starGeo = new THREE.BufferGeometry(), sp = [];

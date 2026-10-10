@@ -13,6 +13,7 @@ import { addSpaceSky } from '../sky.js';
 import { loadRobot } from '../robot.js';
 import { STORY } from '../../content/v4story.js';
 import { fontsReady } from '../type.js';
+import { MARS } from '../mars.js';
 
 export const CENTER = new THREE.Vector3(0, 0, -2);   // 발사대(로켓) 자리
 const PAD_R = 2.5;
@@ -43,7 +44,7 @@ const gatePos = (id) => {
 const BOUND = { cx: 0, cz: -3, rx: 13.6, rz: 17.6 };
 const boundK = (x, z) => Math.hypot((x - BOUND.cx) / BOUND.rx, (z - BOUND.cz) / BOUND.rz);
 
-const GROUND = { lit: 0xc29a88, dark: 0x93706a, edge: 0x3f3246 };   // 따뜻한 붉은 모래(도전 챌린지 · 타이틀 행성과 같은 계열)
+const GROUND = MARS.ground;   // 녹슨 붉은 모래(gfx3d/mars.js — 미션 · 타이틀 행성과 같은 색)
 
 function ground() {
   const g = new THREE.PlaneGeometry(130, 130, 120, 120); g.rotateX(-Math.PI / 2);
@@ -366,7 +367,7 @@ function challengeZone(stat, live, at) {
 function walkways(gates) {
   // 도전 챌린지처럼 깔끔한 이어진 길: 발사대 둘레 고리 + 미션 문으로 뻗는 길(흰 포장 + 짙은 테두리). 행성 휘기가 먹도록 잘게 나눈 판
   const g = new THREE.Group(); g.name = 'Walkway';
-  const top = vinyl(P.shell, { roughness: 0.62, sheen: 0.2 }), rim = vinyl(0x5a4f6a, { roughness: 0.7 });
+  const top = vinyl(P.shell, { roughness: 0.62, sheen: 0.2 }), rim = vinyl(0x6e2c22, { roughness: 0.7 });
   const R = PAD_R + 1.0, Y = 0.13;   // 땅의 잔물결(± 0.1)보다 살짝 위
   const flat = (geo, mat, y) => { geo.rotateX(-Math.PI / 2); const m = mesh(geo, mat, { cast: false }); m.position.y = y; m.receiveShadow = true; g.add(m); return m; };
   flat(new THREE.RingGeometry(R - 0.5, R + 0.5, 160, 2), rim, Y - 0.01).position.set(CENTER.x, Y - 0.01, CENTER.z);
@@ -391,17 +392,17 @@ export async function createBaseScene(stage) {
   const { scene, renderer } = stage;
   const root = new THREE.Group(); root.name = 'BaseScene'; scene.add(root);
   // 밤의 기지 — 탈출 이야기라 어둡게 깔고, 불빛(문 · 가로등 · 로켓 · 바이저봇)이 길잡이가 되게 한다
-  // 작은 행성 둘레로 우주가 보인다 — 지평선 띠 없이 깊은 남색 우주 + 별을 많이
-  const sky = addSpaceSky(scene, { top: 0x04061a, horizon: 0x0d1030, glow: 0x24163e, stars: 2600, fog: [24, 80] }); sky.userData.noAO = true;
+  // 작은 행성 둘레로 우주가 보인다 — 검붉은 화성 밤하늘(mars.js) + 별을 많이
+  const sky = addSpaceSky(scene, { ...MARS.sky, stars: 2600, fog: [24, 80] }); sky.userData.noAO = true;
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;   // VSM은 휜 행성에서 땅 전체를 그림자로 덮는다(모멘트 비교가 어긋남) — 부드러운 PCF로
   scene.environmentIntensity = 0.38;
-  root.add(new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.8));
+  root.add(new THREE.HemisphereLight(...MARS.hemi, 0.8));
   // 그림자는 바이저봇 둘레만 — 달빛(키 라이트)이 봇을 따라다닌다(지도 전체를 덮으면 해상도가 모자란다)
-  const key = new THREE.DirectionalLight(0xd4dcff, 1.55); key.castShadow = true;
+  const key = new THREE.DirectionalLight(MARS.key, 1.55); key.castShadow = true;
   key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 8; key.shadow.blurSamples = 16;
   Object.assign(key.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 50 }); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0x7fd8ff, 1.5); rim.position.set(8, 6, -10); root.add(rim);   // 윤곽을 살리는 청록 역광
+  const rim = new THREE.DirectionalLight(MARS.rim, 1.5); rim.position.set(8, 6, -10); root.add(rim);   // 윤곽을 살리는 주황 역광
   // 로켓 조명: 발사탑에서 비추는 스폿(그림자 없음) — 기지 어디서나 목표가 보이게
   const rocketLight = new THREE.SpotLight(0xffe2b0, 160, 24, 0.36, 0.7, 2); rocketLight.position.set(CENTER.x + 4.5, 10, CENTER.z + 6); rocketLight.target.position.set(CENTER.x, 2.6, CENTER.z); root.add(rocketLight, rocketLight.target);
   rocketLight.userData.flat = rocketLight.position.clone(); rocketLight.target.userData.flat = rocketLight.target.position.clone();
@@ -502,7 +503,7 @@ export async function createBaseScene(stage) {
 
   // 대기 띠: 행성 가장자리에 도는 옅은 빛(휘지 않는 진짜 구 — 행성 중심을 따라 옮긴다)
   const atmo = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 32), new THREE.ShaderMaterial({
-    uniforms: { uCol: { value: new THREE.Color(0x7d9bff) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide, fog: false,
+    uniforms: { uCol: { value: new THREE.Color(MARS.atmo) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide, fog: false,
     vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vV = -mv.xyz; vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * mv; }',
     fragmentShader: 'uniform vec3 uCol; varying vec3 vN; varying vec3 vV; void main(){ float f = dot(normalize(vN), normalize(vV)); float a = pow(clamp(1.0 - abs(f), 0.0, 1.0), 7.0); gl_FragColor = vec4(uCol * 1.2, a * 0.55); }',
   }));

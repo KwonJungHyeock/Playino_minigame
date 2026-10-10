@@ -13,6 +13,7 @@ import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { ground } from './landing.js';
 import { partShowcase } from '../rocket.js';
+import { MARS } from '../mars.js';
 
 const P = PALETTE, V = THREE.Vector3;
 export const CH_HEX = [0xff4d4d, 0x2ee86a, 0x4d8dff];          // 빨강 · 초록 · 파랑 빛(허브 에너지 셀 구역 · 로켓 셀 부품과 같은 색)
@@ -101,15 +102,15 @@ const slotPos = (at, k) => new V(at.x + (k - 1) * SLOT_DX, 0.25, at.z);
 export async function createEnergyScene(stage) {
   const { scene, camera, renderer } = stage;
   const root = new THREE.Group(); root.name = 'EnergyScene'; scene.add(root);
-  addSpaceSky(scene, { top: 0x050817, horizon: 0x1c2048, glow: 0x3a3a6a, stars: 1800, fog: [16, 60] });
+  addSpaceSky(scene, { ...MARS.sky, stars: 1800, fog: [16, 60] });
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.type = THREE.VSMShadowMap;
   scene.environmentIntensity = 0.42;
-  root.add(new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.8));
-  const key = new THREE.DirectionalLight(0xd4dcff, 1.5); key.position.set(-4, 9, 7); key.castShadow = true;
+  root.add(new THREE.HemisphereLight(...MARS.hemi, 0.8));
+  const key = new THREE.DirectionalLight(MARS.key, 1.5); key.position.set(-4, 9, 7); key.castShadow = true;
   key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 9; key.shadow.blurSamples = 16;
   Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 }); key.target.position.set(0, 0, -1.2); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0x7fd8ff, 1.3); rim.position.set(6, 4, -7); root.add(rim);
+  const rim = new THREE.DirectionalLight(MARS.rim, 1.3); rim.position.set(6, 4, -7); root.add(rim);
   const work = new THREE.SpotLight(0xffe6c0, 40, 14, 0.7, 0.8, 2); work.position.set(0.5, 7, 4); work.target.position.set(0, 0.8, -1.0); root.add(work, work.target);
   // 셀 빛이 둘레를 물들인다(섞은 색 그대로)
   const cellLight = new THREE.PointLight(0xffffff, 0, 6, 2); cellLight.position.set(SOCKET.x, SOCKET.y + 0.7, SOCKET.z + 0.2); root.add(cellLight);

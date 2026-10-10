@@ -14,6 +14,7 @@ import { loadRobot } from '../robot.js';
 import { createParticles } from '../fx.js';
 import { ground } from './landing.js';
 import { partShowcase } from '../rocket.js';
+import { MARS } from '../mars.js';
 
 const P = PALETTE, V = THREE.Vector3;
 export const SUN_HEX = 0xffd24a, SHADE_HEX = 0x5d6bd8;
@@ -68,15 +69,15 @@ const wingsPart = () => partShowcase('wings', 0.8);
 export async function createSolarScene(stage) {
   const { scene, camera, renderer } = stage;
   const root = new THREE.Group(); root.name = 'SolarScene'; scene.add(root);
-  addSpaceSky(scene, { top: 0x050817, horizon: 0x22204a, glow: 0x5a4358, stars: 1800, fog: [18, 70] });
+  addSpaceSky(scene, { ...MARS.sky, stars: 1800, fog: [18, 70] });
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.type = THREE.VSMShadowMap;
   scene.environmentIntensity = 0.42;
-  const hemi = new THREE.HemisphereLight(0x95a0e8, 0x3a2a36, 0.8); root.add(hemi);
-  const key = new THREE.DirectionalLight(0xd4dcff, 1.2); key.position.set(-4, 9, 7); key.castShadow = true;
+  const hemi = new THREE.HemisphereLight(...MARS.hemi, 0.8); root.add(hemi);
+  const key = new THREE.DirectionalLight(MARS.key, 1.2); key.position.set(-4, 9, 7); key.castShadow = true;
   key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 9; key.shadow.blurSamples = 16;
   Object.assign(key.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 }); key.target.position.set(1, 0, -1); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0x7fd8ff, 1.2); rim.position.set(6, 4, -7); root.add(rim);
+  const rim = new THREE.DirectionalLight(MARS.rim, 1.2); rim.position.set(6, 4, -7); root.add(rim);
 
   // ══ 1단계 무대: 충전소 ══
   const station = new THREE.Group(); station.name = 'Station'; root.add(station);

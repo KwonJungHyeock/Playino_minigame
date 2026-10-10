@@ -18,7 +18,7 @@ const BOT = new V(0.2, 0, 3.4), PAD = new V(1.7, 0, -1.4);
 
 function skyTexture() {
   const c = document.createElement('canvas'); c.width = 16; c.height = 512; const x = c.getContext('2d'), gr = x.createLinearGradient(0, 0, 0, 512);
-  gr.addColorStop(0, '#120f3a'); gr.addColorStop(0.38, '#3a2a72'); gr.addColorStop(0.62, '#8a4f8f'); gr.addColorStop(0.8, '#e8807a'); gr.addColorStop(0.92, '#ffbf8f'); gr.addColorStop(1, '#ffd9a8');
+  gr.addColorStop(0, '#170a1c'); gr.addColorStop(0.38, '#4a1a34'); gr.addColorStop(0.62, '#9a4446'); gr.addColorStop(0.8, '#e8807a'); gr.addColorStop(0.92, '#ffbf8f'); gr.addColorStop(1, '#ffd9a8');
   x.fillStyle = gr; x.fillRect(0, 0, 16, 512); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
@@ -33,11 +33,11 @@ export async function createTitleStage(stage) {
   const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.55, sizeAttenuation: true, transparent: true, opacity: 0.85, toneMapped: false }); root.add(new THREE.Points(sg, starMat));
   const moons = [[34, 30, -90, 7, 0xf2c9a4], [22, 40, -95, 2.4, 0xbcd0f0]].map(([x, y, z, r, col]) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 48, 24), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.35, roughness: 0.9 })); m.position.set(x, y, z); root.add(m); return m; });
   // 빛: 노을 해(주황) + 하늘 테두리 + 둥근 하늘빛
-  root.add(new THREE.HemisphereLight(0x9aa6ff, 0x6a3a3a, 0.9));
+  root.add(new THREE.HemisphereLight(0xffc4a8, 0x6a2e26, 0.9));
   const sun = new THREE.DirectionalLight(0xff9a70, 2.2); sun.position.set(7, 3.5, -7); root.add(sun);
   const key = new THREE.DirectionalLight(0xffe2cc, 1.4); key.position.set(-3, 7, 8); key.castShadow = true; key.shadow.mapSize.setScalar(1024); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 6;
   Object.assign(key.shadow.camera, { left: -7, right: 7, top: 7, bottom: -4, near: 1, far: 30 }); key.target.position.set(0.8, 0, 0.5); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0x9fd8ff, 0.9); rim.position.set(-6, 4, -3); root.add(rim);
+  const rim = new THREE.DirectionalLight(0xffb08a, 0.9); rim.position.set(-6, 4, -3); root.add(rim);
   // 땅(큰 행성 곡면) · 발사대 · 로켓
   const planet = new THREE.Mesh(new THREE.SphereGeometry(80, 128, 64), vinyl(0xc8664a, { roughness: 0.9, clearcoat: 0.05, sheen: 0.15 })); planet.position.set(0, -80, 0); planet.receiveShadow = true; root.add(planet);
   const pad = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 2.05, 0.22, 64), vinyl(0x2c2f3d, { roughness: 0.5 })); pad.position.set(PAD.x, 0.11, PAD.z); pad.receiveShadow = pad.castShadow = true; root.add(pad);

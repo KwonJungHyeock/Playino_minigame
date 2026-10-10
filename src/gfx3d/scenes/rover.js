@@ -16,6 +16,7 @@ import { createParticles } from '../fx.js';
 import { partShowcase } from '../rocket.js';
 import { strataColumn, strataMaterial } from '../toyrock.js';
 import { bounce, trail } from '../juice.js';
+import { MARS } from '../mars.js';
 
 const P = PALETTE, V = THREE.Vector3;
 export const ROAD_V = 3.2;                 // 2단계: 로버가 달리는 빠르기(m/초) — 관문 간격 = 판정 간격 × 이 값
@@ -126,15 +127,15 @@ const finsPart = () => partShowcase('fins', 0.9);
 export async function createRoverScene(stage) {
   const { scene, camera, renderer } = stage;
   const root = new THREE.Group(); root.name = 'RoverScene'; scene.add(root);
-  addSpaceSky(scene, { top: 0x060818, horizon: 0x3a2240, glow: 0x7a3a3a, stars: 1800, fog: [18, 70] });
+  addSpaceSky(scene, { ...MARS.sky, stars: 1800, fog: [18, 70] });
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene.environmentIntensity = 0.45;
-  root.add(new THREE.HemisphereLight(0xa0a8f0, 0x5a3030, 0.9));
+  root.add(new THREE.HemisphereLight(...MARS.hemi, 0.9));
   const key = new THREE.DirectionalLight(0xffe2cc, 1.8); key.castShadow = true;
   key.shadow.mapSize.setScalar(stage.tier === 'low' ? 1024 : 2048); key.shadow.bias = -0.0005; key.shadow.normalBias = 0.03;
   Object.assign(key.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 40 }); root.add(key, key.target);
-  const rim = new THREE.DirectionalLight(0x7fd8ff, 1.4); rim.position.set(6, 5, -8); root.add(rim);
+  const rim = new THREE.DirectionalLight(MARS.rim, 1.4); rim.position.set(6, 5, -8); root.add(rim);
 
   // 트랙(로버는 늘 x≈0에 있고, 땅이 뒤로 흐른다)
   const track = new THREE.Group(); track.name = 'Track'; root.add(track);
