@@ -93,7 +93,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   scn = await createReactorScene(stage);
   if (done) { scn.dispose(); return; }
   addPost(stage, { bloom: 0.42, bloomRadius: 0.7, threshold: 1.1 });   // 돔 · 노심이 하얗게 날지 않게
-  hud = createHud(el, { mission: { icon: '⚛️', eyebrow: 'MISSION 08 · 깊은 곳으로', title: '원자로 진정' }, onPause: () => pause() });
+  hud = createHud(el, { mission: { icon: '⚛️', eyebrow: '미션 08 · 깊은 곳으로', title: '원자로 진정' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
   // 바이저봇이 핸들을 돌린다: 두 손을 바퀴 테에(핸들이 돌면 한 손은 오르고 한 손은 내린다) · 눈은 계기판 · 맞으면 콩 · 김이 뿜으면 움찔
   const actor = createActor(bot), camPos = () => cam.position;
@@ -164,7 +164,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
   async function intro() {
     bgm.setDuck(1); S.onWheel = false; actor.pose(null);
     await wait(1200); if (introSkipped) return;
-    await hud.banner('원자로 진정', 'MISSION 08', { ms: 2000 }); if (introSkipped) return;
+    await hud.banner('원자로 진정', '미션 08', { ms: 2000 }); if (introSkipped) return;
     actor.look(camPos); bot.setExpression('놀람');
     await hud.dialogue([
       { text: '으앗, 원자로가 부글부글 화가 났어! 이대로면 동력 코어를 못 꺼내.', mood: '놀람' },
@@ -260,7 +260,7 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
     if (act.mode === 'match') { S.m = { idx: -1, center: 0.5, half: act.half0, holdT: 0, roundT: 0 }; S.total = act.rounds; nextRound(); }
     else { S.tk = { t: 0, checkIdx: 0, nextCheck: act.dur / act.checks }; S.total = act.checks; scn.setBand(trackTarget(0, act.dur), act.tol0, 'track'); S.left = Math.ceil(act.dur / 1000); }
     actor.look(() => scn.gaugeAt()); bot.setExpression('기본'); progressGoal(); bgm.setDuck(0);
-    await hud.banner(STAGE_TITLE[S.mode - 1], 'MISSION START', { ms: 1400 });
+    await hud.banner(STAGE_TITLE[S.mode - 1], '미션 시작', { ms: 1400 });
     if (done || S.phase !== 'count') return;
     dialEl.hidden = false; readEl.hidden = false;
     await hud.countdown(3, { onTick: () => sfx.click?.() });
@@ -348,11 +348,11 @@ export async function showReactorGame(root, { onExit, stage: startStage = 1 } = 
       if (last) { scn.calm(); later(1000, () => { scn.revealPart(); sfx.ok(); }); } else { scn.setHeat(0.35); scn.mood('happy', 2500); }
       await wait(last ? 1500 : 500); if (done) return;
       bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('flex')); later(2600, () => actor.pose(null));
-      await hud.banner(n === 1 ? '제어봉 잠금 완료!' : n === 2 ? '압력이 내려갔어!' : '원자로가 진정됐어!', 'MISSION CLEAR', { ms: 1800 });
+      await hud.banner(n === 1 ? '제어봉 잠금 완료!' : n === 2 ? '압력이 내려갔어!' : '원자로가 진정됐어!', '미션 성공', { ms: 1800 });
       await hud.say(n < 3 ? (n === 1 ? '조금 식었어! 이번엔 압력 탱크 밸브를 더 정밀하게 잠그자.' : '거의 다 왔어. 마지막으로 폭주하는 노심을 붙잡자!') : medal ? '동력 코어 획득! 로켓에 달면 드디어 출발 준비 끝이야 ⚛️' : '진정 성공! 앞의 막도 통과하면 동력 코어를 받아.', { mood: '웃음' });
     } else {
       bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('dizzy', 1.8)); scn.mood('hot', 2500);
-      await hud.banner('원자로가 아직 뜨거워', 'TRY AGAIN', { bad: true, ms: 1600 });
+      await hud.banner('원자로가 아직 뜨거워', '다시 도전', { bad: true, ms: 1600 });
       await hud.say(n === 3 ? '띠가 움직이는 방향을 보고 미리 따라가 봐. 경고등이 계속 켜져 있으면 잘하고 있는 거야!' : '경고등이 빨라지는 쪽으로 돌리다가, 계속 켜지면 손을 멈추고 버텨 봐!', { mood: '졸림' });
       if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 목표 폭을 넓혔어. 다시 해 보자!', { mood: '윙크' }); }
     }

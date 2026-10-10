@@ -83,7 +83,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   scn = await createBeaconScene(stage);
   if (done) { scn.dispose(); return; }
   addPost(stage, { bloom: 0.45, bloomRadius: 0.7, threshold: 1.05 });
-  hud = createHud(el, { mission: { icon: '📡', eyebrow: 'MISSION 02 · 기지 복구', title: '구조 신호 비콘' }, onPause: () => pause() });
+  hud = createHud(el, { mission: { icon: '📡', eyebrow: '미션 02 · 기지 복구', title: '구조 신호 비콘' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
   // 바이저봇은 신호 지휘자: 맞힌 음 높이만큼 팔을 든다(낮은 음 낮게 · 높은 음 높게) — 소리 높이 = 줄 높이를 몸으로
   const { createActor } = await import('../gfx3d/actor.js'); if (done) return;
@@ -171,7 +171,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   async function intro() {
     bgm.setDuck(1);
     await wait(1300); if (introSkipped) return;
-    await hud.banner('구조 신호 비콘', 'MISSION 02', { ms: 2000 }); if (introSkipped) return;
+    await hud.banner('구조 신호 비콘', '미션 02', { ms: 2000 }); if (introSkipped) return;
     bot.play('인사', { once: true }); bot.setExpression('웃음');
     actor.look(camPos);   // 말할 땐 화면(플레이어)을 본다
     await hud.dialogue([
@@ -263,7 +263,7 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
   async function beginPlay() {
     Object.assign(S, { phase: 'count', t: 0, beats: buildBeats(S.mode - 1), hits: 0, seen: 0, combo: 0, maxCombo: 0, score: 0, ended: false, pass: false, pausedAt: 0 });
     scn.setLink(0); bot.play('대기'); bot.setExpression('기본'); progressGoal(); bgm.setDuck(0);
-    await hud.banner(STAGE_NAME[S.mode - 1].split('·')[1].trim(), 'MISSION START', { ms: 1500 });
+    await hud.banner(STAGE_NAME[S.mode - 1].split('·')[1].trim(), '미션 시작', { ms: 1500 });
     if (done || S.phase !== 'count') return;
     padsEl.hidden = false; padsEl.classList.add('on-play');
     await hud.countdown(3, { onTick: () => sfx.click?.() });
@@ -331,11 +331,11 @@ export async function showBeaconGame(root, { onExit, stage: startStage = 1 } = {
     if (pass) {
       if (stageNo === 2) { scn.revealPart(); sfx.ok(); }
       await wait(700); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('dance')); later(2600, () => actor.pose(null));
-      await hud.banner(stageNo === 1 ? '신호 연결!' : '교신 성공!', 'MISSION CLEAR', { ms: 1800 });
+      await hud.banner(stageNo === 1 ? '신호 연결!' : '교신 성공!', '미션 성공', { ms: 1800 });
       await hud.say(stageNo === 1 ? '위성이 대답했어! 이제 긴 신호로 통신을 완전히 잇자.' : medal ? '통신 안테나 획득! 기지 로켓에 달러 가자 📡' : '교신 성공! 1단계도 통과하면 안테나를 받아.', { mood: '웃음' });
     } else {
       bot.setExpression('졸림'); later(500, () => actor.routine('phew', 1.8));
-      await hud.banner('신호가 조금 끊겼어', 'TRY AGAIN', { bad: true, ms: 1600 });
+      await hud.banner('신호가 조금 끊겼어', '다시 도전', { bad: true, ms: 1600 });
       await hud.say('소리를 들으면서 다시 해볼까? 높이만 맞추면 돼.', { mood: '졸림' });
       if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 박자 판정을 넉넉하게 했어. 다시 해 보자!', { mood: '윙크' }); }
     }

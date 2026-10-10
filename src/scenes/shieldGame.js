@@ -86,7 +86,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   scn = await createShieldScene(stage);
   if (done) { scn.dispose(); return; }
   addPost(stage, { bloom: 0.5, bloomRadius: 0.7, threshold: 1.05 });
-  hud = createHud(el, { mission: { icon: '🛡️', eyebrow: 'MISSION 06 · 기지 복구', title: '운석 방어막' }, onPause: () => pause() });
+  hud = createHud(el, { mission: { icon: '🛡️', eyebrow: '미션 06 · 기지 복구', title: '운석 방어막' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
   // 바이저봇: 1단계엔 운석을 눈으로 좇고 막으면 그쪽을 가리키며 콩, 2단계엔 파랑 · 하양 깃발을 들고 내 방어막을 따라 올리고 내린다
   const actor = createActor(bot), camPos = () => cam.position;
@@ -146,7 +146,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
   async function intro() {
     bgm.setDuck(1);
     await wait(1100); if (introSkipped) return;
-    await hud.banner('운석 방어막', 'MISSION 06', { ms: 2000 }); if (introSkipped) return;
+    await hud.banner('운석 방어막', '미션 06', { ms: 2000 }); if (introSkipped) return;
     actor.look(camPos); bot.play('인사', { once: true }); bot.setExpression('놀람');
     await hud.dialogue([
       { text: '운석 비가 온대! 기지를 지켜야 해.', mood: '놀람' },
@@ -246,7 +246,7 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
     [...padsEl.children].forEach((b) => b.classList.remove('on'));
     bot.play('대기'); bot.setExpression('기본'); actor.look(null); progressGoal(); bgm.setDuck(0);
     if (S.mode === 2) scn.command('준비!', '#8ef7ed', `명령 ${game.count}번`);
-    await hud.banner(STAGE_TITLE[S.mode - 1], 'MISSION START', { ms: 1400 });
+    await hud.banner(STAGE_TITLE[S.mode - 1], '미션 시작', { ms: 1400 });
     if (done || S.phase !== 'count') return;
     padsEl.hidden = false; readEl.hidden = false; if (S.mode === 1) { clockEl.classList.add('on'); $('#shd-time').textContent = game.time; }
     await hud.countdown(3, { onTick: () => sfx.click?.() });
@@ -389,11 +389,11 @@ export async function showShieldGame(root, { onExit, stage: startStage = 1 } = {
       if (stageNo === 2) { scn.revealPart(); sfx.ok(); }
       await wait(500); if (done) return;
       bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('flex')); later(2600, () => actor.pose(null));
-      await hud.banner(stageNo === 1 ? '운석 막기 성공!' : '방어막 훈련 통과!', 'MISSION CLEAR', { ms: 1800 });
+      await hud.banner(stageNo === 1 ? '운석 막기 성공!' : '방어막 훈련 통과!', '미션 성공', { ms: 1800 });
       await hud.say(stageNo === 1 ? '기지가 무사해! 이제 관제 명령대로 방어막을 다뤄 보자.' : medal ? '방어막 노즈콘 획득! 기지 로켓에 달러 가자 🛡️' : '훈련 통과! 1단계도 통과하면 방어막 노즈콘을 받아.', { mood: '웃음' });
     } else {
       bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('dizzy', 1.8));
-      await hud.banner(stageNo === 1 ? '시간이 다 됐어' : '명령을 조금 놓쳤어', 'TRY AGAIN', { bad: true, ms: 1600 });
+      await hud.banner(stageNo === 1 ? '시간이 다 됐어' : '명령을 조금 놓쳤어', '다시 도전', { bad: true, ms: 1600 });
       await hud.say(stageNo === 1 ? '운석이 보이는 쪽을 바로 눌러 봐. 금빛 운석은 3점이야!' : '누르기 전에 방어막이 이미 켜져 있는지 먼저 봐!', { mood: '졸림' });
     }
     if (done) return;

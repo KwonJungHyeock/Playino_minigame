@@ -110,7 +110,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   scn = await createLaunchScene(stage);
   if (done) { scn.dispose(); return; }
   addPost(stage, { bloom: 0.42, bloomRadius: 0.7, threshold: 1.05 });
-  hud = createHud(el, { mission: { icon: '🚀', eyebrow: 'FINAL · 탈출', title: '발사 쇼' }, onPause: () => pause() });
+  hud = createHud(el, { mission: { icon: '🚀', eyebrow: '마지막 · 탈출', title: '발사 쇼' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
   // 바이저봇이 쇼 감독: 1막엔 조명을 가리키고 · 2막엔 음 높이만큼 지휘 · 3막엔 조종대 빨간 단추를 꾹 · 끝엔 직접 타고 떠난다
   const actor = createActor(bot), camPos = () => cam.position;
@@ -300,7 +300,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     else if (n === 2) { S.mel = { seq: [], inIdx: 0, lives: MELODY.lives + (assist.on(2) ? 1 : 0), phase: 'show', best: 0 }; S.total = MELODY.target; }
     else { S.cue = { idx: 0, pos: 0, judged: false, t: 0, inP: false }; S.total = CUE.cues; scn.setCount(CUE.cues); scn.setHeat(0); }
     bot.setExpression('기본'); progressGoal(); bgm.setDuck(0);
-    await hud.banner(STAGE_TITLE[n - 1], 'SHOW START', { ms: 1400 });
+    await hud.banner(STAGE_TITLE[n - 1], '쇼 시작', { ms: 1400 });
     if (done || S.phase !== 'count') return;
     setCtl(n); readEl.hidden = false;
     await hud.countdown(3, { onTick: () => sfx.click?.() });
@@ -405,12 +405,12 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     if (pass) {
       await wait(400); if (done) return;
       bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); scn.setFace(0, 'smile'); later(700, () => actor.routine('cheer'));
-      await hud.banner(n === 1 ? '조명 점검 완료!' : n === 2 ? '관제 교신 성공!' : '카운트다운 완료!', 'SHOW CLEAR', { ms: 1700 });
+      await hud.banner(n === 1 ? '조명 점검 완료!' : n === 2 ? '관제 교신 성공!' : '카운트다운 완료!', '쇼 성공', { ms: 1700 });
       if (last) { if (done) return; await ending(medal); return; }
       await hud.say(n === 1 ? '발사탑이 초록불로 가득해! 이제 관제와 교신하자.' : '관제가 발사를 허락했어! 마지막 카운트다운이야.', { mood: '웃음' });
     } else {
       bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('phew', 1.8));
-      await hud.banner('조금 흔들렸어', 'TRY AGAIN', { bad: true, ms: 1600 });
+      await hud.banner('조금 흔들렸어', '다시 도전', { bad: true, ms: 1600 });
       await hud.say(n === 1 ? '로켓 얼굴 색을 보고 다이얼을 천천히 돌려 봐. 색이 같아지면 멈추고 버텨!' : n === 2 ? '음표등 색과 순서를 같이 기억해 봐. 소리 높이도 힌트야!' : '빛 점이 금색 구간에 들어가는 순간을 미리 기다렸다가 눌러 봐!', { mood: '졸림' });
       if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 판정을 넉넉하게 했어. 다시 해 보자!', { mood: '윙크' }); }
     }
@@ -447,7 +447,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
     await hud.countdown(3, { onTick: () => { sfx.click?.(); scn.puff(16, 0.8); scn.setHeat(0.7); } }); if (done) return;
     scn.party(); scn.launch(true); scn.setCount(null); S.view = 'launch'; shake = 1.2; sfx.launch?.(); sfx.roar(6500); tone(523, 600);
     await wait(2600); if (done) return;
-    await hud.banner('행성 탈출!', 'MISSION COMPLETE', { ms: 2600 }); if (done) return;
+    await hud.banner('행성 탈출!', '미션 완료', { ms: 2600 }); if (done) return;
     await hud.say(`${student.label() ? `${student.get()?.name || ''}, ` : ''}함께해 줘서 고마워! 우리 이제 진짜 메이커야 🚀`, { mood: '웃음' }); if (done) return;
     await hud.say('저기 봐, 우리가 고친 기지가 있던 붉은 행성이야. 언제든 다시 놀러 가자!', { mood: '윙크' }); if (done) return;
     showResult(n, grade, pct, true, true);

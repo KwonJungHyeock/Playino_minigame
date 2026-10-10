@@ -39,7 +39,7 @@ const CSS = `
   background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.95) 42%,transparent 52%) no-repeat,linear-gradient(180deg,#fff6c8 0%,#ffe27a 38%,#ffc93a 62%,#f2a91f 100%);background-size:250% 100%,100% 100%;background-position:160% 0,0 0;-webkit-background-clip:text;background-clip:text}
 .ttl.on .lg-main::after{animation:lgshine 4.8s 1.1s ease-in-out infinite}
 @keyframes lgshine{0%,62%{background-position:160% 0,0 0}100%{background-position:-60% 0,0 0}}
-.lg-en{display:flex;align-items:center;gap:.7em;margin:.5em 0 0 .3em;font:700 clamp(11px,1vw,13px)/1 var(--f-num);letter-spacing:.34em;color:#8ff7ee;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.lg-en{display:flex;align-items:center;gap:.7em;margin:.5em 0 0 .3em;font:700 clamp(12px,1.05vw,14px)/1 var(--f-ui);letter-spacing:.12em;color:#8ff7ee;text-shadow:0 2px 8px rgba(0,0,0,.6)}
 .lg-en::before,.lg-en::after{content:'';width:28px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#8ff7ee)}.lg-en::after{transform:scaleX(-1)}
 .ttl-sub{margin:0;color:#eef0ff;font:600 clamp(14px,1.25vw,17px)/1.45 var(--f-ui);text-shadow:0 2px 10px rgba(0,0,0,.7)}
 /* 등장(로고 쾅 → 리본 → 띠 → 메뉴 차례로) */
@@ -71,13 +71,13 @@ const CSS = `
 /* 저장 슬롯 */
 .ttl-slot{display:flex;align-items:center;gap:12px;width:min(400px,100%);padding:10px 14px 10px 10px;border-radius:18px;background:linear-gradient(90deg,rgba(10,10,40,.72),rgba(10,10,40,.4));border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px)}
 .ttl-slot .av{flex:none;width:48px;height:48px;border-radius:14px;background:radial-gradient(circle at 50% 35%,#fff,#dfe3ee);display:grid;place-items:center;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}.ttl-slot .av svg{width:42px;height:42px}
-.ttl-slot .tx{display:grid;gap:3px;min-width:0}.ttl-slot .tx small{font:800 10px/1 var(--f-num);letter-spacing:.2em;color:#8ff7ee}.ttl-slot .tx b{font:400 19px/1.1 var(--f-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ttl-slot .tx{display:grid;gap:3px;min-width:0}.ttl-slot .tx small{font:800 11px/1 var(--f-ui);letter-spacing:.06em;color:#8ff7ee}.ttl-slot .tx b{font:400 19px/1.1 var(--f-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ttl-slot .tx em{font:600 12px/1 var(--f-ui);font-style:normal;color:#c9d0ea}
 .ttl-slot .ch{margin-left:auto;display:flex;gap:6px;flex:none}.ttl-slot .ch span{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.1);font:700 13px/1 var(--f-num);white-space:nowrap}
 /* 아래 줄: 조작 안내 · 브랜드 */
 .ttl-foot{position:absolute;left:max(6vw,28px);right:max(3vw,20px);bottom:max(18px,env(safe-area-inset-bottom));z-index:2;display:flex;align-items:center;gap:18px;font:700 12px/1 var(--f-ui);color:rgba(255,255,255,.75);pointer-events:none}
 .ttl-foot kbd{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;margin-right:5px;border-radius:6px;background:rgba(255,255,255,.92);color:#1c2140;font:800 11px/1 var(--f-ui);box-shadow:0 2px 0 rgba(0,0,0,.35)}
-.ttl-foot .br{margin-left:auto;font:700 11px/1 var(--f-num);letter-spacing:.2em;color:rgba(255,255,255,.6)}
+.ttl-foot .br{margin-left:auto;margin-right:64px;font:700 12px/1 var(--f-ui);letter-spacing:.04em;color:rgba(255,255,255,.6)}
 .ttl-snd{position:absolute;right:max(16px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));z-index:3;width:46px;height:46px;border-radius:16px;border:1px solid rgba(255,255,255,.22);background:rgba(14,12,48,.5);backdrop-filter:blur(8px);color:#fff;display:grid;place-items:center;cursor:pointer}.ttl-snd:focus-visible{outline:3px solid #8ff7ee;outline-offset:2px}
 @media (pointer:coarse){.ttl-foot .keys,.ttl-item .tag{display:none}}
 @media (max-aspect-ratio:1/1){.ttl-art{background-image:url("${ART_TALL}");background-position:50% 40%}
@@ -98,23 +98,23 @@ export function showTitle(root, { onContinue, onNew, onClassic }) {
   const parts = PART_ROOMS.filter((id) => progress.isCleared(id)).length;
   const words = GAME.title.split(' '), lead = words.slice(0, -1).join(' '), main = words.slice(-1)[0];
   const items = [
-    canGo ? { act: 'go', label: '이어하기', tag: 'SPACE' } : { act: 'new', label: '모험 시작', tag: 'SPACE' },
+    canGo ? { act: 'go', label: '이어하기', tag: '스페이스' } : { act: 'new', label: '모험 시작', tag: '스페이스' },
     ...(canGo ? [{ act: 'new', label: '새로 시작', small: '다른 학생' }] : []),
     { act: 'load', label: '기록 불러오기', small: '다른 기기에서' },
     { act: 'classic', label: '클래식 2D 판' },
   ];
   const slot = canGo
-    ? `<div class="ttl-slot" aria-label="저장된 기록"><span class="av">${PORTRAIT('웃음')}</span><span class="tx"><small>SAVE DATA</small><b>${esc(student.label())}</b><em>${esc(josa(profile.name(), '과', '와'))} 함께</em></span><span class="ch"><span>🚀 ${parts}/${PART_ROOMS.length}</span><span>⭐ ${stars.total()}</span></span></div>`
-    : `<div class="ttl-slot"><span class="av">${PORTRAIT('윙크')}</span><span class="tx"><small>NEW GAME</small><b>${who ? `${esc(student.label())} · 에디를 꾸미고 출발!` : '이름을 적고 나만의 에디를 꾸며요'}</b></span></div>`;
+    ? `<div class="ttl-slot" aria-label="저장된 기록"><span class="av">${PORTRAIT('웃음')}</span><span class="tx"><small>저장 기록</small><b>${esc(student.label())}</b><em>${esc(josa(profile.name(), '과', '와'))} 함께</em></span><span class="ch"><span>🚀 ${parts}/${PART_ROOMS.length}</span><span>⭐ ${stars.total()}</span></span></div>`
+    : `<div class="ttl-slot"><span class="av">${PORTRAIT('윙크')}</span><span class="tx"><small>새 모험</small><b>${who ? `${esc(student.label())} · 에디를 꾸미고 출발!` : '이름을 적고 나만의 에디를 꾸며요'}</b></span></div>`;
   root.innerHTML = `<style>${CSS}</style><section class="ttl scene-fade" aria-label="${GAME.title}">
     <div class="ttl-art" role="img" aria-label="붉은 행성 발사대 앞에서 만세하는 에디와 로켓"></div><div class="ttl-gl" id="ttl-gl"></div><div class="ttl-scrim"></div>
     <div class="ttl-in">
-      <h1 class="ttl-logo" aria-label="${GAME.title}"><span class="lg-top">${lead}</span><span class="lg-main" data-t="${main}">${main}</span><span class="lg-en">${GAME.en}</span></h1>
+      <h1 class="ttl-logo" aria-label="${GAME.title}"><span class="lg-top">${lead}</span><span class="lg-main" data-t="${main}">${main}</span><span class="lg-en">${GAME.sub}</span></h1>
       <p class="ttl-sub">${GAME.tagline}</p>
       <nav class="ttl-menu" role="menu" aria-label="메뉴">${items.map((it, i) => `<button class="ttl-item${i === 0 ? ' sel' : ''}" id="ttl-${it.act}" role="menuitem" type="button" data-act="${it.act}"><i class="ar"></i>${it.label}${it.small ? `<small>${it.small}</small>` : ''}${it.tag ? `<span class="tag">${it.tag}</span>` : ''}</button>`).join('')}</nav>
       ${slot}
     </div>
-    <div class="ttl-foot"><span class="keys"><kbd>↑</kbd><kbd>↓</kbd>고르기</span><span class="keys"><kbd>SPACE</kbd>결정</span><span class="br">EDUINO AI · 3D MAKER ADVENTURE</span></div>
+    <div class="ttl-foot"><span class="keys"><kbd>↑</kbd><kbd>↓</kbd>고르기</span><span class="keys"><kbd>스페이스</kbd>결정</span><span class="br">에듀이노 AI · 3D 메이커 모험</span></div>
     <input type="file" id="ttl-file" accept=".eduino,.json,application/json,application/octet-stream" hidden>
     <button class="ttl-snd" id="ttl-snd" type="button" aria-label="소리 켜기/끄기">${sfx.muted ? icon('volume-off', 18) : icon('speaker', 18)}</button><div class="ttl-flash"></div></section>`;
   const $ = (s) => root.querySelector(s), el = $('.ttl'), btns = [...root.querySelectorAll('.ttl-item')];

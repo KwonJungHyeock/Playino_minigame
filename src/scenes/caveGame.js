@@ -93,7 +93,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   scn = await createCaveScene(stage);
   if (done) { scn.dispose(); return; }
   addPost(stage, { bloom: 0.55, bloomRadius: 0.75, threshold: 1.05 });
-  hud = createHud(el, { mission: { icon: '🔦', eyebrow: 'MISSION 07 · 깊은 곳으로', title: '어둠 동굴 탐사' }, onPause: () => pause() });
+  hud = createHud(el, { mission: { icon: '🔦', eyebrow: '미션 07 · 깊은 곳으로', title: '어둠 동굴 탐사' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
   // 바이저봇이 등불을 든다: 비출 곳으로 팔을 뻗고(가리키기) 고개로 따라간다 · 몬스터가 다가오면 움찔 · 깨우면 콩
   const actor = createActor(bot), camPos = () => cam.position, R_ARM = { arm: 'R' };   // 등불은 오른손 — 늘 그 팔로 비춘다
@@ -154,7 +154,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   async function intro() {
     bgm.setDuck(1);
     await wait(1200); if (introSkipped) return;
-    await hud.banner('어둠 동굴 탐사', 'MISSION 07', { ms: 2000 }); if (introSkipped) return;
+    await hud.banner('어둠 동굴 탐사', '미션 07', { ms: 2000 }); if (introSkipped) return;
     actor.look(camPos); bot.setExpression('놀람');
     await hud.dialogue([
       { text: '여기 깜깜하다… 기지 아래 동굴에 연료 수정이 있대.', mood: '놀람' },
@@ -250,7 +250,7 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
     else if (act.mode === 'track') { S.tk = { t: 0, checkIdx: 0, nextCheck: act.dur / act.checks }; S.total = act.checks; scn.resetWall(); }
     else { S.sp = { seq: Array.from({ length: act.len }, (_, i) => randHue(i ? null : 30 + Math.random() * 40)), idx: 0, holdT: 0, t: 0, warm: false }; S.total = act.len; scn.bossSetup(S.sp.seq); }
     bot.setExpression('기본'); progressGoal(); bgm.setDuck(0);
-    await hud.banner(STAGE_TITLE[S.mode - 1], 'MISSION START', { ms: 1400 });
+    await hud.banner(STAGE_TITLE[S.mode - 1], '미션 시작', { ms: 1400 });
     if (done || S.phase !== 'count') return;
     ctl.hidden = false;
     await hud.countdown(3, { onTick: () => sfx.click?.() });
@@ -342,11 +342,11 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
       if (last) { scn.bossDefeat(); later(900, () => { scn.revealPart(); sfx.ok(); }); }
       await wait(last ? 1400 : 500); if (done) return;
       bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('dance')); later(2600, () => actor.pose(null));
-      await hud.banner(n === 1 ? '수정이 깨어났어!' : n === 2 ? '빛 무리를 따라잡았어!' : '보스를 물리쳤어!', 'MISSION CLEAR', { ms: 1800 });
+      await hud.banner(n === 1 ? '수정이 깨어났어!' : n === 2 ? '빛 무리를 따라잡았어!' : '보스를 물리쳤어!', '미션 성공', { ms: 1800 });
       await hud.say(n < 3 ? (n === 1 ? '이제 색을 바꾸며 도망치는 빛 무리를 쫓아가자!' : '동굴 깊은 곳에 보스가 있어. 마지막 힘을 내자!') : medal ? '연료 수정 획득! 기지 로켓에 달러 가자 🔦' : '보스 처치! 앞의 막도 통과하면 연료 수정을 받아.', { mood: '웃음' });
     } else {
       bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('phew', 1.8));
-      await hud.banner('빛이 조금 빗나갔어', 'TRY AGAIN', { bad: true, ms: 1600 });
+      await hud.banner('빛이 조금 빗나갔어', '다시 도전', { bad: true, ms: 1600 });
       await hud.say('고리 색을 먼저 보고 손을 얼마나 가릴지 정해 봐. 색 띠를 보면 어디쯤인지 알 수 있어!', { mood: '졸림' });
       if (assistOn) { hud.toast('🤝 도우미 켜짐', 'ok'); await hud.say('두 번 아쉬웠지? 도우미를 켰어 — 색을 조금 덜 정확해도 되게 했어. 다시 해 보자!', { mood: '윙크' }); }
     }

@@ -85,7 +85,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   scn = await createSolarScene(stage);
   if (done) { scn.dispose(); return; }
   addPost(stage, { bloom: 0.5, bloomRadius: 0.7, threshold: 1.05 });
-  hud = createHud(el, { mission: { icon: '☀️', eyebrow: 'MISSION 04 · 기지 복구', title: '태양광 충전소' }, onPause: () => pause() });
+  hud = createHud(el, { mission: { icon: '☀️', eyebrow: '미션 04 · 기지 복구', title: '태양광 충전소' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
   // 바이저봇이 직접 한다: 1단계엔 센서 옆에서 다가오는 구슬을 눈으로 좇고 그림자 땐 팔을 뻗어 센서를 덮는다 · 2단계엔 날개를 메고 직접 난다
   const actor = createActor(bot), camPos = () => cam.position, sensorTop = scn.sensorTop(), lookV = new THREE.Vector3();
@@ -200,7 +200,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
   async function intro() {
     bgm.setDuck(1);
     await wait(1200); if (introSkipped) return;
-    await hud.banner('태양광 충전소', 'MISSION 04', { ms: 2000 }); if (introSkipped) return;
+    await hud.banner('태양광 충전소', '미션 04', { ms: 2000 }); if (introSkipped) return;
     bot.play('인사', { once: true }); bot.setExpression('웃음');
     actor.look(camPos);   // 말할 땐 화면(플레이어)을 본다
     await hud.dialogue([
@@ -297,7 +297,7 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     else { S.fly = { y: VH * 0.4, vy: 0, pillars: [], spawned: 0, t: 0, endT: 0, crash: 0 }; S.total = game.pillars; scn.drone(wy(S.fly.y), 0); }
     bot.play('대기'); bot.setExpression('기본'); progressGoal(); bgm.setDuck(0); wasDark = null;
     if (S.view === 'station') actor.look(lookV.set(FROM_X, RAIL_Y, RAIL_Z), 0.9);
-    await hud.banner(STAGE_NAME[S.mode - 1], 'MISSION START', { ms: 1400 });
+    await hud.banner(STAGE_NAME[S.mode - 1], '미션 시작', { ms: 1400 });
     if (done || S.phase !== 'count') return;
     padEl.hidden = false; readEl.hidden = false;
     await hud.countdown(3, { onTick: () => sfx.click?.() });
@@ -392,12 +392,12 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
       await wait(500); if (done) return;
       if (stageNo === 2) { setView('station'); scn.revealPart(); sfx.ok(); }
       actor.look(camPos).face(camPos); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('cheer')); later(2600, () => actor.pose(null));
-      await hud.banner(stageNo === 1 ? '신호 연결!' : '비행 성공!', 'MISSION CLEAR', { ms: 1800 });
+      await hud.banner(stageNo === 1 ? '신호 연결!' : '비행 성공!', '미션 성공', { ms: 1800 });
       await hud.say(stageNo === 1 ? '드론들이 깨어났어! 이제 한 대를 직접 날려 보자.' : medal ? '태양광 날개 획득! 기지 로켓에 달러 가자 ☀️' : '비행 성공! 1단계도 통과하면 태양광 날개를 받아.', { mood: '웃음' });
     } else {
       if (stageNo === 2) setView('station');
       actor.look(camPos); bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('phew', 1.8));
-      await hud.banner('빛이 조금 엇갈렸어', 'TRY AGAIN', { bad: true, ms: 1600 });
+      await hud.banner('빛이 조금 엇갈렸어', '다시 도전', { bad: true, ms: 1600 });
       await hud.say(stageNo === 1 ? '구슬이 고리에 닿는 순간을 노려 봐. 조금 일찍 눌러도 괜찮아!' : '살짝살짝 끊어 누르면 높이를 맞추기 쉬워.', { mood: '졸림' });
     }
     if (done) return;

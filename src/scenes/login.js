@@ -30,7 +30,7 @@ export function showLogin(root, { onDone, v4 = false } = {}) {
       <div class="brand-badge"><span class="brand-dot"></span>Eduino&nbsp;<b>AI</b></div>
       <div class="lg-inner">
         <div class="lg-card">
-          <div class="lg-brand"><span class="brand-dot"></span>${v4 ? 'RED PLANET ESCAPE · 탐사 대원 등록' : 'EDUINO AI · 미니게임천국'}</div>
+          <div class="lg-brand"><span class="brand-dot"></span>${v4 ? '붉은 행성 대탈출 · 탐사 대원 등록' : 'EDUINO AI · 미니게임천국'}</div>
           <h2 class="lg-title">${v4 ? '탐사 대원 등록 🚀' : '플레이어 입장 🎮'}</h2>
           <p class="lg-sub"><b>이름</b>을 적고, 구매 시 <b>이메일로 받은 6자리 접속 코드</b>를 입력하세요.<br/><span class="lg-demo">데모 버전 — 아무 코드나 입장할 수 있어요</span></p>
           <label class="lg-label" for="lg-name">내 이름</label>

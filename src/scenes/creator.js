@@ -69,7 +69,7 @@ body:has(.crt) .fs-toggle{right:auto;left:max(16px,env(safe-area-inset-left))}bo
 
 /**
  * @param {HTMLElement} root
- * @param {{onDone?:Function, onBack?:Function, step?:string}} o step: 위쪽 작은 글씨(예: 'STEP 2 / 3')
+ * @param {{onDone?:Function, onBack?:Function, step?:string}} o step: 위쪽 작은 글씨(예: '2 / 3단계')
  */
 export async function showCreator(root, { onDone, onBack, step = '캐릭터 만들기' } = {}) {
   const who = student.get()?.name || '';
@@ -89,7 +89,7 @@ export async function showCreator(root, { onDone, onBack, step = '캐릭터 만�
       <div class="crt-tabs" role="tablist" aria-label="꾸밀 부위">${PARTS.map(([part, label], i) => `<button class="crt-tab" role="tab" type="button" data-tab="${part}" aria-selected="${i === 0}" title="${label}">${tabSw(part)}${TABS[part][0]}</button>`).join('')}</div>
       <div class="crt-body">${PARTS.map(([part, label], i) => `<section class="crt-sec${i === 0 ? ' on' : ''}" data-sec="${part}" role="tabpanel"><div class="crt-h">${label}<small>${opened(part)} / ${STYLE[part].length} 열림</small></div><div class="crt-row" role="group" aria-label="${label}">${STYLE[part].map((o) => { const ok = style.unlocked(part, o.id); return `<button type="button" data-part="${part}" data-id="${o.id}" ${o.icon ? '' : `style="--c:#${o.hex.toString(16).padStart(6, '0')}"`} aria-pressed="${style.get()[part] === o.id}" ${ok ? '' : 'disabled'}>${o.icon ? `<i class="ic">${o.icon}</i>` : '<i></i>'}${o.name}${ok ? '' : `<small>${lockLabel(o)}</small>`}</button>`; }).join('')}</div>
         ${part === 'hat' ? '<p class="crt-note">별 조각은 미션의 🔭 둘러보기와 S등급에서 모아요. 👑 왕관은 행성을 탈출하면 열려요.</p>' : part === 'plate' ? '<p class="crt-note">‘내 이름’을 고르면 위에 적은 이름이 가슴에 새겨져요.</p>' : ''}</section>`).join('')}</div>
-      <div class="crt-foot"><button class="crt-go" id="crt-go" type="button">이 모습으로 출발 ▶<span>ENTER</span></button></div>
+      <div class="crt-foot"><button class="crt-go" id="crt-go" type="button">이 모습으로 출발 ▶<span>엔터</span></button></div>
     </div></section>`;
   const $ = (s) => root.querySelector(s), el = $('.crt'), host = $('#crt-stage'), sayEl = $('#crt-say'), nameIn = $('#crt-name');
   let done = false, stage = null, bot = null, offTick = null, applyStyle = null, faceFallback = null;

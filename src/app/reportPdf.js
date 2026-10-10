@@ -73,7 +73,7 @@ const gradeCell = (s) => `<span class="st"><span class="g g-${s.grade || 'none'}
 const starRow = (a) => `<span class="sr">${a.map((x) => (x ? '★' : '<i>★</i>')).join('')}</span>`;
 
 function pages(R, face) {
-  const top = (n, title) => `<div class="rp-top"><div><div class="b">${GAME.en} · EXPEDITION REPORT</div><h1>${title}</h1></div><div class="pg">${n} / 4</div></div>`;
+  const top = (n, title) => `<div class="rp-top"><div><div class="b">${GAME.title} · 탐사 보고서</div><h1>${title}</h1></div><div class="pg">${n} / 4</div></div>`;
   const foot = `<div class="rp-foot"><span>${GAME.title} · 에듀이노 AI</span><span>${esc(R.student.label || '이름 없음')} · ${R.made} 만듦</span></div>`;
   const p1 = `<section class="rp">${top(1, '탐사 대원증')}
     <div class="rp-id"><div class="face"><img src="${face}" alt=""></div><dl>

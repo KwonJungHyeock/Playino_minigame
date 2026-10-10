@@ -76,7 +76,7 @@ export async function showBasicsGame(root, { onExit } = {}) {
   scn = await createBootScene(stage);
   if (done) { scn.dispose(); return; }
   addPost(stage, { bloom: 0.5, bloomRadius: 0.7, threshold: 1.05 });
-  hud = createHud(el, { mission: { icon: '🔋', eyebrow: 'PROLOGUE · 깨어나기', title: '부팅 훈련' }, onPause: () => pause() });
+  hud = createHud(el, { mission: { icon: '🔋', eyebrow: '프롤로그 · 깨어나기', title: '부팅 훈련' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
   // 에디는 부품 일꾼: 앞줄의 잠든 부품을 들고 와 '이건 어디?' 하고 묻고, 고른 칸으로 가서 꽂는다
   const actor = createActor(bot), camPos = () => cam.position;
@@ -225,7 +225,7 @@ export async function showBasicsGame(root, { onExit } = {}) {
     let order; do order = shuffle(PARTS.map((p) => p.id)); while (PM[order[0]].cat === PM[order[1]].cat && PM[order[1]].cat === PM[order[2]].cat);   // 처음 셋이 한쪽만 나오지 않게
     Object.assign(S, { phase: 'count', order, i: 0, asking: false, miss: 0, firstOk: 0, ended: false, trip: S.trip + 1 });
     actor.drop(); actor.pose(null).point(null).face(null).look(null); scn.reset(); bot.object.position.copy(scn.stand('center')); bot.object.rotation.y = 0; bot.play('대기'); bot.setExpression('기본'); bgm.setDuck(0.4); progressGoal();
-    await hud.banner('부품을 깨워라', 'MISSION START', { ms: 1400 });
+    await hud.banner('부품을 깨워라', '미션 시작', { ms: 1400 });
     if (done || S.phase !== 'count') return;
     S.phase = 'play'; nextPart();
   }
@@ -311,7 +311,7 @@ export async function showBasicsGame(root, { onExit } = {}) {
     scn.boot(); sfx.launch(); juice.flash('#8ff7ee'); later(300, () => sfx.fanfare());
     await wait(1300); if (done) return;
     scn.revealCard(); sfx.ok(); actor.look(() => scn.cardAt()); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('flex')); later(2600, () => actor.pose(null));
-    await hud.banner('부팅 완료!', 'PROLOGUE CLEAR', { ms: 1800 }); if (done) return;
+    await hud.banner('부팅 완료!', '프롤로그 완료', { ms: 1800 }); if (done) return;
     actor.look(camPos);
     await hud.say(first ? '기지 출입 카드 획득! 이제 기지 구역 문이 열려. 미션을 깨서 로켓 부품을 모으자 🚀' : '콘솔이 또 한 번 깨어났어! 입력 · 출력, 이제 눈 감고도 알겠지?', { mood: '웃음' });
     if (done) return;

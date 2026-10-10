@@ -173,7 +173,7 @@ export async function createBootScene(stage) {
   let bootList = [], booted = false;
   const screen = canvasPlane(1.3, 0.64, (x, W, H) => {
     const n = bootList.length;
-    x.font = `700 ${H * 0.13}px ${FONT.num}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = booted ? '#5ff0a0' : '#8ff7ee'; x.fillText(booted ? 'BOOT OK' : 'BOOTING…', W / 2, H * 0.2);
+    x.font = `700 ${H * 0.13}px ${FONT.num}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = booted ? '#5ff0a0' : '#8ff7ee'; x.fillText(booted ? '부팅 완료' : '부팅 중…', W / 2, H * 0.2);
     logoText(x, booted ? '부팅 완료!' : `부품 ${n} / 6`, W / 2, H * 0.47, H * 0.2, booted ? '#ffd25a' : '#ffffff');
     for (let k = 0; k < 6; k++) { const cx = W * (0.2 + k * 0.12), cy = H * 0.77, it = bootList[k]; x.beginPath(); x.arc(cx, cy, H * 0.07, 0, Math.PI * 2); x.fillStyle = it ? (it === 'in' ? IN_CSS : OUT_CSS) : 'rgba(255,255,255,.12)'; x.fill(); if (it) { x.lineWidth = H * 0.018; x.strokeStyle = '#fff'; x.stroke(); } }
   });
@@ -190,7 +190,7 @@ export async function createBootScene(stage) {
       x.fillStyle = 'rgba(8,11,32,.82)'; x.beginPath(); x.roundRect(4, 4, W - 8, H - 8, H * 0.2); x.fill(); x.lineWidth = H * 0.05; x.strokeStyle = cat === 'in' ? IN_CSS : OUT_CSS; x.stroke();
       logoText(x, cat === 'in' ? '입력' : '출력', W * 0.3, H * 0.5, H * 0.42, cat === 'in' ? '#9cc1ff' : '#ffa8cb');
       x.font = `700 ${H * 0.14}px ${FONT.ui}`; x.textAlign = 'left'; x.fillStyle = '#e9ecf8'; x.fillText(cat === 'in' ? '정보를 받아요' : '동작을 만들어요', W * 0.52, H * 0.36);
-      x.font = `700 ${H * 0.16}px ${FONT.num}`; x.fillStyle = cat === 'in' ? '#9cc1ff' : '#ffa8cb'; x.fillText(cat === 'in' ? 'SENSOR → 보드' : '보드 → ACTION', W * 0.52, H * 0.64);
+      x.font = `700 ${H * 0.16}px ${FONT.num}`; x.fillStyle = cat === 'in' ? '#9cc1ff' : '#ffa8cb'; x.fillText(cat === 'in' ? '센서 → 보드' : '보드 → 동작', W * 0.52, H * 0.64);
     });
     sign.position.set(0, 1.0, -0.62); g.add(sign);
     const post = mesh(roundedCylinder(0.04, 0.72, 0.012, 0), vinyl(P.grey)); post.position.set(0, 0, -0.66); g.add(post);

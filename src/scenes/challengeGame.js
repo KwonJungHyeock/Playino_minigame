@@ -76,7 +76,7 @@ export async function showChallengeGame(root, { onExit } = {}) {
   crs = await createCourse(stage);
   if (done) { crs.dispose(); return; }
   addPost(stage, { bloom: 0.42, bloomRadius: 0.7, threshold: 1.05, ao: false });   // 넓은 하늘 코스라 AO 대신 프레임을 아낀다
-  hud = createHud(el, { mission: { icon: '⚡', eyebrow: 'CHALLENGE · 자유 도전', title: '운석 폭풍 런' }, onPause: () => pause() });
+  hud = createHud(el, { mission: { icon: '⚡', eyebrow: '도전 · 자유 도전', title: '운석 폭풍 런' }, onPause: () => pause() });
   dust = createParticles({ max: 64, tier: stage.tier }); sparks = createParticles({ max: 120, additive: true, tier: stage.tier });
   confetti = createConfetti({ max: 180, tier: stage.tier });
   crs.root.add(dust.points, sparks.points, confetti.mesh);
@@ -337,7 +337,7 @@ export async function showChallengeGame(root, { onExit } = {}) {
     const time = S.run, r = bonus.record('booster', { time, falls: S.falls }), grade = (GRADE.find(([, s]) => time <= s) || ['C'])[0];
     bot.play('환호', { once: true }); bot.setExpression('웃음'); sfx.fanfare(); later(450, () => sfx.perfect()); S.vel.set(0, 0, 0); clockEl.classList.remove('on'); S.sq = -0.45;
     for (let i = 0; i < 4; i++) later(i * 220, () => { burst(sparks, 26, body.position, [0xffd25a, 0x8ff7ee, 0xff8a7a, 0x5ff0a0][i], 4.5); confetti.burst(50, tmp.copy(body.position).setY(body.position.y + 3.2), { up: 3, spread: 3.4, life: 2.8 }); });
-    await hud.banner('도전 성공!', 'GOAL', { ms: 1900 }); if (done) return;
+    await hud.banner('도전 성공!', '도착', { ms: 1900 }); if (done) return;
     if (r.first) {
       // 보너스 부품이 바이저봇에게 날아와 붙는다
       crs.booster.userData.fly = 0.001; sfx.ok();

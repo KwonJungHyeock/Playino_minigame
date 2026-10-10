@@ -106,7 +106,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   scn = await createEnergyScene(stage);
   if (done) { scn.dispose(); return; }
   addPost(stage, { bloom: 0.5, bloomRadius: 0.7, threshold: 1.05 });
-  hud = createHud(el, { mission: { icon: '🔋', eyebrow: 'MISSION 03 · 기지 복구', title: '에너지 셀 색 맞추기' }, onPause: () => pause() });
+  hud = createHud(el, { mission: { icon: '🔋', eyebrow: '미션 03 · 기지 복구', title: '에너지 셀 색 맞추기' }, onPause: () => pause() });
   const THREE = stage.THREE, cam = stage.camera, bot = scn.bot;
   // 바이저봇은 충전소 일꾼: 빈 셀을 안아 받침에 꽂고, 고르는 빛 탑을 가리키고, 충전 땐 만세 — 섞는 동안엔 셀을 지켜본다
   const actor = createActor(bot), SP = scn.SPOTS, camPos = () => cam.position;
@@ -206,7 +206,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   async function intro() {
     bgm.setDuck(1);
     await wait(1200); if (introSkipped) return;
-    await hud.banner('에너지 셀 색 맞추기', 'MISSION 03', { ms: 2000 }); if (introSkipped) return;
+    await hud.banner('에너지 셀 색 맞추기', '미션 03', { ms: 2000 }); if (introSkipped) return;
     bot.play('인사', { once: true }); bot.setExpression('웃음');
     actor.look(camPos);   // 말할 땐 화면(플레이어)을 본다
     await hud.dialogue([
@@ -298,7 +298,7 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
   async function beginPlay() {
     Object.assign(S, { phase: 'count', round: 0, accs: [], ended: false, pass: false, busy: true, pausedAt: 0, reso: false, placed: false, trip: (S.trip || 0) + 1 });
     actor.drop(); actor.pose(null).point(null); bot.object.position.copy(SP.home); scn.resetRack(3); bot.play('대기'); bot.setExpression('기본'); bgm.setDuck(0.4); progressGoal();
-    await hud.banner(STAGE_NAME[S.mode - 1], 'MISSION START', { ms: 1400 });
+    await hud.banner(STAGE_NAME[S.mode - 1], '미션 시작', { ms: 1400 });
     if (done || S.phase !== 'count') return;
     S.phase = 'play'; ctl.hidden = false; select(0);
     await loadRound();
@@ -387,11 +387,11 @@ export async function showEnergyGame(root, { onExit, stage: startStage = 1 } = {
     if (pass) {
       if (stageNo === 2) { scn.revealPart(); sfx.ok(); }
       await wait(600); bot.play('환호', { once: true }); bot.setExpression('웃음'); actor.hop(3.4); later(700, () => actor.routine('flex')); later(2600, () => actor.pose(null));
-      await hud.banner(stageNo === 1 ? '셀 충전!' : '에너지 가득!', 'MISSION CLEAR', { ms: 1800 });
+      await hud.banner(stageNo === 1 ? '셀 충전!' : '에너지 가득!', '미션 성공', { ms: 1800 });
       await hud.say(stageNo === 1 ? '빛 하나로 셀을 채웠어! 이제 빛을 섞어야 하는 셀이야.' : medal ? '에너지 셀 획득! 기지 로켓에 달러 가자 🔋' : '에너지 가득! 1단계도 통과하면 에너지 셀을 받아.', { mood: '웃음' });
     } else {
       bot.setExpression('졸림'); actor.squash(0.18); later(500, () => actor.routine('dizzy', 1.8));
-      await hud.banner('셀이 덜 찼어', 'TRY AGAIN', { bad: true, ms: 1600 });
+      await hud.banner('셀이 덜 찼어', '다시 도전', { bad: true, ms: 1600 });
       await hud.say('견본 구슬과 셀 빛을 나란히 보면서 다시 해 볼까? 셀이 공명하면 거의 다 온 거야.', { mood: '졸림' });
     }
     if (done) return;

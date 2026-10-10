@@ -55,7 +55,7 @@ const CSS = `
 /* 배너 · 카운트다운 */
 .hud-banner{position:absolute;left:0;right:0;top:34%;text-align:center;pointer-events:none}
 .hud-banner .rib{display:inline-block;padding:14px 46px 16px;border-radius:999px;background:linear-gradient(90deg,rgba(255,210,90,0),rgba(255,210,90,.95) 18%,rgba(255,210,90,.95) 82%,rgba(255,210,90,0));color:#2b2418;animation:hudrib 1.7s cubic-bezier(.2,.9,.25,1) forwards}
-.hud-banner small{display:block;font:700 14px/1.2 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.24em}
+.hud-banner small{display:block;font:700 15px/1.2 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.08em}
 .hud-banner b{display:block;font:400 clamp(32px,6vw,58px)/1.1 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;color:#fff;paint-order:stroke fill;-webkit-text-stroke:.15em #1b1f4a;text-shadow:0 .09em 0 #1b1f4a}
 .hud-banner.bad .rib{background:linear-gradient(90deg,rgba(255,140,120,0),rgba(255,160,140,.95) 18%,rgba(255,160,140,.95) 82%,rgba(255,140,120,0))}
 @keyframes hudrib{0%{opacity:0;transform:scaleX(.4)}14%{opacity:1;transform:scaleX(1.04)}22%{transform:scaleX(1)}82%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
@@ -74,7 +74,7 @@ const CSS = `
 .hud-win h2{margin:4px 0 8px;font:400 31px/1.2 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;text-wrap:balance;text-shadow:0 2px 0 #1b1f4a}
 .hud-win p{margin:6px 0;font-size:16px;line-height:1.6;color:var(--hud-sub);word-break:keep-all}
 .hud-win p b{color:#fff}
-.hud-eye{font:700 13px/1.2 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.14em;color:var(--hud-gold)}
+.hud-eye{font:700 13px/1.2 "Fredoka","Pretendard Variable",sans-serif;letter-spacing:.06em;color:var(--hud-gold)}
 .hud-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}
 .hud-sp{flex:1}
 .hud-btn{display:inline-flex;align-items:center;gap:9px;min-height:50px;padding:0 20px;border-radius:999px;border:1px solid var(--hud-line);background:rgba(255,255,255,.08);color:#fff;font:400 18px/1 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;cursor:pointer;transition:transform .12s,background .2s}
@@ -177,7 +177,7 @@ export function createHud(host, o) {
       c.style.opacity = n >= 2 ? 1 : 0; c.style.left = x + 'px'; c.style.top = y + 'px';
       if (c.firstChild.textContent !== String(n)) { c.firstChild.textContent = n; c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
     },
-    banner(title, sub = 'MISSION', { bad = false, ms = 1700 } = {}) {
+    banner(title, sub = '미션', { bad = false, ms = 1700 } = {}) {
       return new Promise((res) => { const b = document.createElement('div'); b.className = 'hud-banner' + (bad ? ' bad' : ''); b.innerHTML = `<div class="rib"><small>${sub}</small><b>${title}</b></div>`; safe.appendChild(b); later(ms, () => { b.remove(); res(); }); });
     },
     countdown(n = 3, { onTick } = {}) {
@@ -211,7 +211,7 @@ export function createHud(host, o) {
     /** 결과창 — 별 · 등급 도장 · 수치 3개 · 다음 행동 */
     result({ title, sub, grade, stars, stats, primary = '계속', secondary = '다시 하기' }) {
       const col = grade === 'S' || grade === 'A' ? '#5ff0a0' : grade === 'B' ? '#7fb8ff' : '#ffbf7a';
-      return hud.window(`<div class="hud-res"><div class="hud-eye">MISSION RESULT</div>
+      return hud.window(`<div class="hud-res"><div class="hud-eye">미션 결과</div>
         <div class="hud-stars">${[1, 2, 3].map((i) => STAR(false)).join('')}</div>
         <h2>${title}</h2><p>${sub}</p>
         <div class="hud-rank" style="color:${col}">${grade}</div>

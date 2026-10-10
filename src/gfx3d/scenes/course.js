@@ -255,7 +255,7 @@ export async function createCourse(stage) {
   goalArch.add(bunting(-2.8, 2.8, 3.3, 0.25, 0.4));
   const goalBar = mesh(roundedBox(6.0, 0.7, 0.36, 0.2), vinyl(P.white)); goalBar.position.y = 3.7; goalArch.add(goalBar);
   for (let i = 0; i < 12; i++) { const c = mesh(roundedBox(0.44, 0.3, 0.06, 0.04), vinyl(i % 2 ? P.charcoal : P.white)); c.position.set(-2.42 + i * 0.44, 3.85 - (i % 2) * 0, 0.2); c.position.y = 3.55 + ((i % 2) ? 0.3 : 0); goalArch.add(c); }
-  const gcv = document.createElement('canvas'); gcv.width = 512; gcv.height = 128; { const x = gcv.getContext('2d'); x.font = '700 92px "Fredoka","Jua",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round'; x.lineWidth = 16; x.strokeStyle = '#1b1f4a'; x.strokeText('GOAL', 256, 66); x.fillStyle = '#ffd25a'; x.fillText('GOAL', 256, 66); }
+  const gcv = document.createElement('canvas'); gcv.width = 512; gcv.height = 128; { const x = gcv.getContext('2d'); x.font = '700 92px "Fredoka","Jua",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round'; x.lineWidth = 16; x.strokeStyle = '#1b1f4a'; x.strokeText('도착', 256, 66); x.fillStyle = '#ffd25a'; x.fillText('도착', 256, 66); }
   const gtex = new THREE.CanvasTexture(gcv); gtex.colorSpace = THREE.SRGBColorSpace;
   const goalSign = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), new THREE.MeshBasicMaterial({ map: gtex, transparent: true, toneMapped: false })); goalSign.position.set(0, 4.55, 0.05); goalArch.add(goalSign);
   const GOAL_Z = -80.0;
