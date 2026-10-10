@@ -1,5 +1,5 @@
-// login.js — 플레이어 입장(접속 코드). 구매 시 이메일로 받은 6자리 코드를 입력해 입장.
-// 데모: 아무 코드나(또는 빈칸) 입장 가능. 메인과 동일 완성도(배지·사운드·말풍선·인터랙션).
+// login.js — 플레이어 입장(학생 이름 · 번호, 판매판은 + 6자리 접속 코드).
+// 시범판: 이름 · 번호만 받는다(ACCESS_CODE=false). 판매판은 접속 코드 칸을 켠다(확인 서버는 아직 없음).
 import { PORTRAIT } from '../gfx3d/portrait.js';
 import { sfx } from '../app/sfx.js';
 import { icon } from '../app/icons.js';
@@ -28,7 +28,10 @@ const V4_CSS = `.lg.v4 .pm-bg{background:url("${ART_WIDE}") 62% 50%/cover no-rep
 
 const LINES = ['먼저 이름을 적어줘! 기록증에 들어가 ✏️', '구매 후 받은 6자리 접속 코드를 입력해줘!', '코드를 모르면 고객센터로 문의해줘 📞', '천국에서 만나자! 🎮'];
 
-const LINES_V4 = ['먼저 이름을 적어줘! 탐사 보고서에 들어가 ✏️', '접속 코드 6자리를 넣으면 출발 준비 끝!', '다음엔 나를 꾸미러 가자 🎨', '붉은 행성에서 기다릴게! 🚀'];
+// 접속 코드: 시범판(지금)은 끈다 — 이름 · 번호만 받는다. 판매판에서 true 로 켜고, 코드 확인 서버가 생기면 go() 에서 확인한다
+const ACCESS_CODE = false;
+
+const LINES_V4 = ['먼저 이름을 적어줘! 탐사 보고서에 들어가 ✏️', ACCESS_CODE ? '접속 코드 6자리를 넣으면 출발 준비 끝!' : '번호도 적으면 선생님이 찾기 쉬워!', '다음엔 나를 꾸미러 가자 🎨', '붉은 행성에서 기다릴게! 🚀'];
 
 /** v4: true 면 '붉은 행성 대탈출' 흐름 — 옆 캐릭터가 3D 에디 얼굴로 바뀐다 */
 export function showLogin(root, { onDone, v4 = true } = {}) {   // v4(붉은 행성) 옷이 기본 — 예전 2D 판 흐름은 없앴다
@@ -44,20 +47,20 @@ export function showLogin(root, { onDone, v4 = true } = {}) {   // v4(붉은 행
         <div class="lg-card">
           <div class="lg-brand"><span class="brand-dot"></span>${v4 ? '붉은 행성 대탈출 · 탐사 대원 등록' : 'EDUINO AI · 미니게임천국'}</div>
           <h2 class="lg-title">${v4 ? '탐사 대원 등록 🚀' : '플레이어 입장 🎮'}</h2>
-          <p class="lg-sub"><b>이름</b>을 적고, 구매 시 <b>이메일로 받은 6자리 접속 코드</b>를 입력하세요.<br/><span class="lg-demo">데모 버전 — 아무 코드나 입장할 수 있어요</span></p>
+          ${ACCESS_CODE ? '<p class="lg-sub"><b>이름</b>을 적고, 구매 시 <b>이메일로 받은 6자리 접속 코드</b>를 입력하세요.</p>' : '<p class="lg-sub"><b>이름</b>과 <b>번호</b>를 적어 주세요. 기록증 · 탐사 보고서에 들어가요.</p>'}
           <label class="lg-label" for="lg-name">내 이름</label>
           <div class="lg-who">
             <input class="lg-in lg-name" id="lg-name" maxlength="20" placeholder="이름" autocomplete="off" value="${saved ? esc(saved.name) : ''}" />
             <input class="lg-in lg-no" id="lg-no" inputmode="numeric" maxlength="4" placeholder="번호" aria-label="번호" autocomplete="off" value="${saved ? esc(saved.no) : ''}" />
           </div>
           <p class="lg-err" id="lg-err" hidden>이름을 적어줘! 기록증에 들어가요 ✏️</p>
-          <label class="lg-label">접속 코드 (6자리)</label>
-          <div class="code-inputs" id="code-inputs">
+          <label class="lg-label" ${ACCESS_CODE ? '' : 'style="display:none"'}>접속 코드 (6자리)</label>
+          <div class="code-inputs" id="code-inputs" ${ACCESS_CODE ? '' : 'style="display:none"'}>
             ${[0, 1, 2, 3, 4, 5].map((i) => `${i === 3 ? '<span class="code-sep">·</span>' : ''}<input class="code-box" inputmode="numeric" maxlength="1" data-i="${i}" aria-label="코드 ${i + 1}번째" />`).join('')}
           </div>
           <button class="btn primary lg-go" id="lf-login">${v4 ? '등록하고 출발 ▶' : '입장하기 ▶'}</button>
           <button type="button" class="lg-help lg-new" id="lg-new" ${saved ? '' : 'hidden'}>다른 학생이에요? · 새 학생으로 시작</button>
-          <a class="lg-help" id="lf-help" href="https://eduino.kr/shopinfo/customer.html?board_no=3" target="_blank" rel="noopener">접속 코드가 없으신가요? · 고객센터 문의</a>
+          <a class="lg-help" id="lf-help" href="https://eduino.kr/shopinfo/customer.html?board_no=3" target="_blank" rel="noopener">${ACCESS_CODE ? '접속 코드가 없으신가요? · 고객센터 문의' : '문의 · 고객센터'}</a>
         </div>
         <div class="lg-hero" id="lg-hero">
           <div class="lg-speech" id="lg-speech" hidden></div>
@@ -104,7 +107,7 @@ export function showLogin(root, { onDone, v4 = true } = {}) {   // v4(붉은 행
   nameIn.addEventListener('input', () => { if (nameIn.value.trim()) { errEl.hidden = true; nameIn.classList.remove('bad'); } });
   nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); noIn.focus(); } });
   noIn.addEventListener('input', () => { noIn.value = noIn.value.replace(/\D/g, '').slice(0, 4); });
-  noIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); boxes[0]?.focus(); } });
+  noIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (ACCESS_CODE) boxes[0]?.focus(); else go(); } });
   setTimeout(() => (nameIn.value.trim() ? boxes[0] : nameIn)?.focus(), 200);
 
   // 다른 학생 — 이 기기의 기록을 비우고 빈 칸으로
@@ -121,7 +124,7 @@ export function showLogin(root, { onDone, v4 = true } = {}) {   // v4(붉은 행
   const snd = root.querySelector('#snd-toggle');
   snd.onclick = () => { const m = sfx.toggle(); snd.innerHTML = m ? icon('volume-off', 18) : icon('speaker', 18); if (!m) sfx.click(); };
 
-  // 입장 (데모: 코드는 무조건 통과 · 이름만 필수)
+  // 입장: 이름만 필수(시범판). 판매판(ACCESS_CODE)은 여기서 코드를 확인한다 — 아직 확인 서버가 없어 통과
   const go = () => {
     const name = nameIn.value.trim();
     if (!name) {

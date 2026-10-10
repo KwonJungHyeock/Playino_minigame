@@ -14,6 +14,7 @@ import { journal } from './app/journal.js';
 import { showTitle } from './scenes/title.js';
 import { mountFullscreen } from './app/fullscreen.js';
 import { supports3D } from './gfx3d/quality.js';
+import { roomUrl } from './net/room.js';
 
 const app = () => document.getElementById('app');
 
@@ -47,7 +48,8 @@ function sceneHub3d(opts) {
   import('./scenes/hub3d.js').then((m) => m.showHub3d(app(), {
     ...opts,
     onRoom: (id, { stage }) => nav.push(() => sceneMission3d(id, stage)),
-    onCoop: () => nav.push(sceneCoop),
+    // 모둠 협동 단추: 교실 방 서버 주소가 있을 때만(시범판). 개발 서버 · ?v4=coop 로는 언제나 열 수 있다(창끼리 모드)
+    onCoop: roomUrl() || DEV_TOOLS ? () => nav.push(sceneCoop) : null,
     onExit: () => { if (nav.canBack()) nav.back(); else location.search = ''; },   // 본 흐름: 타이틀로 · 미리보기(?v4=hub): 주소 비우기
   }));
 }
