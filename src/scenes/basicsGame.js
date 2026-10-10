@@ -25,20 +25,22 @@ export async function showBasicsGame(root, { onExit } = {}) {
     .bsc{position:fixed;inset:0;overflow:hidden;background:#121838}.bsc-stage{position:absolute;inset:0}
     .bsc-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px var(--f-ui);cursor:pointer;backdrop-filter:blur(8px)}
     /* 고르기 띠: 바이저 판독 띠 결(왼쪽 빛줄 + 짙은 유리) */
-    .bsc-ctl{position:absolute;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;width:min(640px,calc(100% - 28px));padding:12px 14px 14px;border-radius:4px 22px 22px 4px;
-      border-left:3px solid #8ff7ee;background:linear-gradient(90deg,rgba(6,9,28,.9),rgba(6,9,28,.76));backdrop-filter:blur(10px);box-shadow:0 18px 40px rgba(4,6,20,.45);transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1)}
+    .bsc-ctl{position:absolute;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;width:min(640px,calc(100% - 28px));padding:12px 14px 14px;transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1);border-radius:18px;border:3px solid #fff;background:linear-gradient(180deg,#26338a,#172064);box-shadow:inset 0 5px 0 #8ff7ee,5px 7px 0 #0d1238,0 16px 34px rgba(0,0,0,.35)}
     .bsc-ctl[hidden]{display:block;opacity:0;pointer-events:none;transform:translate(-50%,24px)}
     .bsc-q{display:flex;align-items:center;gap:12px;margin:0 2px 11px}
-    .bsc-q i{flex:none;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.1);font-size:26px;font-style:normal;box-shadow:inset 0 -4px 0 rgba(0,0,0,.25)}
-    .bsc-q small{display:block;font:700 13px var(--f-ui);color:#c9d0ea}.bsc-q b{display:block;font:400 26px/1.1 var(--f-display);color:#fff}
+    .bsc-q i{position:relative;flex:none;display:grid;place-items:center;width:58px;height:58px;border-radius:14px;background:radial-gradient(circle at 35% 30%,#fff,#dfe8ff 60%,#b9c8ff);border:3px solid #fff;box-shadow:0 0 0 3px #0d1238,4px 5px 0 3px #0d1238;font-size:30px;font-style:normal;transform:rotate(-6deg)}
+    .bsc-q i::before{content:'';position:absolute;inset:-8px;border-radius:18px;background:conic-gradient(#ff5a5a,#ffd21f,#5fe08c,#4db3ff,#b48cff,#ff5a5a);z-index:-1}   /* 아이템 상자(무지개 테) */
+    .bsc-q small{display:block;font:700 13px var(--f-ui);color:#dfe5ff}.bsc-q b{display:block;font:400 28px/1.1 var(--f-kart);color:#fff;paint-order:stroke fill;-webkit-text-stroke:.12em #0d1238;text-shadow:2px 3px 0 #0d1238}
     .bsc-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .bsc-pick{position:relative;display:grid;justify-items:center;gap:3px;padding:12px 10px 11px;border:0;border-radius:20px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;color:#fff;font:400 23px/1 var(--f-display);transition:transform .08s,box-shadow .08s,filter .2s}
-    .bsc-pick small{font:700 12px var(--f-ui);opacity:.9}
-    .bsc-pick.in{background:radial-gradient(circle at 50% 25%,#9cc1ff,${IN_CSS} 70%);box-shadow:0 6px 0 #2a5bb8,0 12px 22px rgba(0,0,0,.35)}
-    .bsc-pick.out{background:radial-gradient(circle at 50% 25%,#ffb3d2,${OUT_CSS} 70%);box-shadow:0 6px 0 #b8306c,0 12px 22px rgba(0,0,0,.35)}
-    .bsc-pick:active,.bsc-pick.down{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.3),0 6px 12px rgba(0,0,0,.3)}
+    .bsc-pick{position:relative;display:grid;justify-items:center;gap:3px;padding:12px 10px 11px;border:4px solid #fff;border-radius:10px;transform:skewX(-10deg);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;color:#fff;font:400 25px/1 var(--f-kart);text-shadow:2px 2px 0 #0d1238;transition:transform .08s,box-shadow .08s,filter .2s;overflow:hidden}
+    .bsc-pick::after{content:'';position:absolute;left:-12%;top:0;width:28%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transform:skewX(-20deg);pointer-events:none}
+    .bsc-pick small{font:800 12px var(--f-ui);opacity:.95;text-shadow:none}
+    .bsc-pick.in{background:linear-gradient(180deg,#7fb1ff,${IN_CSS} 55%,#2a5bd0);box-shadow:5px 7px 0 #0d1238}
+    .bsc-pick.out{background:linear-gradient(180deg,#ff8fbd,${OUT_CSS} 55%,#d02a70);box-shadow:5px 7px 0 #0d1238}
+    .bsc-pick:active,.bsc-pick.down{transform:skewX(-10deg) translateY(4px);box-shadow:1px 2px 0 #0d1238}
+    .bsc-pick:focus-visible{outline:4px solid #ffd21f;outline-offset:3px}
     .bsc-pick:disabled{filter:grayscale(.6) brightness(.75);cursor:default}
-    .bsc-pick .hud-key{position:absolute;left:12px;top:12px;display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 6px;border-radius:7px;background:rgba(255,255,255,.88);color:#1c2140;font:800 11px/1 var(--f-ui)}
+    .bsc-pick .hud-key{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:inline-grid;place-items:center;width:30px;height:30px;padding:0;border-radius:50%;background:#fff;color:#0d1238;font:400 16px/1 var(--f-kart);text-shadow:none;box-shadow:inset 0 -3px 0 #c8cfe8}
     .bsc-tap{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:calc(max(16px,env(safe-area-inset-bottom)) + 4px);z-index:5;padding:7px 13px;border-radius:999px;background:rgba(6,9,28,.66);color:#c9d0ea;font:700 12px var(--f-ui);pointer-events:none;opacity:0;transition:opacity .4s}
     .bsc-tap.on{opacity:1}
     @media (max-width:640px){.bsc-q b{font-size:22px}.bsc-pick{font-size:20px}.bsc-tap{display:none}}
@@ -124,7 +126,7 @@ export async function showBasicsGame(root, { onExit } = {}) {
   async function intro() {
     bgm.setDuck(1);
     await wait(1200); if (introSkipped) return;
-    await hud.banner('부팅 훈련', 'PROLOGUE', { ms: 2000 }); if (introSkipped) return;
+    await hud.banner('부팅 훈련', '프롤로그', { ms: 2000 }); if (introSkipped) return;
     bot.play('인사', { once: true }); bot.setExpression('졸림'); actor.look(camPos);
     await hud.dialogue([
       { text: '으… 착륙 충격으로 기지 센서가 전부 잠들어 버렸어.', mood: '졸림' },
@@ -208,7 +210,7 @@ export async function showBasicsGame(root, { onExit } = {}) {
   // ── 설명 ──
   async function brief() {
     hud.goal('부품 6개를 제자리에 꽂아 콘솔 깨우기', 0);
-    const a = await hud.window(`<div class="hud-eye">PROLOGUE · 부팅 훈련</div><h2>잠든 부품을 제자리에 꽂자</h2>
+    const a = await hud.window(`<div class="hud-eye">프롤로그 · 부팅 훈련</div><h2>잠든 부품을 제자리에 꽂자</h2>
       <p>${josa(profile.name(), '이', '가')} 부품을 하나씩 들고 와요. <b style="color:#9cc1ff">정보를 받는 부품(센서)</b>이면 <b style="color:#9cc1ff">⬅ 입력 칸</b>,
         <b style="color:#ffa8cb">빛 · 소리 · 움직임을 만드는 부품</b>이면 <b style="color:#ffa8cb">출력 칸 ➡</b>을 골라요.</p>
       <p>맞는 칸에 꽂히면 부품이 깨어나고, 6개를 다 꽂으면 콘솔이 부팅돼요. 틀려도 괜찮아요 — 다시 고르면 돼요.</p>

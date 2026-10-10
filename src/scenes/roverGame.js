@@ -43,8 +43,8 @@ export async function showRoverGame(root, { onExit, stage: startStage = 1 } = {}
   root.innerHTML = `<style>body:has(.rov) .nav-back{display:none!important}body:has(.rov-dial:not([hidden])) .fs-toggle{display:none!important}
     .rov{position:fixed;inset:0;overflow:hidden;background:#140f26}.rov-stage{position:absolute;inset:0}
     .rov-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px var(--f-ui);cursor:pointer;backdrop-filter:blur(8px)}
-    .rov-read{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;padding:10px 16px 12px;border-left:3px solid var(--rv,#8ff7ee);border-radius:4px 20px 20px 4px;
-      background:linear-gradient(90deg,rgba(6,9,28,.88),rgba(6,9,28,.7));backdrop-filter:blur(10px);transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1)}
+    .rov-read{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;padding:10px 16px 12px;
+      transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1);border-radius:18px;border:3px solid #fff;background:linear-gradient(180deg,#26338a,#172064);box-shadow:inset 0 5px 0 var(--rv,#8ff7ee),5px 7px 0 #0d1238,0 16px 34px rgba(0,0,0,.35)}
     .rov-read[hidden]{display:block;opacity:0;pointer-events:none;transform:translateY(20px)}
     .rov-read code{display:block;font:600 14px/1.55 var(--f-code);color:#e9ecf8;white-space:nowrap}.rov-read code .f{color:#ffd25a}.rov-read code b{display:inline-block;min-width:2.6em;text-align:right;color:#8ff7ee;font-weight:700}
     .rov-read small{display:block;margin-top:4px;font:700 12px var(--f-ui);color:#c9d0ea}.rov-read small i{font-style:normal;color:var(--rv,#8ff7ee)}

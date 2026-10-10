@@ -97,6 +97,66 @@ const CSS = `
 .hud-tog small{font-size:11px;font-weight:600;color:var(--hud-sub)}.hud-tog[aria-pressed="true"]{background:rgba(95,240,160,.16);border-color:rgba(95,240,160,.6)}.hud-tog[aria-pressed="true"]::after{content:"켜짐";font-size:11px;color:var(--hud-good)}
 @media (max-width:640px){.hud-comfort{grid-template-columns:1fr}.hud-talk{bottom:46px}.hud-text{font-size:17px}.hud-face{width:68px;height:68px;border-radius:22px}.hud-face svg{width:58px;height:58px}.hud-win{padding:20px}.hud-win h2{font-size:26px}.hud-count{font-size:96px}.hud-obj-t b{font-size:17px}}
 @media (prefers-reduced-motion:reduce){.hud *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ══ 카트 그랑프리(UI 시안 A) — 위의 기본 모양을 덮는다: 남색 판 + 흰 테 + 딱 떨어지는 남색 그림자 · 기울인 표지 · 굵은 카트 글자 ══ */
+.hud{--k-nav:#0d1238;--k-yel:#ffd21f;--k-red:#e8352b;--k-blu:#2f7bff}
+.hud-glass{background:linear-gradient(180deg,#26338a,#172064);backdrop-filter:none;-webkit-backdrop-filter:none;border:3px solid #fff;box-shadow:5px 7px 0 var(--k-nav),0 14px 30px rgba(0,0,0,.3)}
+.hud-obj{border-radius:12px;transform:skewX(-8deg);padding:8px 16px 9px 9px}
+.hud-obj>*{transform:skewX(8deg)}
+.hud-obj::after{content:"";position:absolute;left:10px;right:22%;bottom:-11px;height:7px;background:repeating-conic-gradient(#fff 0 25%,var(--k-nav) 0 50%) 0 0/7px 7px;border:2px solid #fff;transform:skewX(0)}
+.hud-obj.off::after{display:none}
+.hud-obj-ic{border-radius:12px;background:linear-gradient(180deg,#fff27a,var(--k-yel));border:3px solid #fff;box-shadow:3px 4px 0 var(--k-nav)}
+.hud-obj-t small{font:400 12px/1.2 var(--f-kart);letter-spacing:.04em;color:var(--k-yel)}
+.hud-obj-t b{font:400 21px/1.2 var(--f-kart);paint-order:stroke fill;-webkit-text-stroke:.14em var(--k-nav);text-shadow:2px 3px 0 var(--k-nav)}
+.hud-obj-t span{color:#dfe5ff;font-weight:700}
+.hud-bar{height:8px;border:2px solid #fff;background:var(--k-nav)}.hud-bar i{background:linear-gradient(90deg,var(--k-yel),#ff9a1f)}
+.hud-pause{border-radius:14px;font-size:18px}
+/* 대화: 흰 말풍선 + 남색 테 · 노란 이름표 */
+.hud-face{border-radius:22px;border:4px solid var(--k-nav);box-shadow:5px 6px 0 var(--k-nav)}
+.hud-box.hud-glass{background:#fff;color:var(--k-nav);border:4px solid var(--k-nav);border-radius:20px;box-shadow:6px 7px 0 var(--k-nav),0 14px 30px rgba(0,0,0,.3)}
+.hud-text{color:#141a46;font-weight:800}
+.hud-name{top:-17px;transform:skewX(-12deg);border-radius:6px;background:var(--k-yel);border:3px solid var(--k-nav);color:var(--k-nav);font:400 15px/1.2 var(--f-kart);padding:4px 14px}
+.hud-next{color:#59608f}
+/* 조작 표시: 흰 동그란 단추 */
+.hud-key{border-radius:999px;border:2px solid var(--k-nav);box-shadow:0 2px 0 var(--k-nav);font-weight:900}
+/* 큰 행동 단추 · 창 단추: 기울인 판 */
+.hud-act{border-radius:10px;transform:translateX(-50%) skewX(-12deg);background:linear-gradient(180deg,#fff27a 0,var(--k-yel) 55%,#f0b400 100%);color:var(--k-nav);border:4px solid #fff;box-shadow:6px 8px 0 var(--k-nav),0 14px 30px rgba(0,0,0,.35);font:400 22px/1 var(--f-kart)}
+.hud-act:active,.hud-act.hit{transform:translateX(-50%) skewX(-12deg) translateY(4px);box-shadow:2px 3px 0 var(--k-nav)}
+.hud-btn{border-radius:10px;transform:skewX(-10deg);border:3px solid #fff;background:linear-gradient(180deg,#5d97ff,var(--k-blu) 60%,#1d55d6);box-shadow:4px 6px 0 var(--k-nav);font:400 18px/1 var(--f-kart)}
+.hud-btn:hover{background:linear-gradient(180deg,#78a9ff,#3d86ff 60%,#2160e0)}.hud-btn:active{transform:skewX(-10deg) translateY(3px);box-shadow:1px 2px 0 var(--k-nav)}
+.hud-btn.main{background:linear-gradient(180deg,#fff27a 0,var(--k-yel) 55%,#f0b400 100%);color:var(--k-nav);border-color:#fff;box-shadow:5px 7px 0 var(--k-nav)}
+/* 창: 남색 판 · 빨간 기울인 머리표 · 굵은 제목 */
+.hud-veil{background:radial-gradient(80% 70% at 50% 50%,rgba(10,14,40,.2),rgba(10,14,40,.62))}
+.hud-win{border-radius:20px}
+.hud-win h2{font:400 30px/1.2 var(--f-kart);paint-order:stroke fill;-webkit-text-stroke:.12em var(--k-nav);text-shadow:3px 4px 0 var(--k-nav)}
+.hud-win p{color:#dfe5ff}
+.hud-eye{display:inline-block;transform:skewX(-12deg);background:var(--k-red);border:3px solid #fff;box-shadow:3px 4px 0 var(--k-nav);padding:4px 12px;color:#fff;font:400 13px/1.2 var(--f-kart);letter-spacing:.03em}
+/* 결과: 금 동전 등급 · 흰 테 수치 */
+.hud-res .hud-eye{margin-bottom:2px}
+.hud-rank{width:88px;height:88px;border:5px solid #fff;color:var(--k-nav)!important;background:radial-gradient(circle at 35% 30%,#fff7c2,var(--k-yel) 55%,#e09a00);box-shadow:0 0 0 4px var(--k-nav),5px 7px 0 4px var(--k-nav);font:400 46px/1 var(--f-kart)}
+.hud-stat{border-radius:12px;background:rgba(13,18,56,.55);border:2px solid rgba(255,255,255,.9);box-shadow:3px 4px 0 var(--k-nav)}
+.hud-stat small{color:#dfe5ff;font-weight:700}.hud-stat b{font:400 25px/1.25 var(--f-kart);color:var(--k-yel)}
+/* 배너: 빨간 기울인 띠 + 노란 굵은 글자 + 체크 무늬 */
+.hud-banner .rib{position:relative;border-radius:10px;transform-origin:50% 50%;background:linear-gradient(180deg,#ff5a4a,var(--k-red) 60%,#c4211a);border:5px solid #fff;box-shadow:8px 10px 0 var(--k-nav);padding:12px 54px 16px;color:#fff;animation:kartrib 1.7s cubic-bezier(.2,.9,.25,1) forwards}
+.hud-banner .rib::before,.hud-banner .rib::after{content:"";position:absolute;top:-5px;bottom:-5px;width:22px;background:repeating-conic-gradient(#fff 0 25%,var(--k-nav) 0 50%) 0 0/11px 11px;border:3px solid #fff}
+.hud-banner .rib::before{left:-30px}.hud-banner .rib::after{right:-30px}
+.hud-banner small{font:400 16px/1.2 var(--f-kart);color:#fff2b0;letter-spacing:.06em}
+.hud-banner b{font:400 clamp(34px,6.4vw,64px)/1.1 var(--f-kart);color:var(--k-yel);-webkit-text-stroke:.13em var(--k-nav);text-shadow:4px 6px 0 var(--k-nav)}
+.hud-banner.bad .rib{background:linear-gradient(180deg,#8a92b8,#5d6488 60%,#454b6e)}
+.hud-banner.bad b{color:#fff}
+@keyframes kartrib{0%{opacity:0;transform:skewX(-12deg) translateX(-60vw)}14%{opacity:1;transform:skewX(-12deg) translateX(2%)}22%{transform:skewX(-12deg) translateX(0)}82%{opacity:1;transform:skewX(-12deg)}100%{opacity:0;transform:skewX(-12deg) translateX(60vw)}}
+.hud-count{color:var(--k-yel);font-family:var(--f-kart);font-weight:400;-webkit-text-stroke:16px var(--k-nav);text-shadow:8px 12px 0 var(--k-nav)}
+/* 판정 글자 */
+.hud-pop{font:400 34px/1 var(--f-kart);-webkit-text-stroke:6px var(--k-nav);text-shadow:3px 4px 0 var(--k-nav)}
+.hud-combo b{font:400 40px/1 var(--f-kart);color:var(--k-yel)}
+/* 알림: 흰 기울인 표지 */
+.hud-toast.hud-glass{background:#fff;color:var(--k-nav);border:3px solid var(--k-nav);border-radius:10px;transform:skewX(-8deg);box-shadow:4px 5px 0 var(--k-nav);font-weight:800}
+.hud-toast.ok{border-left:12px solid var(--k-grn,#2fd66f)}.hud-toast.warn{border-left:12px solid #ff9a1f}
+@keyframes hudtoast{0%{opacity:0;transform:skewX(-8deg) translateY(-8px)}8%,85%{opacity:1;transform:skewX(-8deg)}100%{opacity:0;transform:skewX(-8deg)}}
+.hud-tog{border:2px solid rgba(255,255,255,.85);border-radius:12px;background:rgba(13,18,56,.5)}
+/* 미션 공용: 인트로 건너뛰기 단추(각 미션 *-skip) */
+[class$="-skip"]:not(.hud-skip){border:3px solid #fff!important;border-radius:10px!important;transform:skewX(-10deg);background:linear-gradient(180deg,#26338a,#172064)!important;box-shadow:4px 5px 0 #0d1238!important;font:400 14px/1 var(--f-kart)!important;color:#fff!important;backdrop-filter:none!important}
+@media (prefers-reduced-motion:reduce){.hud-banner .rib{animation:hudfade .3s ease both}}
 `;
 
 const comfortRow = () => `<div class="hud-comfort"><button class="hud-tog" data-comfort="reduce" type="button" aria-pressed="${comfort.reduce}">🌙 화면 효과 줄이기<small>흔들림 · 번쩍임 · 빠른 깜빡임</small></button><button class="hud-tog" data-comfort="cvd" type="button" aria-pressed="${comfort.cvd}">👁️ 색 도우미<small>색 맞추기에 숫자 · 위치 표시</small></button></div>`;

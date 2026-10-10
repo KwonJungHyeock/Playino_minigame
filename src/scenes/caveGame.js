@@ -46,8 +46,8 @@ export async function showCaveGame(root, { onExit, stage: startStage = 1 } = {})
   root.innerHTML = `<style>body:has(.cav) .nav-back{display:none!important}body:has(.cav-ctl:not([hidden])) .fs-toggle{display:none!important}
     .cav{position:fixed;inset:0;overflow:hidden;background:#04050c}.cav-stage{position:absolute;inset:0}
     .cav-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px var(--f-ui);cursor:pointer;backdrop-filter:blur(8px)}
-    .cav-ctl{position:absolute;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;width:min(640px,calc(100% - 28px));padding:10px 16px 14px;border-left:3px solid var(--cv,#8ff7ee);border-radius:4px 22px 22px 4px;
-      background:linear-gradient(90deg,rgba(6,9,28,.9),rgba(6,9,28,.76));backdrop-filter:blur(10px);transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1)}
+    .cav-ctl{position:absolute;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;width:min(640px,calc(100% - 28px));padding:10px 16px 14px;
+      transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1);border-radius:18px;border:3px solid #fff;background:linear-gradient(180deg,#26338a,#172064);box-shadow:inset 0 5px 0 var(--cv,#8ff7ee),5px 7px 0 #0d1238,0 16px 34px rgba(0,0,0,.35)}
     .cav-ctl[hidden]{display:block;opacity:0;pointer-events:none;transform:translate(-50%,24px)}
     .cav-ctl code{display:flex;flex-wrap:wrap;gap:4px 14px;font:600 13.5px/1.5 var(--f-code);color:#e9ecf8}.cav-ctl code .f{color:#ffd25a}.cav-ctl code b{color:#8ff7ee;font-weight:700;display:inline-block;min-width:2.4em;text-align:right}
     .cav-row{display:flex;align-items:center;gap:12px;margin-top:8px}

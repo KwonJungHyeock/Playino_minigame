@@ -38,8 +38,8 @@ export async function showSolarGame(root, { onExit, stage: startStage = 1 } = {}
     .sol{position:fixed;inset:0;overflow:hidden;background:#121838}.sol-stage{position:absolute;inset:0}
     .sol-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px var(--f-ui);cursor:pointer;backdrop-filter:blur(8px)}
     /* 센서 판독 띠: 진짜 코드 + 값 + 밝기 막대 */
-    .sol-read{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;min-width:250px;padding:10px 16px 12px;border-left:3px solid var(--sol,#ffd24a);border-radius:4px 20px 20px 4px;
-      background:linear-gradient(90deg,rgba(6,9,28,.88),rgba(6,9,28,.7));backdrop-filter:blur(10px);transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1)}
+    .sol-read{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;min-width:250px;padding:10px 16px 12px;
+      transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1);border-radius:18px;border:3px solid #fff;background:linear-gradient(180deg,#26338a,#172064);box-shadow:inset 0 5px 0 var(--sol,#ffd24a),5px 7px 0 #0d1238,0 16px 34px rgba(0,0,0,.35)}
     .sol-read[hidden]{display:block;opacity:0;pointer-events:none;transform:translateY(20px)}
     .sol-read code{display:block;font:600 15px/1.3 var(--f-code);color:#e9ecf8;white-space:nowrap}.sol-read code .f{color:#ffd25a}.sol-read code b{display:inline-block;min-width:2.6em;text-align:right;color:#8ff7ee;font-weight:700}
     .sol-bar{position:relative;height:10px;margin-top:9px;border-radius:999px;background:#0b0d1c;box-shadow:inset 0 2px 3px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.1);overflow:hidden}

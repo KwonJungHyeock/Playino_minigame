@@ -295,7 +295,7 @@ export async function showChallengeGame(root, { onExit } = {}) {
     // 골에서 출발점까지 코스를 한 번 훑는다
     S.phase = 'intro'; S.introT = 0;
     await wait(300); if (skip) return;
-    await hud.banner('운석 폭풍 런', 'CHALLENGE', { ms: 2100 }); if (skip) return;
+    await hud.banner('운석 폭풍 런', '도전', { ms: 2100 }); if (skip) return;
     await hud.dialogue([
       { text: '이번엔 센서 없이 몸으로 하는 도전이야!', mood: '웃음' },
       { text: '끝까지 가면 보너스 부품을 줄게. 떨어져도 괜찮아!', mood: '윙크' },

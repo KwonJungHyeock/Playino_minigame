@@ -6,13 +6,25 @@ import { icon } from '../app/icons.js';
 import { student, confirmNewStudent } from '../app/student.js';
 import { esc } from '../app/achievement.js';
 import ART_WIDE from '../assets/title/keyart-wide.webp?url';
+import { injectType } from '../gfx3d/type.js';
 
 // v4(붉은 행성 대탈출) 옷: 타이틀 키 아트를 흐리게 깔고, 카드 · 단추를 타이틀 메뉴와 같은 금빛 콘솔 결로(공용 CSS 파트는 그대로 두고 여기서만 덮는다)
 const V4_CSS = `.lg.v4 .pm-bg{background:url("${ART_WIDE}") 62% 50%/cover no-repeat!important;filter:blur(7px) brightness(.5) saturate(1.1);transform:scale(1.06)}.lg.v4 .pm-blobs{display:none}
 .lg.v4 .lg-card{background:linear-gradient(180deg,rgba(16,20,54,.86),rgba(10,13,38,.9));border:1px solid rgba(255,255,255,.12);box-shadow:0 30px 60px rgba(0,0,0,.45);backdrop-filter:blur(12px)}
 .lg.v4 .lg-brand{color:#ffd25a;font-family:var(--f-num,inherit);letter-spacing:.2em;font-size:11px}.lg.v4 .lg-title{font-family:var(--f-display,inherit);font-weight:400;font-size:34px}
 .lg.v4 .lg-go{background:linear-gradient(180deg,#ffeaa0 0%,#ffd25a 55%,#f0b52e 100%);color:#2b1d00;font-family:var(--f-display,inherit);font-weight:400;font-size:22px;box-shadow:inset 0 2px 0 rgba(255,255,255,.65),inset 0 -4px 0 rgba(160,100,10,.35),0 5px 0 #a8761a,0 12px 24px rgba(0,0,0,.35)}
-.lg.v4 .lg-in:focus,.lg.v4 .code-box:focus{border-color:#8ff7ee}.lg.v4 .brand-badge{display:none}`;
+.lg.v4 .lg-in:focus,.lg.v4 .code-box:focus{border-color:#8ff7ee}.lg.v4 .brand-badge{display:none}
+/* 카트 그랑프리(UI 시안 A): 남색 판 · 흰 테두리 · 딱딱한 그림자 · 비스듬한 노란 단추 · 빨간 꼬리표 */
+.lg.v4 .lg-card{border-radius:20px;border:4px solid #fff;background:linear-gradient(180deg,#26338a,#172064);box-shadow:inset 0 6px 0 #e8352b,6px 8px 0 #0d1238,0 24px 50px rgba(0,0,0,.45);backdrop-filter:none}
+.lg.v4 .lg-brand{display:inline-block;padding:5px 14px 6px;border-radius:6px;transform:skewX(-12deg);background:#e8352b;color:#fff;font:400 13px/1 var(--f-kart,"Jua"),"Jua",sans-serif;letter-spacing:.02em;box-shadow:3px 3px 0 #0d1238;font-family:var(--f-kart,"Jua"),"Jua",sans-serif;font-size:13px;letter-spacing:.02em}.lg.v4 .lg-brand .brand-dot{display:none}
+.lg.v4 .lg-title{font:400 36px/1.15 var(--f-kart,"Jua"),"Jua",sans-serif;color:#fff;text-shadow:3px 3px 0 #0d1238}
+.lg.v4 .lg-sub{color:#c9d3ff}.lg.v4 .lg-sub b{color:#ffd21f}.lg.v4 .lg-label{color:#ffd21f;font-family:var(--f-kart,"Jua"),"Jua",sans-serif;font-weight:400}
+.lg.v4 .lg-in,.lg.v4 .code-box{border:3px solid #0d1238;border-radius:12px;background:#fff;color:#141a4a;box-shadow:3px 4px 0 #0d1238;font-weight:800}
+.lg.v4 .lg-in:focus,.lg.v4 .code-box:focus{border-color:#ffd21f;outline:none;box-shadow:0 0 0 3px #0d1238,3px 4px 0 #0d1238}
+.lg.v4 .lg-go{border:3px solid #fff;border-radius:14px;transform:skewX(-10deg);background:linear-gradient(180deg,#fff27a,#ffd21f 60%,#f5b400);color:#0d1238;font-family:var(--f-kart,"Jua"),"Jua",sans-serif;font-weight:400;box-shadow:inset 0 3px 0 rgba(255,255,255,.7),5px 6px 0 #0d1238;font-size:24px}.lg.v4 .lg-go:hover{filter:brightness(1.05)}.lg.v4 .lg-go:active{transform:skewX(-10deg) translateY(3px);box-shadow:inset 0 3px 0 rgba(255,255,255,.7),2px 2px 0 #0d1238}
+.lg.v4 .lg-help{color:#c9d3ff}
+.lg.v4 .lg-speech{background:#fff;color:#141a4a;border:3px solid #0d1238;box-shadow:4px 5px 0 #0d1238;font-weight:800}
+.lg.v4 .lg-hero-fallback{border-radius:32px;border:4px solid #fff;background:radial-gradient(circle at 50% 35%,#fff,#dfe3ee);box-shadow:6px 8px 0 #0d1238}`;
 
 const LINES = ['먼저 이름을 적어줘! 기록증에 들어가 ✏️', '구매 후 받은 6자리 접속 코드를 입력해줘!', '코드를 모르면 고객센터로 문의해줘 📞', '천국에서 만나자! 🎮'];
 
@@ -20,6 +32,7 @@ const LINES_V4 = ['먼저 이름을 적어줘! 탐사 보고서에 들어가 ✏
 
 /** v4: true 면 '붉은 행성 대탈출' 흐름 — 옆 캐릭터가 3D 에디 얼굴로 바뀐다 */
 export function showLogin(root, { onDone, v4 = true } = {}) {   // v4(붉은 행성) 옷이 기본 — 예전 2D 판 흐름은 없앴다
+  injectType();   // 카트 서체(--f-kart) · 색 토큰
   const saved = student.get();
   root.innerHTML = `
     ${v4 ? `<style>${V4_CSS}</style>` : ''}<div class="lg scene-fade${v4 ? ' v4' : ''}">

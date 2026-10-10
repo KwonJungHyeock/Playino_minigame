@@ -4,8 +4,10 @@
 //   본문 · 안내(ui)       Pretendard      — 또렷한 한글 본문(작은 글씨 · 대사 · 설명)
 //   숫자 · 영문 표기(num)  Fredoka         — 둥근 라틴 · 숫자(MISSION 01 · 3/8 · 카운트다운 · 콤보 · 등급)
 //   코드(code)            JetBrains Mono  — 아두이노 코드
+//   카트(kart)            Black Han Sans  — 콘솔 게임 결 굵은 제목 · 단추 · 배너(UI 시안 A '카트 그랑프리')
 // 3D 씬은 이 파일을 불러오기만 하면 된다(글꼴 CSS가 함께 딸려 온다). 캔버스 글씨는 FONT.* 문자열을 쓰고 fontsReady() 뒤에 그린다.
 import '@fontsource/jua/index.css';
+import '@fontsource/black-han-sans/index.css';
 import '@fontsource/fredoka/600.css';
 import '@fontsource/fredoka/700.css';
 import '@fontsource/jetbrains-mono/600.css';
@@ -16,12 +18,22 @@ export const FONT = {
   ui: '"Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-serif',
   num: '"Fredoka", "Pretendard Variable", sans-serif',
   code: '"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace',
+  kart: '"Black Han Sans", "Jua", "Pretendard Variable", sans-serif',
 };
 export const INK = '#1b1f4a';   // 외곽선 · 그림자 남색(바이저봇 어두운 바이저와 같은 계열)
 
 /** 모든 3D 화면 공통 글자 변수 · 로고 글자 클래스 */
 export const TYPE_CSS = `
-:root{--f-display:${FONT.display};--f-ui:${FONT.ui};--f-num:${FONT.num};--f-code:${FONT.code};--f-ink:${INK}}
+:root{--f-display:${FONT.display};--f-ui:${FONT.ui};--f-num:${FONT.num};--f-code:${FONT.code};--f-ink:${INK};--f-kart:${FONT.kart}
+  ;--k-nav:#0d1238;--k-panel:linear-gradient(180deg,#26338a,#172064);--k-red:#e8352b;--k-yel:#ffd21f;--k-blu:#2f7bff;--k-pnk:#ff3f8e;--k-grn:#2fd66f;--k-white:#fff}
+/* 카트 그랑프리(UI 시안 A) 공용 조각: 남색 판 + 흰 테 + 딱 떨어지는 남색 그림자 · 기울인 단추 */
+.k-panel{background:var(--k-panel);border:3px solid #fff;border-radius:18px;box-shadow:5px 7px 0 var(--k-nav),0 16px 34px rgba(0,0,0,.35)}
+.k-tag{display:inline-block;transform:skewX(-12deg);background:var(--k-red);border:3px solid #fff;box-shadow:4px 5px 0 var(--k-nav);padding:3px 12px;color:#fff;font:400 13px/1.2 var(--f-kart);letter-spacing:.04em}
+/* 늘 떠 있는 단추(뒤로 · 전체 화면 · 소리)도 카트 판 — 화면마다 따로 고치지 않게 여기서 한 번에 덮는다 */
+.nav-back,.fs-toggle,.snd-toggle{background:var(--k-panel)!important;border:3px solid #fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:4px 5px 0 var(--k-nav),0 10px 22px rgba(0,0,0,.3)!important;color:#fff!important}
+.nav-back{border-radius:12px!important;transform:skewX(-10deg);font:400 16px/1 var(--f-kart)!important;letter-spacing:0!important}
+.nav-back:hover{transform:skewX(-10deg) translateX(-2px)!important}.nav-back:active{transform:skewX(-10deg) translateY(3px)!important;box-shadow:1px 2px 0 var(--k-nav)!important}
+.fs-toggle,.snd-toggle{border-radius:14px!important}.fs-toggle:active,.snd-toggle:active{transform:translateY(3px)!important;box-shadow:1px 2px 0 var(--k-nav)!important}
 .t-logo{font-family:var(--f-display);font-weight:400;color:#fff;paint-order:stroke fill;-webkit-text-stroke:.15em var(--f-ink);text-shadow:0 .09em 0 var(--f-ink),0 .14em .32em rgba(4,6,24,.45);letter-spacing:.005em}
 .t-logo.gold{color:#ffe28a}
 .t-num{font-family:var(--f-num);font-weight:700;font-variant-numeric:tabular-nums}

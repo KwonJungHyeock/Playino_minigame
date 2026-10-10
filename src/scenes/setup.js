@@ -5,6 +5,7 @@ import { board } from '../app/board.js';
 import { mountMonitor } from '../app/monitor.js';
 import { PORTRAIT } from '../gfx3d/portrait.js';
 import ART_WIDE from '../assets/title/keyart-wide.webp?url';
+import { injectType } from '../gfx3d/type.js';
 import { sfx } from '../app/sfx.js';
 import { icon } from '../app/icons.js';
 
@@ -15,7 +16,16 @@ const V4_CSS = `.setup2.v4 .pm-bg{background:url("${ART_WIDE}") 62% 50%/cover no
 .setup2.v4 .su-kicker{color:#ffd25a}.setup2.v4 .su-title{font-family:var(--f-display,inherit);font-weight:400}
 .setup2.v4 .su-go{background:linear-gradient(180deg,#ffeaa0 0%,#ffd25a 55%,#f0b52e 100%);color:#2b1d00;font-family:var(--f-display,inherit);font-weight:400;box-shadow:inset 0 2px 0 rgba(255,255,255,.65),inset 0 -4px 0 rgba(160,100,10,.35),0 5px 0 #a8761a,0 12px 24px rgba(0,0,0,.35)}
 .setup2.v4 .su-go:disabled{filter:grayscale(.6) brightness(.75)}
-.setup2.v4 .su-eddie{display:grid;place-items:center}.setup2.v4 .su-eddie .v4face{width:118px;height:118px;border-radius:32px;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#fff,#dfe3ee);box-shadow:0 8px 0 rgba(0,0,0,.25),0 18px 30px rgba(0,0,0,.35)}.setup2.v4 .su-eddie .v4face svg{width:100px;height:100px}`;
+.setup2.v4 .su-eddie{display:grid;place-items:center}.setup2.v4 .su-eddie .v4face{width:118px;height:118px;border-radius:32px;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#fff,#dfe3ee);box-shadow:0 8px 0 rgba(0,0,0,.25),0 18px 30px rgba(0,0,0,.35)}.setup2.v4 .su-eddie .v4face svg{width:100px;height:100px}
+/* 카트 그랑프리(UI 시안 A) */
+.setup2.v4 .su-panel,.setup2.v4 .su-monitor{border-radius:20px;border:4px solid #fff;background:linear-gradient(180deg,#26338a,#172064);box-shadow:inset 0 6px 0 #e8352b,6px 8px 0 #0d1238,0 24px 50px rgba(0,0,0,.45);backdrop-filter:none}
+.setup2.v4 .su-kicker{display:inline-block;padding:5px 14px 6px;border-radius:6px;transform:skewX(-12deg);background:#e8352b;color:#fff;font:400 13px/1 var(--f-kart,"Jua"),"Jua",sans-serif;letter-spacing:.02em;box-shadow:3px 3px 0 #0d1238}.setup2.v4 .su-kicker .brand-dot{display:none}
+.setup2.v4 .su-title{font:400 32px/1.15 var(--f-kart,"Jua"),"Jua",sans-serif;color:#fff;text-shadow:3px 3px 0 #0d1238}
+.setup2.v4 .su-go{border:3px solid #fff;border-radius:14px;transform:skewX(-10deg);background:linear-gradient(180deg,#fff27a,#ffd21f 60%,#f5b400);color:#0d1238;font-family:var(--f-kart,"Jua"),"Jua",sans-serif;font-weight:400;box-shadow:inset 0 3px 0 rgba(255,255,255,.7),5px 6px 0 #0d1238}.setup2.v4 .su-go:active{transform:skewX(-10deg) translateY(3px)}
+.setup2.v4 .su-panel .btn{border:3px solid #fff;border-radius:12px;transform:skewX(-8deg);box-shadow:4px 5px 0 #0d1238;font-family:var(--f-kart,"Jua"),"Jua",sans-serif;font-weight:400}
+.setup2.v4 .su-panel .btn.primary{background:linear-gradient(180deg,#5aa0ff,#2f7bff);color:#fff}
+.setup2.v4 .su-speech{background:#fff;color:#141a4a;border:3px solid #0d1238;box-shadow:4px 5px 0 #0d1238;font-weight:800}
+.setup2.v4 .su-eddie .v4face{border:4px solid #fff;box-shadow:6px 8px 0 #0d1238}`;
 
 const ITEMS = [
   { id: 'browser',  label: '브라우저 확인',   desc: 'Chrome / Edge' },
@@ -25,6 +35,7 @@ const ITEMS = [
 ];
 
 export function showSetup(root, { onDone }) {
+  injectType();   // 카트 서체(--f-kart) · 색 토큰
   const status = { browser: 'todo', connect: 'todo', firmware: 'todo', led13: 'todo' };
   let led13Confirm = false;
   let connectHint = '';

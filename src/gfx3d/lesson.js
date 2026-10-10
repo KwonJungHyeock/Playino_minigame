@@ -50,6 +50,23 @@ const CSS = `
 .lsn-skip{position:absolute;right:calc(max(16px,env(safe-area-inset-right)) + 66px);top:max(20px,env(safe-area-inset-top));pointer-events:auto;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#c9d0ea;font:700 13px "Pretendard Variable","Noto Sans KR",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
 @media (pointer:coarse){.lsn .lsn-next .hud-key,.lsn-btn .kk.key{display:none}}
 @media (max-width:640px){.lsn-wrap{top:118px}.lsn-title{font-size:24px}.lsn-code{font-size:12.5px;padding-right:30px}.lsn-code div{white-space:pre-wrap;padding-left:40px;text-indent:0}.lsn-code .c{white-space:nowrap}.lsn-btn{min-height:48px;font-size:16px}.lsn-say span{font-size:16px}.lsn-say{bottom:calc(max(16px,env(safe-area-inset-bottom)) + 76px)}.lsn-skip{padding:8px 12px;font-size:12px;top:calc(max(16px,env(safe-area-inset-top)) + 62px);right:max(16px,env(safe-area-inset-right))}}
+
+/* 카트 그랑프리(UI 시안 A): 글이 많은 판이라 기울임은 단추 · 표지에만, 판은 흰 테 + 남색 그림자 */
+.lsn-eye{font:400 13px/1 var(--f-kart,"Jua",sans-serif);letter-spacing:.03em;color:#fff;transform:skewX(-12deg);background:#e8352b;border:3px solid #fff;box-shadow:3px 4px 0 #0d1238;padding:5px 12px;justify-self:start}
+.lsn-eye i b{background:rgba(255,255,255,.35)}.lsn-eye i b.on{background:#ffd21f}
+.lsn-title{font:400 32px/1.15 var(--f-kart,"Jua",sans-serif);-webkit-text-stroke:.13em #0d1238;text-shadow:3px 4px 0 #0d1238}
+.lsn-code{border-left:0;border:3px solid #fff;border-radius:14px;background:linear-gradient(180deg,#1d2766,#121947);box-shadow:5px 7px 0 #0d1238;padding-left:4px}
+.lsn-btn{border-radius:10px;transform:skewX(-10deg);background:linear-gradient(180deg,#fff,#e9eeff);border:3px solid #0d1238;box-shadow:4px 6px 0 #0d1238;color:#0d1238;font:400 18px/1.1 var(--f-kart,"Jua",sans-serif)}
+.lsn-btn .kk{border-radius:50%;border:2px solid #0d1238;font:400 16px/1 var(--f-kart,"Jua",sans-serif)}
+.lsn-btn code{color:#1d2766}
+.lsn-btn:active,.lsn-btn.down{transform:skewX(-10deg) translateY(4px);box-shadow:1px 2px 0 #0d1238}
+.lsn-btn.right{background:linear-gradient(180deg,#b8ffd6,#5fe39a);box-shadow:4px 6px 0 #0d1238,0 0 0 4px rgba(47,214,111,.45)}
+.lsn-say b{display:inline-block;transform:skewX(-12deg);background:#ffd21f;color:#0d1238;border:3px solid #0d1238;padding:2px 12px;font:400 15px/1.3 var(--f-kart,"Jua",sans-serif);text-shadow:none;margin-bottom:8px}
+.lsn-say span{background:#fff;color:#141a46;border:3px solid #0d1238;box-shadow:4px 5px 0 #0d1238;border-radius:12px;font-weight:800}
+.lsn-say span.good{color:#0f7a3d}.lsn-say span.hint{color:#9a4b00}
+.lsn-next{border-radius:10px;transform:translateX(-50%) skewX(-12deg);background:linear-gradient(180deg,#fff27a 0,#ffd21f 55%,#f0b400 100%);border:4px solid #fff;box-shadow:6px 8px 0 #0d1238;color:#0d1238;font:400 22px/1 var(--f-kart,"Jua",sans-serif)}
+.lsn-next:active{transform:translateX(-50%) skewX(-12deg) translateY(4px)}
+.lsn-skip{border:3px solid #fff;border-radius:10px;transform:skewX(-10deg);background:linear-gradient(180deg,#26338a,#172064);box-shadow:4px 5px 0 #0d1238;color:#fff;font:400 13px/1 var(--f-kart,"Jua",sans-serif)}
 @media (prefers-reduced-motion:reduce){.lsn *{transition-duration:.01ms!important;animation-duration:.01ms!important}}
 `;
 

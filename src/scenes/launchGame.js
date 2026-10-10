@@ -46,8 +46,8 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   root.innerHTML = `<style>body:has(.lch) .nav-back{display:none!important}body:has(.lch-ctl.on) .fs-toggle{display:none!important}
     .lch{position:fixed;inset:0;overflow:hidden;background:#1a1226}.lch-stage{position:absolute;inset:0}
     .lch-skip{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 16px;background:rgba(18,24,56,.6);color:#fff;font:700 13px var(--f-ui);cursor:pointer;backdrop-filter:blur(8px)}
-    .lch-read{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;padding:10px 16px 12px;border-left:3px solid var(--lc,#8ff7ee);border-radius:4px 20px 20px 4px;
-      background:linear-gradient(90deg,rgba(6,9,28,.88),rgba(6,9,28,.7));backdrop-filter:blur(10px);transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1)}
+    .lch-read{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:6;padding:10px 16px 12px;
+      transition:opacity .25s,transform .35s cubic-bezier(.16,1,.3,1);border-radius:18px;border:3px solid #fff;background:linear-gradient(180deg,#26338a,#172064);box-shadow:inset 0 5px 0 var(--lc,#8ff7ee),5px 7px 0 #0d1238,0 16px 34px rgba(0,0,0,.35)}
     .lch-read[hidden]{display:block;opacity:0;pointer-events:none;transform:translateY(20px)}
     .lch-read code{display:block;font:600 14px/1.55 var(--f-code);color:#e9ecf8;white-space:nowrap}.lch-read code .f{color:#ffd25a}.lch-read code b{display:inline-block;min-width:2.4em;text-align:right;color:#8ff7ee;font-weight:700}
     .lch-read small{display:flex;align-items:center;gap:8px;margin-top:5px;font:700 12px var(--f-ui);color:#c9d0ea}.lch-read small i{font-style:normal;color:var(--lc,#8ff7ee)}
@@ -198,7 +198,7 @@ export async function showLaunchGame(root, { onExit, stage: startStage = 1 } = {
   async function intro() {
     bgm.setDuck(1);
     await wait(1200); if (introSkipped) return;
-    await hud.banner('발사 쇼', 'FINAL', { ms: 2000 }); if (introSkipped) return;
+    await hud.banner('발사 쇼', '마지막 미션', { ms: 2000 }); if (introSkipped) return;
     actor.look(camPos); bot.setExpression('웃음');
     await hud.dialogue([
       { text: `드디어 발사대야! 모은 부품 ${partsDone}개를 달았어.`, mood: '웃음' },

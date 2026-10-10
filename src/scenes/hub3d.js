@@ -83,12 +83,17 @@ export async function showHub3d(root, { onRoom, onExit, spawnAt, openAll = false
     @media (max-width:560px){.jr-stats{grid-template-columns:repeat(2,1fr)}}
 
     /* 목표 칸 — 유리 상자 대신 바이저 꺾쇠 + 글자 */
-    .hub3 .hud-obj.hud-glass{background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:8px 14px 8px 18px;transition:opacity .3s,transform .4s cubic-bezier(.16,1,.3,1)}
+    /* 기지 왼쪽 위: 카트 그랑프리 판(hud 기본과 같은 결) — 로켓 부품 진행 · 다음 목적지 */
     .hub3 .hud-obj-ic{display:none}
-    .hub3 .hud-obj::before,.hub3 .hud-obj::after{content:"";position:absolute;left:0;width:14px;height:14px;border:3px solid var(--gold);border-right:0}
-    .hub3 .hud-obj::before{top:0;border-bottom:0;border-top-left-radius:6px}.hub3 .hud-obj::after{bottom:0;border-top:0;border-bottom-left-radius:6px}
-    .hub3 .hud-obj-t small,.hub3 .hud-obj-t b,.hub3 .hud-obj-t span{text-shadow:0 2px 0 rgba(10,14,40,.5),0 0 14px rgba(10,14,40,.65)}
-    .hub3 .hud-obj-t span{color:#fff;font-weight:700}
+    .hub3 .hud-obj{padding:9px 18px 10px 16px}
+    /* 오른쪽 위 도구 · 아래 조작 안내: 카트 판 */
+    .hub3-tools button{border:3px solid #fff!important;border-radius:12px!important;transform:skewX(-10deg);background:linear-gradient(180deg,#26338a,#172064)!important;backdrop-filter:none!important;box-shadow:4px 6px 0 #0d1238;font:400 17px/1 var(--f-kart,"Jua",sans-serif)!important}
+    .hub3-tools button:active{transform:skewX(-10deg) translateY(3px);box-shadow:1px 2px 0 #0d1238}
+    .hub3-tools b{color:#ffd21f!important;font:400 15px var(--f-kart,"Jua",sans-serif)!important}
+    .hub3-hint{border:3px solid #fff!important;border-radius:12px!important;background:linear-gradient(180deg,#26338a,#172064)!important;backdrop-filter:none!important;box-shadow:4px 6px 0 #0d1238}
+    .hub3-hint .hud-key{border-radius:999px!important;border:2px solid #0d1238;font-weight:900!important}
+    .sty-tab[aria-selected=true]{background:linear-gradient(180deg,#fff27a,#ffd21f)!important;color:#0d1238!important;box-shadow:inset 0 0 0 3px #fff,3px 4px 0 #0d1238!important}
+    .sty-row button[aria-pressed=true]{border-color:#fff!important;background:rgba(255,210,31,.22)!important;box-shadow:3px 4px 0 #0d1238}
     .hub3 .hud-bar{background:rgba(10,14,40,.45);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
 
     /* 바이저 스캔: 홀로그램을 겨누는 꺾쇠 · 한 번 훑는 주사선 · 정보 몇 줄(상자 없음) */
@@ -119,21 +124,21 @@ export async function showHub3d(root, { onRoom, onExit, spawnAt, openAll = false
     .hub3-scrim.on{opacity:1}
     .hub3-say{position:absolute;left:50%;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 120px);transform:translate(-50%,10px);width:min(640px,calc(100% - 32px));text-align:center;pointer-events:none;z-index:5;opacity:0;transition:opacity .25s,transform .45s cubic-bezier(.16,1,.3,1)}
     .hub3-say.on{opacity:1;transform:translate(-50%,0)}
-    .hub3-say b{display:block;font:400 15px/1.2 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;color:var(--gold);margin-bottom:4px;text-shadow:0 1px 0 rgba(10,14,40,.6)}
-    .hub3-say span{display:inline;padding:5px 14px;border-radius:12px;-webkit-box-decoration-break:clone;box-decoration-break:clone;background:rgba(8,12,34,.7);font:700 19px/1.75 "Pretendard Variable","Noto Sans KR",sans-serif;color:#fff;word-break:keep-all}
+    .hub3-say b{display:table;margin:0 auto 8px;padding:5px 16px 6px;border:3px solid #0d1238;border-radius:8px;transform:skewX(-12deg);background:linear-gradient(180deg,#fff27a,#ffd21f);box-shadow:3px 4px 0 #0d1238;font:400 16px/1.1 var(--f-kart,"Jua"),"Jua",sans-serif;color:#0d1238}
+    .hub3-say span{display:inline;padding:5px 14px;border-radius:12px;-webkit-box-decoration-break:clone;box-decoration-break:clone;background:#fff;border:3px solid #0d1238;box-shadow:4px 5px 0 #0d1238;font:800 19px/1.9 "Pretendard Variable","Noto Sans KR",sans-serif;color:#141a4a;word-break:keep-all}
     .hub3-say span:empty{display:none}
     .hub3-go{position:absolute;left:50%;width:max-content;bottom:max(16px,env(safe-area-inset-bottom));transform:translate(-50%,24px);display:flex;align-items:center;gap:14px;z-index:6;opacity:0;pointer-events:none;transition:opacity .2s,transform .45s cubic-bezier(.16,1,.3,1)}
     .hub3-go.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
     .hub3-go.leave{opacity:0;transform:translate(-50%,16px) scale(.9);transition-duration:.18s}
     .hub3-hold{position:relative;flex:none;width:96px;height:96px;border:0;padding:0;border-radius:50%;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;
-      background:radial-gradient(circle at 50% 38%,#fffaf0,#efe2c4 70%,#d9c7a0);box-shadow:0 6px 0 #b9a47a,0 14px 26px rgba(8,10,30,.45);transition:transform .1s,box-shadow .1s}
+      background:linear-gradient(180deg,#26338a,#172064);box-shadow:inset 0 0 0 4px #fff,0 6px 0 #0d1238,0 14px 26px rgba(8,10,30,.45);transition:transform .1s,box-shadow .1s}
     .hub3-hold:focus-visible{outline:3px solid var(--led);outline-offset:5px}
     .hub3-hold svg.rg{position:absolute;inset:-9px;width:calc(100% + 18px);height:calc(100% + 18px);transform:rotate(-90deg);pointer-events:none}
     .hub3-hold .trk{fill:none;stroke:rgba(10,14,40,.45);stroke-width:6}
     .hub3-hold .arc{fill:none;stroke:var(--good);stroke-width:6;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;filter:drop-shadow(0 0 5px rgba(95,240,160,.9))}
-    .hub3-hold .cap{position:absolute;inset:14px;border-radius:50%;display:grid;place-items:center;color:#5a3d06;background:radial-gradient(circle at 50% 30%,#ffe9a0,#f2c242 60%,#d99f1c);box-shadow:inset 0 -5px 0 rgba(150,96,10,.35),0 3px 0 rgba(150,96,10,.5);transition:transform .1s}
+    .hub3-hold .cap{position:absolute;inset:14px;border-radius:50%;display:grid;place-items:center;color:#0d1238;background:radial-gradient(circle at 50% 30%,#fff7a8,#ffd21f 60%,#f0a800);box-shadow:inset 0 -5px 0 rgba(150,96,10,.35),0 0 0 3px #0d1238;transition:transform .1s}
     .hub3-hold .cap svg{width:34px;height:34px}
-    .hub3-hold.down{transform:translateY(4px);box-shadow:0 2px 0 #b9a47a,0 8px 16px rgba(8,10,30,.4)}
+    .hub3-hold.down{transform:translateY(4px);box-shadow:inset 0 0 0 4px #fff,0 2px 0 #0d1238,0 8px 16px rgba(8,10,30,.4)}
     .hub3-hold.down .cap{transform:scale(.94)}
     .hub3-hold.locked .cap{color:#3a4060;background:radial-gradient(circle at 50% 30%,#e4e8f5,#b9c0d8 65%,#9aa2bf);box-shadow:inset 0 -5px 0 rgba(40,48,80,.25),0 3px 0 rgba(40,48,80,.35)}
     .hub3-hold.locked .arc{stroke:#c9d0ea;filter:none}
@@ -141,7 +146,7 @@ export async function showHub3d(root, { onRoom, onExit, spawnAt, openAll = false
     .hub3-hold.no{animation:hub3no .42s cubic-bezier(.36,.07,.19,.97)}
     @keyframes hub3no{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
     .hub3-go-t{display:grid;gap:5px;text-align:left}
-    .hub3-go-t b{font:400 24px/1.15 "Jua","Pretendard Variable","Noto Sans KR",sans-serif;color:#fff;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:.14em #1b1f4a;text-shadow:0 .08em 0 #1b1f4a,0 0 16px rgba(10,14,40,.6)}
+    .hub3-go-t b{font:400 25px/1.15 var(--f-kart,"Jua"),"Jua",sans-serif;color:#fff;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:.14em #1b1f4a;text-shadow:0 .08em 0 #1b1f4a,0 0 16px rgba(10,14,40,.6)}
     .hub3-go-t>span{display:flex;white-space:nowrap;gap:6px;align-items:center;font:700 13px "Pretendard Variable","Noto Sans KR",sans-serif;color:var(--sub);text-shadow:0 1px 0 rgba(10,14,40,.6)}
     .hub3-go-t .hud-key{text-shadow:none}
     .hub3-go-t>span:empty{display:none}.hub3-go-t .h3-pick{gap:4px;color:var(--led)}.hub3-go-t .h3-pick .hud-key{min-width:22px}
