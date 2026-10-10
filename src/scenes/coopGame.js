@@ -249,7 +249,7 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
       pre = `if (${V(D.gateIn >= N, `모인사람 == ${N}`)}) {   ${C(`// 지금 ${D.gateIn}명`)}\n  팀문.열기();\n}`;
       p = D.gateIn >= N ? '모두 모였어요!' : `아직 ${N - D.gateIn}명이 안 왔어요 — 기다려 줘요`;
     }
-    const key = h + pre + p; if (key === codeKey) return; codeKey = key;
+    const key = h + pre + p + S.phase + S.ended; if (key === codeKey) return; codeKey = key;   // 출발 전 · 끝난 뒤에도 다시 그리게 상태를 함께 본다
     codeEl.classList.toggle('on', !!h && S.phase === 'play' && !S.ended);
     if (h) { codeH.textContent = h; codePre.innerHTML = pre; codeP.textContent = p; }
   }

@@ -87,8 +87,10 @@ const CSS = `
 @media (max-width:760px),(max-height:520px){
   .lsn-panel{left:8px;right:8px;width:auto;top:auto;height:min(64%,560px);border-radius:18px 18px 14px 14px}
   .lsn-title{font-size:22px}.lsn-code{font-size:14.5px}.lsn-ln>em{font-size:12px}.lsn-bub{font-size:15px}.lsn-flow span{font-size:11.5px;padding:4px 8px}
-  .lsn-ln{grid-template-columns:26px auto;}.lsn-ln>em{grid-column:2;margin:0 0 4px}
+  .lsn-ln{grid-template-columns:26px 1fr;}.lsn-ln>em{grid-column:2;margin:0 0 4px}.lsn-ln>code{white-space:pre-wrap;word-break:break-all}.lsn-code{font-size:13.5px}
+  .lsn-skip{top:auto;bottom:calc(min(64%,560px) + 18px);right:12px}
 }
+body:has(.lsn.show) .fs-toggle{display:none!important}   /* 학습 판 '다음' 단추를 가리지 않게 */
 @media (prefers-reduced-motion:reduce){.lsn *{transition-duration:.01ms!important;animation-duration:.01ms!important}}
 `;
 
