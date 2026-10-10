@@ -19,7 +19,7 @@ const PAD_R = 3.0, DECK = 0.3, S = 1.15, PLANET_R = 600;
 export const NOTE_HEX = [0xff5a5a, 0xff9a3a, 0xffd23a, 0x5ff07a, 0x4fd6ff, 0x6f7bff, 0xc77dff];
 export const NOTE_CSS = NOTE_HEX.map((h) => `#${h.toString(16).padStart(6, '0')}`);
 export const CUE_LOW = 0.76, CUE_HIGH = 0.97;   // launchGame CUE와 같게
-const TOWER = new V(PAD.x - 2.25, 0, PAD.z - 0.55), ARM_Y = 3.35;
+const TOWER = new V(PAD.x - 2.39, 0, PAD.z - 0.25), ARM_Y = 3.35;   // 다리 끝이 에디 캡슐 탑승문(rocket.js HATCH_A) 옆구리에 닿는 자리
 const BOT_AT = new V(-2.75, 0, 1.05), BOT_YAW = 1.15, CONSOLE_AT = new V(-2.1, 0, 1.4);
 /** 2D 판과 같은 색: HSV(h, 1, 1) */
 export function hueColor(h, out = new THREE.Color()) { return out.setHSL(((h % 360) + 360) % 360 / 360, 1, 0.5, THREE.SRGBColorSpace); }
@@ -218,7 +218,7 @@ export async function createLaunchScene(stage) {
       const b = boarding, o = bot.object; b.t += dt;
       if (b.step === 1) { const k = Math.min(1, b.t / 2.2), e = k * k * (3 - 2 * k); o.position.y = e * (ARM_Y + 0.05); T.lift.position.y = e * (ARM_Y + 0.05); if (k >= 1) { b.step = 2; b.actor.walkTo(new V(b.bridgeIn.x, 0, b.bridgeIn.z), { speed: 1.6 }).then(() => b.actor.walkTo(new V(b.bridgeEnd.x, 0, b.bridgeEnd.z), { speed: 1.8 })).then(() => { if (boarding) { boarding.step = 3; boarding.t = 0; } }); } }
       else if (b.step === 2) o.position.y = ARM_Y + 0.05;
-      else if (b.step === 3) { const k = Math.min(1, b.t / 0.6); o.scale.setScalar(1.2 * (1 - k)); o.position.y = ARM_Y + 0.05 + k * 0.3; if (k >= 1) { o.visible = false; sealed = true; RK.hatchMat.color.setHex(0x5ff0a0); burst(rocket.localToWorld(new V(-0.8, ARM_Y + 0.35, 0)), 0x5ff0a0, 26); boarding = null; b.res(); } }
+      else if (b.step === 3) { const k = Math.min(1, b.t / 0.6); o.scale.setScalar(1.2 * (1 - k)); o.position.y = ARM_Y + 0.05 + k * 0.3; if (k >= 1) { o.visible = false; sealed = true; RK.hatchMat.color.setHex(0x5ff0a0); burst(RK.hatch.getWorldPosition(new V()), 0x5ff0a0, 26); boarding = null; b.res(); } }
     }
     // 발사 · 시험 점화
     if (lifting) { liftV = Math.min(12, liftV + dt * (1.6 + liftV * 0.5)); if (rocket.position.y < 600) rocket.position.y += liftV * dt; rocket.position.x = PAD.x + Math.sin(t * 40) * 0.01 * Math.max(0, 1 - liftV / 4); space = Math.min(1, Math.max(0, (rocket.position.y - 6) / 34)); }
