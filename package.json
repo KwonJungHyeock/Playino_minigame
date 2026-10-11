@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "assets": "node scripts/optimize-assets.mjs"
+    "assets": "node scripts/optimize-assets.mjs",
+    "classroom": "vite build && npm --prefix server install --no-audit --no-fund && node server/room-server.mjs --game dist"
   },
   "devDependencies": {
     "@gltf-transform/core": "4.1.1",

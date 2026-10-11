@@ -7,6 +7,7 @@
 //   ⑤ 팀 문 — 모두 모여야 열린다(모이는 자리에 회전 빔) → 골.
 // 장치 상태는 방장 화면이 계산해(host) 모두에게 나눠 주고(apply), 각자 그 상태로 자기 몸을 움직인다.
 // 사람 수(n)에 맞춰 규칙이 바뀐다 — 1명(혼자 연습)이면 모든 장치가 혼자서도 되도록 느슨해진다.
+// 난이도(lv: app/level.js — 방장이 대기실에서 고른다)는 장애물 빠르기 · 문이 열려 있는 시간 · 다리가 버티는 시간만 바꾼다(규칙 · 조건문은 같다).
 import * as THREE from 'three';
 import { vinyl, lamp, TOY, PALETTE } from '../materials.js';
 import { roundedBox, roundedCylinder, dome, mesh } from '../shapes.js';
@@ -25,6 +26,12 @@ const PLATES1 = [[-4.6, -3.0], [4.6, -3.0], [0, -1.6]], PLATE_A = [3.2, -18.6], 
 const PLATE_R = 0.9;
 
 /** 장치 상태 처음 값(방장이 바꿔 나눠 준다) */
+/** 난이도별 값 — door: 문 열림(초) · sw/gsw: 회전 빔 빠르기(문 앞 · 팀 문 앞) · ham: 해머 [흔들림, 빠르기] · hold: 발판에서 내려와도 다리가 버티는 시간 · kt: 시소 기울기 · winch: 윈치 힘 · box: 상자 밀리는 빠르기 */
+export const COOP_LEVELS = {
+  easy: { door: 7, sw: 0.75, gsw: 0.8, ham: [0.75, 1.6], hold: 2.5, kt: 0.035, winch: 9, box: 2.4 },
+  normal: { door: 5.5, sw: 1.0, gsw: 1.15, ham: [0.95, 1.9], hold: 1.0, kt: 0.045, winch: 8, box: 2.0 },
+  hard: { door: 4, sw: 1.3, gsw: 1.5, ham: [1.1, 2.2], hold: 0.35, kt: 0.055, winch: 7, box: 1.7 },
+};
 export const initialDevices = () => ({ T: 0, door: 0, doorT: 0, need: 3, on1: 0, br: 0, brA: 0, brB: 0, saw: 0, winch: 0, far: 0, near: 0, box: BOX_Z0, boxIn: 0, push: 0, pushNeed: 2, gate: 0, gateIn: 0 });
 
 function stripeTex(a, b, n = 8) {
@@ -42,7 +49,8 @@ function labelSprite(text, color = '#ffd21f', w = 2.6) {
   return s;
 }
 
-export async function createCoopCourse(stage, { n = 1 } = {}) {
+export async function createCoopCourse(stage, { n = 1, lv = 'normal' } = {}) {
+  const L = COOP_LEVELS[lv] || COOP_LEVELS.normal;
   const { scene, renderer } = stage;
   const root = new THREE.Group(); root.name = 'CoopCourse'; scene.add(root);
   // 붉은 행성 낮 하늘(도전 챌린지와 같은 결) — 아래로 행성이 보이는 하늘 훈련장
@@ -96,7 +104,7 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
     for (const r of [0, Math.PI / 2]) { const bar = mesh(new THREE.CapsuleGeometry(SW.r, SW.len * 2 - SW.r * 2, 6, 16), new THREE.MeshPhysicalMaterial({ map: stripeTex('#ffd21f', '#0d1238', 10), roughness: 0.4, clearcoat: 0.8 })); bar.rotation.z = Math.PI / 2; bar.rotation.y = r; sweep.add(bar); }
     hazards.push({ type: 'sweep', s: SW }); anim.push((T) => { SW.ang = T * SW.w + (SW.ph || 0); sweep.rotation.y = SW.ang; });
   }
-  addSweep({ c: new THREE.Vector3(0, 0, -8), ang: 0, w: 1.3, y: 0.42, len: 5.0, r: 0.24 });
+  addSweep({ c: new THREE.Vector3(0, 0, -8), ang: 0, w: L.sw, y: 0.42, len: 5.0, r: 0.24 });
 
   // ── ② 지키는 다리 ──
   addBox(0, 0, -17, 8, 6);
@@ -116,7 +124,7 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
     const pivot = new THREE.Group(); pivot.position.set(0, 5.4, z); add(pivot);
     const rod = mesh(roundedCylinder(0.07, 3.9, 0.02, 0), M.steel); rod.position.y = -3.9; pivot.add(rod);
     const ball = mesh(new THREE.SphereGeometry(0.72, 32, 22), vinyl(0xd23f36, { roughness: 0.3, clearcoat: 1 })); ball.position.y = -4.3; pivot.add(ball);
-    const h = { pivot, ph, amp: 1.1, w: 2.2, L: 4.3, r: 0.72, world: new THREE.Vector3(), vel: new THREE.Vector3() }; hammers.push(h); hazards.push({ type: 'ball', h });
+    const h = { pivot, ph, amp: L.ham[0], w: L.ham[1], L: 4.3, r: 0.72, world: new THREE.Vector3(), vel: new THREE.Vector3() }; hammers.push(h); hazards.push({ type: 'ball', h });
   });
   anim.push((T, dt) => hammers.forEach((h) => { const a = Math.sin(T * h.w + h.ph) * h.amp, px = h.world.x; h.pivot.rotation.z = a; h.world.set(Math.sin(a) * h.L, h.pivot.position.y - Math.cos(a) * h.L, h.pivot.position.z); h.vel.set((h.world.x - px) / Math.max(dt, 1e-3), 0, 0); }));
 
@@ -146,7 +154,7 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
   checkpoints.push({ z: TRENCH1 - 0.4, name: '체크포인트 4', at: (i) => new THREE.Vector3((i - 2) * 1.0, LAND_Y, -67.5) });
 
   // ── ⑤ 팀 문 · 골 ── 모이는 자리 한가운데 회전 빔: 기다리는 동안에도 계속 뛰어야 한다
-  addSweep({ c: new THREE.Vector3(0, LAND_Y, -69.4), ang: 0, w: 1.5, ph: 0.8, y: LAND_Y + 0.42, len: 3.5, r: 0.24 });
+  addSweep({ c: new THREE.Vector3(0, LAND_Y, -69.4), ang: 0, w: L.gsw, ph: 0.8, y: LAND_Y + 0.42, len: 3.5, r: 0.24 });
   const gateL = addBox(-2.6, LAND_Y + 3, GATE_Z, 2.8, 0.6, { h: 3, mat: wallMat }), gateR = addBox(2.6, LAND_Y + 3, GATE_Z, 2.8, 0.6, { h: 3, mat: wallMat });
   const gate = addBox(0, LAND_Y + 2.8, GATE_Z, 2.4, 0.4, { h: 2.8, mat: doorMat });
   const gateSign = add(labelSprite('모두 모여! 0/5', '#ffd21f', 4.2)); gateSign.position.set(0, LAND_Y + 4.0, GATE_Z + 0.5);
@@ -223,28 +231,28 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
   function host(dt, players) {
     const N = Math.max(1, players.length);
     D.T += dt;
-    // ① 남은 사람 수만큼 발판(최대 3) — 동시에 밟으면 4초 열림(혼자 연습: 6초)
+    // ① 남은 사람 수만큼 발판(최대 3) — 동시에 밟으면 L.door 초 열림(혼자 연습은 6초 이상)
     const behind = players.filter((q) => q.p.z > DOOR_Z + 0.3).length;
     D.need = Math.min(3, behind); D.on1 = plates1.filter((pl) => onPlate(pl, players)).length;
     if (D.doorT > 0) D.doorT = Math.max(0, D.doorT - dt);
-    else if (D.need > 0 && D.on1 >= D.need) D.doorT = N === 1 ? 6 : 4;
+    else if (D.need > 0 && D.on1 >= D.need) D.doorT = N === 1 ? Math.max(6, L.door) : L.door;
     D.door = D.doorT > 0 ? 1 : 0;
-    // ② 다리: A 또는 B 를 밟는 동안 나온다. 떼면 곧 들어간다(혼자 연습이면 5초 버텨 준다)
+    // ② 다리: A 또는 B 를 밟는 동안 나온다. 떼면 L.hold 초 뒤 들어간다(혼자 연습이면 5초 버텨 준다)
     D.brA = onPlate(pA, players) ? 1 : 0; D.brB = onPlate(pB, players) ? 1 : 0;
-    D.brHold = D.brA || D.brB ? (N === 1 ? 5 : 0.35) : Math.max(0, (D.brHold || 0) - dt);
+    D.brHold = D.brA || D.brB ? (N === 1 ? 5 : L.hold) : Math.max(0, (D.brHold || 0) - dt);
     D.br = D.brHold > 0 ? Math.min(BR_LEN, D.br + 7 * dt) : Math.max(0, D.br - 5 * dt);
     // ③ 시소: 무게 모멘트(먼 쪽 + / 가까운 쪽 −) + 윈치(끝을 들어 올림)
     let tau = 0; D.far = 0; D.near = 0;   // far · near: 시소 위 먼 쪽 · 가까운 쪽 사람 수(코드 판에 보여 준다)
     for (const q of players) { const top = sawTop(q.p.x, q.p.z); if (top != null && Math.abs(q.p.y - top) < 0.6) { tau += SAW_Z - q.p.z; if (SAW_Z - q.p.z > 0) D.far++; else D.near++; } }
-    D.winch = onPlate(pW, players) ? 1 : 0; if (D.winch) tau -= 7;
-    const kt = N === 1 ? 0.02 : 0.055, target = Math.max(-0.32, Math.min(0.32, kt * tau));
+    D.winch = onPlate(pW, players) ? 1 : 0; if (D.winch) tau -= L.winch;
+    const kt = N === 1 ? 0.02 : L.kt, target = Math.max(-0.32, Math.min(0.32, kt * tau));
     D.saw += (target - D.saw) * Math.min(1, dt * 2.2);
     // ④ 컨테이너: 뒤에서 앞으로(-z) 미는 사람이 2명 이상(혼자 연습 1명)이면 움직인다
     if (!D.boxIn) {
       const back = D.box + BOX_LEN / 2, need = Math.min(2, N);
       const pushers = players.filter((q) => q.ground && q.p.z > back - 0.1 && q.p.z < back + 0.9 && Math.abs(q.p.x) < BOX_W / 2 + 0.6 && q.vz < -0.6).length;
       D.push = pushers; D.pushNeed = need;   // 코드 판: if (미는사람 >= need)
-      if (pushers >= need) D.box -= 1.7 * dt;
+      if (pushers >= need) D.box -= L.box * dt;
       if (D.box <= (TRENCH0 + TRENCH1) / 2) { D.box = (TRENCH0 + TRENCH1) / 2; D.boxIn = 1; }
     }
     // ⑤ 팀 문: 모두(접속한 사람) 문 앞 구역에 모이면 열린다(한 번 열리면 그대로)
@@ -293,5 +301,5 @@ export async function createCoopCourse(stage, { n = 1 } = {}) {
   }
 
   const bot = await loadRobot();
-  return { root, bot, spawns, checkpoints, ground, sides, hits, carry, passed, update, host, apply, see, D, GOAL_Z, goalY: LAND_Y, KILL_Y, reward };
+  return { L, root, bot, spawns, checkpoints, ground, sides, hits, carry, passed, update, host, apply, see, D, GOAL_Z, goalY: LAND_Y, KILL_Y, reward };
 }

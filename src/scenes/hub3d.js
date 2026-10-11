@@ -12,6 +12,7 @@ import { results } from '../app/results.js';
 import { ROOMS, CHAPTERS, chapterUnlocked, roomStages } from '../content/curriculum.js';
 import { STORY, ACTS, PART_ROOMS, GAME } from '../content/v4story.js';
 import { bonus, BONUS } from '../app/bonus.js';
+import { LEVELS } from '../app/level.js';
 import { stars, STAR_ROOMS } from '../app/stars.js';
 import { PARTS, profile, lockLabel } from '../app/profile.js';
 import { student } from '../app/student.js';
@@ -210,7 +211,7 @@ export async function showHub3d(root, { onRoom, onExit, onCoop, spawnAt, openAll
   // ── 진행 상태(curriculum 판정 그대로) ──
   const save = loadSave();
   function stateOf(id) {
-    if (STORY[id].bonus) { const b = bonus.get(STORY[id].part); return { locked: false, cleared: !!b?.at, passed: b?.at ? 1 : 0, total: 1, played: !!b?.tries, stages: [], best: b?.best }; }   // 자유 도전: 늘 열림
+    if (STORY[id].bonus) { const b = bonus.get(STORY[id].part); return { locked: false, cleared: !!b?.at, passed: b?.at ? 1 : 0, total: 1, played: !!b?.tries, stages: [], best: b?.best, bestLv: b?.bestLv }; }   // 자유 도전: 늘 열림
     const room = ROOMS[id], st = roomStages(id), total = st.length, passed = st.filter((s) => s?.passed).length;
     return { locked: !openAll && !chapterUnlocked(room.chapter), cleared: progress.isCleared(id), passed, total, played: results.has(id), stages: st };
   }
@@ -408,7 +409,7 @@ export async function showHub3d(root, { onRoom, onExit, onCoop, spawnAt, openAll
   function infoLines(id, st) {
     const s = STORY[id], room = ROOMS[id];
     if (st.locked) return [['열리는 조건', `${prevActOf(id)} 미션을 한 번씩`], ['그다음 받는 것', s.reward]];
-    if (s.bonus) { const fmt = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`; return [['도전', s.concept], ['보너스 부품', st.cleared ? `${s.reward} <small>· 받았어요</small>` : `${s.reward} <small>· ${BONUS.booster.perk}</small>`], ['최고 기록', st.best ? fmt(st.best) : '아직 없음']]; }
+    if (s.bonus) { const fmt = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`; return [['도전', s.concept], ['보너스 부품', st.cleared ? `${s.reward} <small>· 받았어요</small>` : `${s.reward} <small>· ${BONUS.booster.perk}</small>`], ['최고 기록', st.best ? `${fmt(st.best)}${st.bestLv ? ` <small>· ${LEVELS[st.bestLv]?.name || ''}</small>` : ''}` : '아직 없음']]; }
     const lines = [['배우는 것', room.concept], [s.part ? '받는 부품' : '얻는 것', st.cleared ? `${s.reward} <small>· 받았어요</small>` : s.reward]];
     if (s.stages) lines.push(['고른 단계', stageLabel(id, S.brief.sel)]);
     else lines.push(['진행', st.cleared ? '모두 통과' : st.passed ? `${st.passed} / ${st.total} 단계 통과` : st.played ? '도전 중' : `처음 · ${st.total}단계`]);

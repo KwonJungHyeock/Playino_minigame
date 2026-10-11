@@ -187,7 +187,7 @@ export async function createCourse(stage) {
   const movers = [];
   [[-21.8, 0, 3.2, 0], [-25.2, 0.45, 3.4, 1.9], [-28.6, 0.9, 3.0, 3.6], [-32.0, 0.45, 3.4, 5.1]].forEach(([z, y, amp, ph], i) => {
     const c = addBox(0, y, z, 2.1, 2.0, [C.sky, C.lemon, C.pink, C.lime][i]);   // 작은 발판(틈 1.4m)
-    c.amp = amp; c.ph = ph; c.speed = 1.3 + i * 0.12; movers.push(c);   // 옆으로 가장 빠를 때 ≈ 달리기 속도(예전 1.05 + 0.12i)
+    c.amp = c.amp0 = amp; c.ph = ph; c.speed = 1.3 + i * 0.12; movers.push(c);   // 어려움: 옆으로 가장 빠를 때 ≈ 달리기 속도(난이도는 setLevel)
   });
   anim.push((t) => { movers.forEach((c) => { c.prev.copy(c.pos); c.pos.x = Math.sin(t * c.speed + c.ph) * c.amp; }); });
   addBox(0, 0.45, -37, 6, 4.4, C.purple);
@@ -196,6 +196,7 @@ export async function createCourse(stage) {
 
   // ── ③ 무너지는 육각 타일 ──
   const HEX_HOLES = new Set(['1,-1', '2,1', '3,0', '4,-2', '5,1', '6,-1', '7,0']);
+  const HEX = { crumble: 0.4, back: 5.0 };   // 밟고 무너지기까지 · 다시 솟기까지(초) — 난이도(setLevel)
   const hexes = [], HR = 0.78, hxStep = HR * 1.74, hzStep = HR * 1.52;
   for (let row = 0; row < 8; row++) for (let col = -2; col <= 2; col++) {
     const x = col * hxStep + (row % 2 ? hxStep / 2 : 0); if (Math.abs(x) > 3.6) continue;
@@ -207,8 +208,8 @@ export async function createCourse(stage) {
   }
   anim.push((t, dt) => {   // 밟힌 타일: 젤리처럼 출렁이며 깜빡 → 떨어짐 → 다시 솟음
     hexes.forEach((c) => {
-      if (c.state === 1) { c.t += dt; const k = Math.min(1, c.t / 0.4); c.obj.position.x = c.home.x + Math.sin(c.t * 70) * 0.04 * k; c.body.material = k > 0.5 && Math.floor(c.t * 18) % 2 ? hexWarn : c.mat; c.obj.scale.set(1 + Math.sin(c.t * 40) * 0.05 * k, 1 - Math.sin(c.t * 40) * 0.08 * k, 1 + Math.sin(c.t * 40) * 0.05 * k); if (c.t > 0.4) { c.state = 2; c.t = 0; c.vy = 0; c.live = false; } }
-      else if (c.state === 2) { c.t += dt; c.vy -= 22 * dt; c.obj.position.y += c.vy * dt; c.obj.rotation.x += dt * 1.5; if (c.t > 5.0) { c.state = 3; c.t = 0; } }
+      if (c.state === 1) { c.t += dt; const k = Math.min(1, c.t / HEX.crumble); c.obj.position.x = c.home.x + Math.sin(c.t * 70) * 0.04 * k; c.body.material = k > 0.5 && Math.floor(c.t * 18) % 2 ? hexWarn : c.mat; c.obj.scale.set(1 + Math.sin(c.t * 40) * 0.05 * k, 1 - Math.sin(c.t * 40) * 0.08 * k, 1 + Math.sin(c.t * 40) * 0.05 * k); if (c.t > HEX.crumble) { c.state = 2; c.t = 0; c.vy = 0; c.live = false; } }
+      else if (c.state === 2) { c.t += dt; c.vy -= 22 * dt; c.obj.position.y += c.vy * dt; c.obj.rotation.x += dt * 1.5; if (c.t > HEX.back) { c.state = 3; c.t = 0; } }
       else if (c.state === 3) { c.t += dt; const k = Math.min(1, c.t / 0.5); c.obj.position.copy(c.home); c.obj.position.y = c.home.y - 2 * (1 - k); c.obj.rotation.x = 0; c.obj.scale.setScalar(0.4 + 0.6 * k); c.body.material = c.mat; if (k >= 1) { c.state = 0; c.live = true; c.obj.scale.setScalar(1); } }
     });
   });
@@ -373,7 +374,19 @@ export async function createCourse(stage) {
     key.target.position.set(sx, 0, sz); key.position.set(sx - 6, 18, sz + 8);
     sky.position.set(botPos.x, 0, botPos.z);
   }
+  /** 난이도(app/level.js) — 장애물 속도 · 타일 시간만 바꾼다(코스 모양은 같다). 출발 전에 부른다 */
+  const LV = {
+    easy: { sw: 0.95, mv: 0.8, mvAmp: 0.7, hamA: 0.75, hamW: 1.6, crumble: 0.9, back: 3.0 },
+    normal: { sw: 1.25, mv: 1.05, mvAmp: 0.85, hamA: 0.95, hamW: 1.95, crumble: 0.6, back: 4.0 },
+    hard: { sw: 1.55, mv: 1.3, mvAmp: 1, hamA: 1.15, hamW: 2.25, crumble: 0.4, back: 5.0 },
+  };
+  function setLevel(id) {
+    const L = LV[id] || LV.normal;
+    SW.w = L.sw; HEX.crumble = L.crumble; HEX.back = L.back;
+    movers.forEach((c, i) => { c.speed = L.mv + i * 0.12; c.amp = c.amp0 * L.mvAmp; });
+    hammers.forEach((h, i) => { h.amp = L.hamA; h.w = L.hamW + i * 0.1; });
+  }
   function resetHexes() { hexes.forEach((c) => { c.state = 0; c.t = 0; c.live = true; c.obj.position.copy(c.home); c.obj.rotation.set(0, 0, 0); c.obj.scale.setScalar(1); c.body.material = c.mat; }); }
 
-  return { root, bot, checkpoints, ground, sides, hits, carry, update, passed, resetHexes, GOAL_Z, goalY, booster, startGate, hz: { SW, D1, movers, hammers, hexes }, dispose: () => bot.dispose() };   // hz: 자동 점검(난이도 봇)용
+  return { root, bot, checkpoints, ground, sides, hits, carry, update, passed, resetHexes, setLevel, GOAL_Z, goalY, booster, startGate, hz: { SW, D1, movers, hammers, hexes }, dispose: () => bot.dispose() };   // hz: 자동 점검(난이도 봇)용
 }

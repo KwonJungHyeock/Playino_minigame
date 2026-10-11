@@ -6,8 +6,9 @@ import { profile, style } from '../app/profile.js';
 import { student } from '../app/student.js';
 import { injectType } from '../gfx3d/type.js';
 import { PORTRAIT } from '../gfx3d/portrait.js';
-import { enterRoom, startRoom, roomUrl, setRoomUrl, ERR_TEXT } from '../net/room.js';
+import { enterRoom, startRoom, roomUrl, setRoomUrl, isClassroom, ERR_TEXT } from '../net/room.js';
 import { MAX_PLAYERS } from '../net/roomCore.js';
+import { level, LEVELS, LEVEL_IDS } from '../app/level.js';
 
 const COLORS = ['#ffd21f', '#ff6fb5', '#4fc8ff', '#7ee86a', '#ff9a3c'];   // coopCourse.js COOP_PALETTE 와 같은 순서
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -51,6 +52,11 @@ body:has(.cpl) .nav-back{display:none!important}
 .cpl-wait{display:flex;align-items:center;gap:10px;font:800 15px var(--f-ui);color:#ffd21f}
 .cpl-wait::before{content:'';width:12px;height:12px;border-radius:50%;background:#ffd21f;animation:cplb 1s ease-in-out infinite}
 @keyframes cplb{50%{opacity:.25;transform:scale(.7)}}
+.cpl-lv{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font:800 14px var(--f-ui);color:#c9d3ff}
+.cpl-lv button{display:inline-flex;gap:6px;align-items:baseline;border:3px solid #fff;border-radius:12px;padding:9px 14px;background:rgba(255,255,255,.1);color:#fff;font:400 17px/1 var(--f-kart);cursor:pointer;box-shadow:3px 4px 0 #0d1238}
+.cpl-lv button small{font:700 11px var(--f-ui);color:#c9d3ff}
+.cpl-lv button.on{background:#ffd21f;color:#0d1238}.cpl-lv button.on small{color:#3a3f6a}
+.cpl-lv button:disabled{cursor:default}.cpl-lv button:disabled:not(.on){opacity:.4}
 @media (max-width:620px){.cpl-slots{grid-template-columns:repeat(3,1fr)}.cpl h1{font-size:30px}.cpl-big b{font-size:48px}}`;
 
 /**
@@ -60,6 +66,7 @@ body:has(.cpl) .nav-back{display:none!important}
 export function showCoopLobby(root, { onExit } = {}) {
   injectType();
   let room = null, alive = true, view = 'menu', error = '', busy = false, offs = [];
+  let lv = level.get();   // 난이도 — 방장이 고르고(대기실에서 e 로 알림) 출발 신호(start)에 실어 보낸다
   let myName = profile.name() || student.get()?.name || '에디';
   const look = () => style.get();
   const watch = setInterval(() => { if (!root.querySelector('.cpl, .cop') && alive) dispose(); }, 600);   // 다른 화면으로 넘어가면 방을 닫는다
@@ -70,7 +77,9 @@ export function showCoopLobby(root, { onExit } = {}) {
   function bind() {
     offs.forEach((f) => f()); offs = [];
     const rerender = () => { if (view === 'room') render(); };
-    offs.push(room.on('join', () => { sfx.pop?.(); rerender(); }), room.on('leave', rerender), room.on('host', rerender));
+    const tellLv = () => { if (room?.isHost()) room.send('e', { lobbyLv: lv }); };   // 늦게 들어온 친구 · 방장이 바뀐 때도 같은 난이도를 보게
+    offs.push(room.on('join', () => { sfx.pop?.(); tellLv(); rerender(); }), room.on('leave', rerender), room.on('host', () => { tellLv(); rerender(); }));
+    offs.push(room.on('e', (id, d) => { if (id === room?.host && LEVELS[d?.lobbyLv] && d.lobbyLv !== lv) { lv = d.lobbyLv; rerender(); } }));
     offs.push(room.on('start', (st) => play(st)));
     offs.push(room.on('closed', (why) => { if (!alive || view === 'game') return; room = null; error = why === 'kick' ? '방장이 방에서 내보냈어요.' : ERR_TEXT.bad; view = 'menu'; render(); }));
   }
@@ -90,7 +99,7 @@ export function showCoopLobby(root, { onExit } = {}) {
     const { showCoopGame } = await import('./coopGame.js');
     if (!alive || !room) return;
     showCoopGame(root, {
-      room, seed: st.seed, ids: st.ids,
+      room, seed: st.seed, ids: st.ids, lv: LEVELS[st.lv] ? st.lv : lv,
       onEnd: (why, data) => {
         if (!alive) return;
         if (why === 'restart') { play(data); return; }
@@ -103,6 +112,7 @@ export function showCoopLobby(root, { onExit } = {}) {
 
   function modeLine() {
     const url = roomUrl();
+    if (isClassroom()) return `<div class="cpl-mode"><i>교실 모드</i><span>선생님 PC(${esc(location.host)})에 같은 와이파이로 연결됐어요.</span></div>`;
     return `<div class="cpl-mode">${url ? `<i>교실 서버</i><span>${esc(url.replace(/^wss?:\/\//, ''))}</span>` : `<i class="local">서버 없음</i><span>이 컴퓨터의 창 · 탭끼리만 함께해요(시범용). 여러 기기는 교실 서버가 필요해요.</span>`}<button type="button" data-act="server">서버 주소</button></div>`;
   }
 
@@ -131,6 +141,7 @@ export function showCoopLobby(root, { onExit } = {}) {
         <div class="cpl-big"><span>방 코드</span><b>${esc(room.code)}</b></div>
         <p>친구들은 <b>기지 → 👥 모둠 → 코드로 참가</b>에서 이 숫자 4개를 넣어요. ${n}/${MAX_PLAYERS}명</p>
         <div class="cpl-slots">${slots}</div>
+        <div class="cpl-lv"><span>난이도${isHost ? '' : ' (방장이 골라요)'}</span>${LEVEL_IDS.map((id) => `<button type="button" data-lv="${id}" class="${id === lv ? 'on' : ''}" ${isHost ? '' : 'disabled'}>${LEVELS[id].icon} ${LEVELS[id].name} <small>${LEVELS[id].who}</small></button>`).join('')}</div>
         ${room.started ? '<p class="cpl-wait">아직 코스 결과를 보는 친구가 있어요 — 방장이 대기실로 오면 다시 출발할 수 있어요</p>' : ''}
         <div class="cpl-row">${isHost ? `<button class="cpl-btn y" type="button" data-act="start" ${room.started ? 'disabled' : ''}><span>${n >= 2 ? `${n}명 출발!` : '혼자 연습'}</span></button>` : '<span class="cpl-wait">방장이 출발하면 시작해요…</span>'}
           <button class="cpl-btn g" type="button" data-act="leave"><span>방 나가기</span></button></div>
@@ -143,6 +154,7 @@ export function showCoopLobby(root, { onExit } = {}) {
   function wire() {
     const $ = (s) => root.querySelector(s);
     root.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => act(b.dataset.act)));
+    root.querySelectorAll('[data-lv]').forEach((b) => b.addEventListener('click', () => { if (!room?.isHost()) return; lv = b.dataset.lv; level.set(lv); room.send('e', { lobbyLv: lv }); sfx.click?.(); render(); }));
     root.querySelectorAll('[data-kick]').forEach((b) => b.addEventListener('click', () => { room?.raw({ t: 'kick', id: b.dataset.kick }); }));
     $('#cpl-name')?.addEventListener('input', (e) => { myName = e.target.value.trim().slice(0, 8) || '에디'; });
     const boxes = [...root.querySelectorAll('#cpl-code input')];
@@ -157,7 +169,7 @@ export function showCoopLobby(root, { onExit } = {}) {
     if (a === 'back') { leave(); return; }
     if (a === 'host') { open('host'); return; }
     if (a === 'join') { const code = [...root.querySelectorAll('#cpl-code input')].map((x) => x.value).join(''); if (code.length !== 4) { error = '방 코드 숫자 4개를 넣어 줘!'; render(); return; } open('join', code); return; }
-    if (a === 'start') { if (room?.isHost() && !room.started) startRoom(room); return; }
+    if (a === 'start') { if (room?.isHost() && !room.started) startRoom(room, lv); return; }
     if (a === 'leave') { offs.forEach((f) => f()); offs = []; room?.close(); room = null; view = 'menu'; render(); return; }
     if (a === 'server') {
       const cur = roomUrl(), v = prompt('교실 방 서버 주소(wss://…). 비우면 서버 없이 이 컴퓨터의 창끼리만 해요.', cur);

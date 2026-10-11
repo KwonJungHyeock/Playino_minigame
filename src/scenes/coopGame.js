@@ -7,8 +7,9 @@ import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
 import { bonus, BONUS } from '../app/bonus.js';
 import { comfort } from '../gfx3d/comfort.js';
+import { level, LEVELS } from '../app/level.js';
 
-const GRADE = [['S', 240], ['A', 360], ['B', 540]];   // 팀 기록(초) — 중학생 기준 어렵게
+const GRADE = [['S', 240], ['A', 360], ['B', 540]];   // 팀 기록(초) — 어려움(중학생) 기준. 쉬움 · 보통은 level.grades 로 늘린다
 const starsOf = (g) => ({ S: 3, A: 2, B: 1 }[g] || 0);
 const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
 const POSE_HZ = 15, HOST_HZ = 10, INTERP = 0.12;
@@ -16,9 +17,11 @@ const r2 = (v) => Math.round(v * 100) / 100;
 
 /**
  * @param {HTMLElement} root
- * @param {{ room, seed: number, ids: string[], onEnd: (why: 'lobby'|'exit'|'restart'|'closed', data?) => void }} o
+ * @param {{ room, seed: number, ids: string[], lv?: string, onEnd: (why: 'lobby'|'exit'|'restart'|'closed', data?) => void }} o
  */
-export async function showCoopGame(root, { room, seed, ids, onEnd }) {
+export async function showCoopGame(root, { room, seed, ids, lv = 'normal', onEnd }) {
+  if (!LEVELS[lv]) lv = 'normal';
+  const grades = level.grades(GRADE, lv);
   const g = await import('../gfx3d/index.js');
   if (!g.supports3D()) { onEnd?.('exit'); return; }
 
@@ -72,7 +75,7 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
   if (done) return;
   await fontsReady('모둠협동훈련장발판열림모두모여통과윈치같이밀어부품도착0123456789/!'); if (done) return;
   const order = ids.filter((id) => room.players.has(id));
-  crs = await createCoopCourse(stage, { n: order.length });
+  crs = await createCoopCourse(stage, { n: order.length, lv });
   if (done) return;
   const { COOP_PALETTE } = await import('../gfx3d/scenes/coopCourse.js');
   addPost(stage, { bloom: 0.4, bloomRadius: 0.7, threshold: 1.05, ao: false });
@@ -268,7 +271,7 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
     await wait(120); if (done) return;
     fadeEl.classList.remove('on'); S.respawning = false;
   }
-  const SECTION_TIP = ['', '발판 위에 동시에! "하나, 둘, 셋!" 문은 4초만 열려요', '누군가 발판을 밟아야 다리가 나와요. 건너간 친구는 저쪽 발판을!', '혼자 가면 시소가 가라앉아요. 무게를 나누고, 건너간 친구는 윈치를 밟아 줘!', '컨테이너는 2명 이상이 같이 밀어야 움직여요'];
+  const SECTION_TIP = ['', `발판 위에 동시에! "하나, 둘, 셋!" 문은 ${order.length > 1 ? crs.L.door : Math.max(6, crs.L.door)}초만 열려요`, '누군가 발판을 밟아야 다리가 나와요. 건너간 친구는 저쪽 발판을!', '혼자 가면 시소가 가라앉아요. 무게를 나누고, 건너간 친구는 윈치를 밟아 줘!', '컨테이너는 2명 이상이 같이 밀어야 움직여요'];
   let tipShown = 0;
 
   function physics(h) {
@@ -304,7 +307,7 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
 
   async function teamFinish(d) {
     if (S.ended) return; S.ended = true; S.phase = 'goal'; keys.clear(); topEl.classList.remove('on');
-    const time = d.time ?? S.run, falls = d.falls ?? S.teamFalls, n = d.n ?? order.length, grade = (GRADE.find(([, s]) => time <= s) || ['C'])[0];
+    const time = d.time ?? S.run, falls = d.falls ?? S.teamFalls, n = d.n ?? order.length, grade = (grades.find(([, s]) => time <= s) || ['C'])[0];
     sfx.perfect?.();
     for (let i = 0; i < 5; i++) later(i * 240, () => confetti.burst(60, tmp.set((Math.random() - 0.5) * 6, crs.goalY + 4, crs.GOAL_Z - 4), { up: 3, spread: 4, life: 2.8 }));
     await hud.banner('모둠 협동 성공!', '도착', { ms: 1900 }); if (done) return;
@@ -331,12 +334,12 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
     }
     let sub = `${n}명이 함께 ${fmt(time)} 만에 행성 훈련장을 통과!`;
     if (n >= 2) {
-      const r = bonus.record('coop', { time, falls });
+      const r = bonus.record('coop', { time, falls, lv });
       if (r.first) { sub = `팀 보상 '${BONUS.coop.name}' 획득! ${BONUS.coop.perk}.`; await hud.say(`우리 모둠 최고! '${BONUS.coop.name}'을 받았어!`, { mood: '하트' }); }
       else if (r.improved) sub = `모둠 신기록 ${fmt(time)}!`;
     } else sub = '혼자 연습 완주! 팀 보상은 2명 이상이 같이 깨야 받아요.';
     if (done) return;
-    const choice = hud.result({ title: n >= 2 ? '모둠 협동 성공!' : '연습 완주!', sub, grade, stats: [['팀 기록', fmt(time)], ['모둠', `${n}명`], ['모두 떨어진 수', `${falls}번`]], primary: '대기실로', secondary: '나가기' });
+    const choice = hud.result({ title: n >= 2 ? '모둠 협동 성공!' : '연습 완주!', sub, grade, stats: [['팀 기록', fmt(time)], ['모둠', `${n}명 · ${LEVELS[lv].name}`], ['모두 떨어진 수', `${falls}번`]], primary: '대기실로', secondary: '나가기' });
     hud.lightStars(starsOf(grade));
     const a = await choice; if (done) return;
     if (a === 'retry') { end('exit'); return; }
@@ -354,7 +357,7 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
   }
 
   // ── 카메라 ──
-  const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), cv = new THREE.Vector3(), lv = new THREE.Vector3();
+  const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), cv = new THREE.Vector3(), lookV = new THREE.Vector3();
   let camSnap = true, camFloor = 0;
   function damp(cur, target, vel, st, dt) { const o = 2 / st, x = o * dt, e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x); const ch = tmp.subVectors(cur, target), t2 = new THREE.Vector3().copy(vel).addScaledVector(ch, o).multiplyScalar(dt); vel.addScaledVector(t2, -o).multiplyScalar(e); cur.copy(target).add(ch.add(t2).multiplyScalar(e)); }
   function camFrame(dt) {
@@ -363,8 +366,8 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
     if (me.S.onGround || p.y > camFloor) camFloor = me.S.onGround ? p.y : Math.max(camFloor, p.y);
     const y = Math.max(p.y, camFloor - 1.2);
     const wantP = new THREE.Vector3(p.x * 0.7, y + (tall ? 4.8 : 3.9), p.z + (tall ? 7.8 : 6.9)), look = new THREE.Vector3(p.x * 0.85, y + 0.9, p.z - (tall ? 3.2 : 4.2));
-    if (camSnap) { camPos.copy(wantP); camLook.copy(look); cv.set(0, 0, 0); lv.set(0, 0, 0); camSnap = false; }
-    damp(camPos, wantP, cv, 0.22, dt); damp(camLook, look, lv, 0.16, dt);
+    if (camSnap) { camPos.copy(wantP); camLook.copy(look); cv.set(0, 0, 0); lookV.set(0, 0, 0); camSnap = false; }
+    damp(camPos, wantP, cv, 0.22, dt); damp(camLook, look, lookV, 0.16, dt);
     cam.position.copy(camPos); me.S.shake = Math.max(0, (me.S.shake || 0) - dt * 4);
     if (me.S.shake > 0) cam.position.y += Math.sin(me.S.t * 63) * 0.06 * me.S.shake * comfort.shake();
     cam.lookAt(camLook);
@@ -374,7 +377,7 @@ export async function showCoopGame(root, { room, seed, ids, onEnd }) {
   // ── 흐름 ──
   async function begin() {
     renderTeam();
-    await hud.banner('붉은 행성 협동 훈련장', `모둠 ${order.length}명`, { ms: 2000 }); if (done) return;
+    await hud.banner('붉은 행성 협동 훈련장', `모둠 ${order.length}명 · ${LEVELS[lv].icon} ${LEVELS[lv].name}`, { ms: 2000 }); if (done) return;
     hud.toast(order.length > 1 ? '혼자서는 못 깨요. 말로 맞춰 가며 같이 가자!' : '혼자 연습 — 장치가 혼자서도 되도록 느슨해져요', '');
     topEl.classList.add('on'); hintEl.classList.add('on'); bgm.setDuck(0.6); S.phase = 'count';
     await hud.countdown(3, { onTick: () => sfx.click?.() }); if (done) return;

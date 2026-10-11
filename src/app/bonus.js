@@ -12,11 +12,15 @@ export const BONUS = {
 export const bonus = {
   has: (id) => !!load()[id]?.at,
   get: (id) => load()[id] || null,
-  /** 도전 기록 — 처음 깨면 부품을 얻는다. best: 가장 빠른 기록(초). 반환 { first, best, improved } */
-  record(id, { time, falls }) {
-    const v = load(), prev = v[id] || null, first = !prev?.at, improved = !prev?.best || time < prev.best;
-    v[id] = { at: prev?.at || Date.now(), best: improved ? time : prev.best, bestFalls: improved ? falls : prev.bestFalls, tries: (prev?.tries || 0) + 1 };
-    save(v); return { first, best: v[id].best, improved };
+  /** 도전 기록 — 처음 깨면 부품을 얻는다. best: 가장 빠른 기록(초, 어느 난이도든) · byLv: 난이도(app/level.js)별 가장 빠른 기록.
+   *  lv 를 주면 신기록 · 반환 best 는 그 난이도 기준. 반환 { first, best, improved } */
+  record(id, { time, falls, lv }) {
+    const v = load(), prev = v[id] || null, first = !prev?.at, byLv = { ...(prev?.byLv || {}) };
+    const mine = lv ? byLv[lv]?.best : prev?.best, improved = !mine || time < mine;
+    if (lv && improved) byLv[lv] = { best: time, falls };
+    const all = !prev?.best || time < prev.best;
+    v[id] = { at: prev?.at || Date.now(), best: all ? time : prev.best, bestFalls: all ? falls : prev.bestFalls, bestLv: all ? lv : prev.bestLv, byLv, tries: (prev?.tries || 0) + 1 };
+    save(v); return { first, best: lv ? byLv[lv].best : v[id].best, improved };
   },
   /** 도전했지만 끝까지 못 간 판(시도 수만) */
   tried(id) { const v = load(); v[id] = { ...(v[id] || {}), tries: (v[id]?.tries || 0) + 1 }; save(v); },

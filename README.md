@@ -154,7 +154,13 @@ avr-objcopy -O ihex -R .eeprom fw.elf public/firmware/playhouse-uno.hex
 
 - **여러 기기**: 방 서버가 필요하다(브라우저는 같은 와이파이의 다른 컴퓨터를 직접 찾지 못한다). [`server/README.md`](server/README.md) 대로
   AWS 에 올리고 빌드 환경 변수 `VITE_ROOM_URL=wss://…` 를 넣는다. 시험은 주소 뒤 `?room=wss://…`, 선생님은 대기실의 '서버 주소'.
+- **교실 모드(AWS 없이 같은 와이파이)**: 선생님 PC 에서 `npm run classroom` → 게임 + 방을 `http://선생님PC:8787` 로 같이 연다.
+  학생은 그 주소로 들어오면 방 서버가 저절로 잡힌다(보드 연결은 https 주소에서만 — 교실 모드는 협동용). 자세히는 [`server/README.md`](server/README.md).
 - **서버 없이**: 같은 컴퓨터의 창 · 탭끼리만(시범 · 점검용). 바로 열기 `?v4=coop`.
+- **난이도**: 방장이 대기실에서 쉬움(초등 3~4) · 보통(초등 5~6) · 어려움(중학생)을 고른다. 장치 규칙(조건문)은 같고
+  문이 열려 있는 시간 · 다리가 버티는 시간 · 장애물 빠르기만 바뀐다(`COOP_LEVELS` in `src/gfx3d/scenes/coopCourse.js`).
+  도전 챌린지도 출발 전에 같은 세 단계를 고른다(`setLevel` in `src/gfx3d/scenes/course.js`). 공통 설정은 `src/app/level.js`,
+  선생님은 주소 뒤 `?level=easy|normal|hard` 로 반 전체를 한 난이도로 묶을 수 있다.
 - 각자 자기 에디만 계산하고 위치를 나눈다. 협동 장치는 방장 화면이 계산한다(방장이 나가면 다음 사람이 이어받는다).
 
 ## 배포

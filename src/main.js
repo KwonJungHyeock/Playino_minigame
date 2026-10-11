@@ -113,7 +113,8 @@ function boot() {
     return;
   }
   // 모둠 협동 미리보기(?v4=coop) — 주소에 &room=ws://… 를 붙이면 그 방 서버로
-  if (q.get('v4') === 'coop') { nav.start(sceneCoop); return; }
+  //   교실 모드(선생님 PC)의 '모둠 바로가기' 주소이기도 하다 — 나가면 타이틀로
+  if (q.get('v4') === 'coop') { nav.start(() => import('./scenes/coopLobby.js').then((m) => m.showCoopLobby(app(), { onExit: () => { location.search = ''; } }))); return; }
   // 미션 미리보기(?v4=led 등, &stage=2 · 3)
   if (MISSION_3D[q.get('v4')]) {   // ?v4=basics · led · buzzer · rgb · cds · pot · button · lamp · bomb · final · challenge
     MISSION_3D[q.get('v4')]().then((show) => show(app(), { stage: Math.max(1, Math.min(3, parseInt(q.get('stage') || '1', 10) || 1)), onExit: () => { location.search = ''; } }));

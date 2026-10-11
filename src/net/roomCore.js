@@ -7,8 +7,8 @@
 // 들어오는 메시지(학생 → 방)            나가는 메시지(방 → 학생)
 //   host  { name, look, v }             room  { code, you, host, max, players:[{id,name,look}] }
 //   join  { code, name, look, v }       err   { code: 'none' | 'full' | 'started' | 'version' | 'bad' }
-//   start { seed }        (방장만)      join  { p:{id,name,look} } · leave { id, host }
-//   lobby {}              (방장만)      start { seed, ids } · lobby {}
+//   start { seed, lv }    (방장만)      join  { p:{id,name,look} } · leave { id, host }
+//   lobby {}              (방장만)      start { seed, lv, ids } · lobby {}      lv: 난이도 id(app/level.js — 'easy' 같은 짧은 영문)
 //   p     { d }  내 몸 위치(자주)        p     { id, d }
 //   e     { d }  일(점프 · 발판 등)      e     { id, d }
 //   h     { d }  장치 상태(방장만)       h     { d }
@@ -81,7 +81,7 @@ export function createRoomHub({ max = MAX_PLAYERS, codeOf = randomCode, onEmpty 
       const isHost = r.host === id;
       if (t === 'p' || t === 'e') { toAll(r, { t, id, d: msg.d }, id); return; }
       if (t === 'h') { if (isHost) toAll(r, { t: 'h', d: msg.d }, id); return; }
-      if (t === 'start') { if (!isHost || r.started) return; r.started = true; toAll(r, { t: 'start', seed: Number(msg.seed) || 1, ids: [...r.players.keys()] }); return; }
+      if (t === 'start') { if (!isHost || r.started) return; r.started = true; toAll(r, { t: 'start', seed: Number(msg.seed) || 1, lv: /^[a-z]{1,8}$/.test(msg.lv) ? msg.lv : 'normal', ids: [...r.players.keys()] }); return; }
       if (t === 'lobby') { if (!isHost) return; r.started = false; toAll(r, { t: 'lobby' }); return; }
       if (t === 'kick') {
         if (!isHost || msg.id === id) return; const p = r.players.get(msg.id); if (!p) return;

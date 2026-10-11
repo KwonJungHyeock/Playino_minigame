@@ -7,8 +7,9 @@ import { sfx } from '../app/sfx.js';
 import { bgm } from '../app/bgm.js';
 import { bonus, BONUS } from '../app/bonus.js';
 import { comfort } from '../gfx3d/comfort.js';
+import { level, LEVELS, LEVEL_IDS } from '../app/level.js';
 
-const GRADE = [['S', 75], ['A', 105], ['B', 150]];   // 초 이내
+const GRADE = [['S', 75], ['A', 105], ['B', 150]];   // 초 이내(어려움 기준 — 쉬움 · 보통은 level.grades 로 늘린다)
 const starsOf = (g) => ({ S: 3, A: 2, B: 1 }[g] || 0);
 const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
 
@@ -72,6 +73,7 @@ export async function showChallengeGame(root, { onExit } = {}) {
   await fontsReady(); if (done) return;
   crs = await createCourse(stage);
   if (done) { crs.dispose(); return; }
+  let LV = level.get(), grades = level.grades(GRADE, LV); crs.setLevel(LV);
   addPost(stage, { bloom: 0.42, bloomRadius: 0.7, threshold: 1.05, ao: false });   // 넓은 하늘 코스라 AO 대신 프레임을 아낀다
   hud = createHud(el, { mission: { icon: '⚡', eyebrow: '도전 · 자유 도전', title: '운석 폭풍 런' }, onPause: () => pause() });
   dust = createParticles({ max: 64, tier: stage.tier }); sparks = createParticles({ max: 120, additive: true, tier: stage.tier });
@@ -188,7 +190,8 @@ export async function showChallengeGame(root, { onExit } = {}) {
   // ── 흐름 ──
   let skip = false;
   async function intro() {
-    bgm.setDuck(1); skip = false;
+    if (skip) return;   // 화면이 켜지기 전에 건너뛰기를 눌렀으면 인트로 없이(대사가 게임 위에 남지 않게)
+    bgm.setDuck(1);
     // 골에서 출발점까지 코스를 한 번 훑는다
     S.phase = 'intro'; S.introT = 0;
     await wait(300); if (skip) return;
@@ -199,10 +202,21 @@ export async function showChallengeGame(root, { onExit } = {}) {
     ].map((l) => ({ ...l, abort: () => skip })));
     if (!skip) start();
   }
-  function start() {
-    if (S.phase !== 'intro') return;
+  async function start() {
+    if (S.phase !== 'intro' || skip) return;
     skip = true; skipBtn.hidden = true; hud.hush(); S.phase = 'ready'; camSnap = true; body.position.copy(START); body.rotation.set(0, Math.PI, 0);
+    await pickLevel(); if (done) return;
     go();
+  }
+  /** 난이도 고르기(app/level.js) — 장애물 빠르기만 바뀐다. 1 · 2 · 3 키 또는 스페이스(지금 난이도 그대로) */
+  async function pickLevel() {
+    const cur = level.get();
+    const a = await hud.window(`<div class="hud-eye">난이도 고르기</div><h2>얼마나 빠른 코스로 달릴까?</h2>
+      <p>코스 모양은 같고 <b>회전 빔 · 발판 · 해머 빠르기</b>와 <b>타일이 무너지는 시간</b>만 달라져요. 처음이면 쉬움부터!</p>
+      <div class="hud-row">${LEVEL_IDS.map((id, i) => `<button class="hud-btn${id === cur ? ' main' : ''}" data-act="${id}" type="button"><span class="hud-key">${i + 1}</span>${LEVELS[id].icon} ${LEVELS[id].name} <small style="font:700 12px var(--f-ui);opacity:.8">${LEVELS[id].who}</small></button>`).join('')}</div>`,
+      { keys: { Digit1: 'easy', Numpad1: 'easy', Digit2: 'normal', Numpad2: 'normal', Digit3: 'hard', Numpad3: 'hard', Space: cur, Enter: cur } });
+    if (done || !LEVELS[a]) return;
+    LV = a; level.set(a); grades = level.grades(GRADE, a); crs.setLevel(a);
   }
   on(skipBtn, 'click', start);
   async function go() {
@@ -231,7 +245,7 @@ export async function showChallengeGame(root, { onExit } = {}) {
 
   async function finish() {
     S.finished = true; S.phase = 'goal'; keys.clear(); padEl.classList.remove('on');
-    const time = S.run, r = bonus.record('booster', { time, falls: S.falls }), grade = (GRADE.find(([, s]) => time <= s) || ['C'])[0];
+    const time = S.run, r = bonus.record('booster', { time, falls: S.falls, lv: LV }), grade = (grades.find(([, s]) => time <= s) || ['C'])[0];
     bot.play('환호', { once: true }); bot.setExpression('웃음'); sfx.fanfare(); later(450, () => sfx.perfect()); S.vel.set(0, 0, 0); clockEl.classList.remove('on'); S.sq = -0.45;
     for (let i = 0; i < 4; i++) later(i * 220, () => { burst(sparks, 26, body.position, [0xffd25a, 0x8ff7ee, 0xff8a7a, 0x5ff0a0][i], 4.5); confetti.burst(50, tmp.copy(body.position).setY(body.position.y + 3.2), { up: 3, spread: 3.4, life: 2.8 }); });
     await hud.banner('도전 성공!', '도착', { ms: 1900 }); if (done) return;
@@ -243,12 +257,12 @@ export async function showChallengeGame(root, { onExit } = {}) {
     if (done) return;
     const choice = hud.result({
       title: r.first ? '보너스 부품 획득!' : r.improved ? '신기록!' : '완주!',
-      sub: r.first ? `${BONUS.booster.name} — ${BONUS.booster.perk}.` : `가장 빠른 기록 ${fmt(r.best)}. 별 3개는 ${GRADE[0][1]}초 안!`,
-      grade, stats: [['기록', fmt(time)], ['떨어짐', `${S.falls}번`], ['최고 기록', fmt(r.best)]], primary: '기지로', secondary: '다시 도전',
+      sub: r.first ? `${BONUS.booster.name} — ${BONUS.booster.perk}.` : `${LEVELS[LV].name} 가장 빠른 기록 ${fmt(r.best)}. 별 3개는 ${grades[0][1]}초 안!${LV !== 'hard' ? ' 다음엔 한 단계 위로?' : ''}`,
+      grade, stats: [['난이도', `${LEVELS[LV].icon} ${LEVELS[LV].name}`], ['기록', fmt(time)], ['떨어짐', `${S.falls}번`]], primary: '기지로', secondary: '다시 도전',
     });
     hud.lightStars(starsOf(grade));
     const a = await choice; if (done) return;
-    if (a === 'retry') go(); else exit();
+    if (a === 'retry') { await pickLevel(); if (!done) go(); } else exit();   // 다시 도전할 때 난이도를 바꿀 수 있다
   }
 
   // ── 매 프레임 ──

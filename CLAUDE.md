@@ -12,6 +12,8 @@
 씬 전환은 `src/app/nav.js` 의 함수 호출 라우팅이다(URL 은 변하지 않는다).
 모둠 협동(최대 5명)은 `src/net/`(방 규칙 `roomCore.js` 는 `server/room-server.mjs` 와 **같은 파일을 공유** — 한쪽만 고치지 말 것)
 · `scenes/coopLobby.js` · `coopGame.js` · `gfx3d/scenes/coopCourse.js`. 방 서버 배포는 `server/README.md`.
+AWS 전에는 교실 모드(`npm run classroom` — 선생님 PC 가 `dist` + 방을 한 주소로 연다). `net/room.js` 의 `sink` 구조는
+rollup 이 웹소켓 수신 호출을 지운 버그를 피한 것이니 `tr.onMessage = null` 식으로 되돌리지 말 것. 자유 도전 난이도는 `app/level.js`.
 
 ## 손대지 말 것
 
